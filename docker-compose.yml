@@ -1,0 +1,61 @@
+services:
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: peer_review_api
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - mariadb
+      - mongodb
+      - redis
+
+      
+    command: npm run start:dev
+
+  mariadb:
+    image: mariadb:10.11
+    container_name: peer_review_mariadb
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: rootpassword
+      MARIADB_DATABASE: peer_review_db
+      MARIADB_USER: dbuser
+      MARIADB_PASSWORD: dbpassword
+    ports:
+      - '3307:3306'
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+  mongodb:
+    image: mongo:6.0
+    container_name: peer_review_mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongoadmin
+      MONGO_INITDB_ROOT_PASSWORD: mongopassword
+      MONGO_INITDB_DATABASE: peer_review_nosql
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongodb_data:/data/db
+
+  redis:
+    image: redis:7.0-alpine
+    container_name: peer_review_redis
+    restart: always
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+
+volumes:
+  mariadb_data:
+  mongodb_data:
+  redis_data:
