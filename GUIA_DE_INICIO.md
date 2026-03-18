@@ -24,6 +24,46 @@ Antes de comenzar, asegúrate de tener instalados:
 
 ---
 
+## 🚀 Cómo Ejecutar el Proyecto por Primera Vez (Clonar Repo Base)
+
+Si eres nuevo en el equipo o vas a trabajar en otra computadora, sigue este paso a paso para clonar y ejecutar el repositorio completo. ¡Solo tendrás que hacerlo la primera vez!
+
+### 1️⃣ Clonar el Repositorio
+Abre tu terminal y ubícate en la carpeta donde trabajarás, clona y entra al proyecto:
+```bash
+git clone https://github.com/JesusM15/peer-review.git proyecto_final
+cd proyecto_final
+```
+
+### 2️⃣ Configurar Backend (Variables de Entorno)
+El backend requiere un archivo `.env` que contenga configuraciones, puedes basarte en la plantilla ya provista:
+```bash
+cd backend
+cp .env.example .env
+cd ..
+```
+*Si estás en Windows PowerShell usa: `copy backend\.env.example backend\.env`*
+
+### 3️⃣ Levantar Infraestructura y Backend con Docker
+Asegúrate de tener **Docker Desktop corriendo**. Luego, desde la raíz del proyecto (`proyecto_final/`), corre:
+```bash
+docker-compose up -d --build
+```
+> Esto iniciará todos los contenedores necesarios para base de datos (MariaDB, MongoDB, Redis) y pondrá a correr la API de NestJS en segundo plano (puerto `3000`).
+
+### 4️⃣ Lanzar Frontend
+Abre otra terminal (dejando correr la de Docker si usaste la terminal integrada del IDE o ya estás ahí) y ve a la carpeta el frontend:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+> El comando `npm install` descargará todas las librerías necesarias. Luego, se levantará la interfaz de Vue en `http://localhost:5173`. Todos los cambios que hagas se reflejarán instantáneamente.
+
+¡Listo! Ya tienes ambas partes del ecosistema corriendo 🏃‍♂️🔥
+
+---
+
 ## ⚙️ 1. Configuración de Variables de Entorno
 
 Antes de levantar los contenedores, asegúrate de configurar el entorno del backend:
