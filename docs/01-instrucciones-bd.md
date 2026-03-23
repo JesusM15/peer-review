@@ -46,5 +46,5 @@ Usamos dos bases de datos en sincronía gracias a esto:
   * Su nombre lo dice: acompaña al `Articulo`. 
   * Usa el id del artículo en MariaDB para unirse. Guarda `pdf_url` (ruta del archivo), `keywords` (etiquetas), y los `embeddings` (la codificación matemática de IA).
 * **📝 `Revision`:**
-  * Acompaña a la `Asignacion`. 
+  * Acompaña a la `Asignacion`. **✨ Nota de Arquitectura:** Utiliza el patrón de "Clave Primaria Compartida" (Shared Primary Key). El `_id` de la `Revision` en MongoDB es exactamente el mismo UUID que el `id` de la `Asignacion` en MariaDB. Esto permite crear una relación 1 a 1 perfecta: sabemos de inmediato quién es el revisor y qué artículo evalúa logrando consultas ultra rápidas y sin redundancia de datos.
   * Guarda datos cuyo tamaño puede variar muchísimo. Por ejemplo, `secciones` (la lista entera de retroalimentaciones hechas en áreas específicas del PDF) y el `analisis_ia` (opiniones de comportamiento arrojadas por la Inteligencia Artificial). Como esto cambia todo el tiempo, guardarlo aquí en Mongo (como JSON abierto) es vital para evitar errores de columnas de SQL.

@@ -1,5 +1,6 @@
-import { Entity, PrimaryColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryColumn, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { Asignacion } from '../../asignaciones/entities/asignacion.entity';
 
 export enum EstadoArticulo {
   BORRADOR = 'Borrador',
@@ -25,4 +26,7 @@ export class Articulo {
   @ManyToOne(() => User)
   @JoinColumn({ name: 'autor_id' })
   autor: User;
+
+  @OneToMany(() => Asignacion, asignacion => asignacion.articulo)
+  asignaciones: Asignacion[];
 }
