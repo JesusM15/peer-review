@@ -2,7 +2,7 @@
   <div class="role-selection">
     <div class="container">
       <div class="card">
-        <h1>🚀 Peer Review System</h1>
+        <h1>Peer Review System</h1>
         <p class="subtitle">Selecciona tu rol para continuar</p>
         
         <div class="roles-grid">
@@ -10,7 +10,7 @@
             @click="selectRole('editor')"
             class="role-button"
           >
-            <div class="role-icon">📝</div>
+            <div class="role-icon">E</div>
             <h3>Editor</h3>
             <p>Gestionar artículos y asignaciones</p>
           </button>
@@ -19,7 +19,7 @@
             @click="selectRole('reviewer')"
             class="role-button"
           >
-            <div class="role-icon">👁️</div>
+            <div class="role-icon">R</div>
             <h3>Revisor</h3>
             <p>Revisar artículos asignados</p>
           </button>
@@ -28,7 +28,7 @@
             @click="selectRole('author')"
             class="role-button"
           >
-            <div class="role-icon">✍️</div>
+            <div class="role-icon">A</div>
             <h3>Autor</h3>
             <p>Enviar y gestionar mis artículos</p>
           </button>
