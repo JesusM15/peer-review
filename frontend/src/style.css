@@ -1,22 +1,52 @@
-:root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* ─── Reset total ─────────────────────────────────────────── */
+*, *::before, *::after {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ─── Raíz ────────────────────────────────────────────────── */
+:root {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── html y body: sin centrar, sin max-width, sin padding ── */
+html {
+  width: 100%;
+  height: 100%;
 }
 
 body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  justify-content: center;
-  min-width: 320px;
+  width: 100%;
   min-height: 100vh;
-  background-color: #0a0a0a;
-  color: #fff;
+  margin: 0;
+  padding: 0;
+  background-color: #080808;
+  color: #e8e8e8;
+  /* SIN display:flex ni place-items que centraría el contenido */
 }
 
+/* ─── #app: ocupa TODO el espacio disponible ──────────────── */
 #app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  width: 100%;
+  min-height: 100vh;
+  /* SIN max-width, SIN margin auto, SIN padding, SIN text-align */
+}
+
+/* ─── Utilidades globales ─────────────────────────────────── */
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  background: transparent;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
 }

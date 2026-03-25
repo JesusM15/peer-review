@@ -1,175 +1,247 @@
 <template>
+  <div class="dashboard">
 
-  <div class="author-view">
-
-    <header class="header">
-
-      <button @click="goBack" class="back-button">
-
-        ← Volver
-
-      </button>
-
-      <h1>✍️ Autor</h1>
-
-      <div class="spacer"></div>
-
-    </header>
-
-    
-
-    <main class="main-content">
-
-      <div class="container">
-
-        <div class="form-container">
-          <h2>Registrar Nuevo Artículo</h2>
-          
-          <form @submit.prevent="submitArticulo" class="articulo-form">
-            <div class="form-group">
-              <label for="titulo">Título del Artículo:</label>
-              <input 
-                type="text" 
-                id="titulo" 
-                v-model="tituloArticulo" 
-                placeholder="Ingrese el título del artículo"
-                required
-                class="form-input"
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="nombreAutor">Nombre del Autor:</label>
-              <input 
-                type="text" 
-                id="nombreAutor" 
-                v-model="nombreAutor" 
-                placeholder="Ingrese su nombre completo"
-                required
-                class="form-input"
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="autorId">ID del Autor (UUID):</label>
-              <input 
-                type="text" 
-                id="autorId" 
-                v-model="autorId" 
-                placeholder="ID del autor (se generará automáticamente si está vacío)"
-                class="form-input"
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="pdfFile">Documento PDF:</label>
-              <div class="file-upload-container">
-                <input 
-                  type="file" 
-                  id="pdfFile" 
-                  @change="handleFileUpload"
-                  accept=".pdf"
-                  required
-                  class="file-input"
-                />
-                <div class="file-upload-label">
-                  <span v-if="!archivoPdf" class="file-placeholder">
-                    Click para seleccionar PDF o arrastrar aquí
-                  </span>
-                  <span v-else class="file-selected">
-                    📄 {{ archivoPdf.name }} ({{ formatFileSize(archivoPdf.size) }})
-                  </span>
-                </div>
-              </div>
-            </div>
-            
-            <div class="form-actions">
-              <button type="submit" class="submit-button" :disabled="isLoading">
-                {{ isLoading ? 'Registrando...' : 'Registrar Artículo' }}
-              </button>
-            </div>
-          </form>
+    <!-- ── Sidebar ── -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="brand-name">Diego</span>
         </div>
-
       </div>
 
+      <nav class="sidebar-nav">
+        <button class="nav-item" :class="{ active: vistaActiva === 'overview' }" id="nav-overview-autor" @click="vistaActiva = 'overview'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Overview
+        </button>
+        <button class="nav-item" :class="{ active: vistaActiva === 'nuevo' }" id="nav-registrar-articulo" @click="vistaActiva = 'nuevo'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Registrar artículo
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-chip">
+          <div class="user-avatar">{{ userInitial }}</div>
+          <div class="user-info">
+            <span class="user-name">{{ currentUser?.nombre || 'Autor' }}</span>
+            <span class="user-role">{{ currentUser?.email || 'autor@diego.edu' }}</span>
+          </div>
+        </div>
+        <button class="back-btn" id="btn-salir-autor" @click="goBack">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Salir
+        </button>
+      </div>
+    </aside>
+
+    <!-- ── Main ── -->
+    <main class="main">
+
+      <!-- ─── OVERVIEW ─────────────────────────────── -->
+      <template v-if="vistaActiva === 'overview'">
+        <header class="topbar">
+          <div>
+            <h1 class="page-title">Mis artículos</h1>
+            <p class="page-sub">Resumen del estado de tus envíos</p>
+          </div>
+          <button class="btn-primary" id="btn-nuevo-desde-overview" @click="vistaActiva = 'nuevo'">
+            + Nuevo artículo
+          </button>
+        </header>
+
+        <!-- Stat cards por estado -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-dot borrador"></span>
+              <span class="stat-label">Borrador</span>
+            </div>
+            <span class="stat-value">0</span>
+            <p class="stat-desc">Artículos guardados aún no enviados</p>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-dot revision"></span>
+              <span class="stat-label">En revisión</span>
+            </div>
+            <span class="stat-value">0</span>
+            <p class="stat-desc">Artículos asignados a revisores</p>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-dot aceptado"></span>
+              <span class="stat-label">Aceptados</span>
+            </div>
+            <span class="stat-value">0</span>
+            <p class="stat-desc">Artículos aprobados para publicación</p>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-dot rechazado"></span>
+              <span class="stat-label">Rechazados</span>
+            </div>
+            <span class="stat-value">0</span>
+            <p class="stat-desc">Artículos que requieren revisión mayor</p>
+          </div>
+        </div>
+
+        <!-- Sección de actividad reciente -->
+        <div class="section">
+          <h2 class="section-title">Actividad reciente</h2>
+          <div class="empty-state">
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <h3>Sin artículos todavía</h3>
+            <p>Crea tu primer artículo para iniciar el proceso de revisión por pares.</p>
+            <button class="btn-primary small" id="btn-crear-primer-articulo" @click="vistaActiva = 'nuevo'">
+              Crear artículo
+            </button>
+          </div>
+        </div>
+      </template>
+
+      <!-- ─── FORMULARIO NUEVO ARTÍCULO ────────────── -->
+      <template v-if="vistaActiva === 'nuevo'">
+        <header class="topbar">
+          <div>
+            <h1 class="page-title">Registrar artículo</h1>
+            <p class="page-sub">Completa el formulario para enviar tu artículo al sistema</p>
+          </div>
+        </header>
+
+        <!-- Formulario centrado en pantalla -->
+        <div class="form-center">
+          <div class="form-card">
+            <form @submit.prevent="submitArticulo" class="articulo-form" id="form-nuevo-articulo">
+
+              <div class="form-group">
+                <label for="titulo">Título del artículo</label>
+                <input type="text" id="titulo" v-model="tituloArticulo" placeholder="Ingrese el título del artículo" required class="form-input"/>
+              </div>
+
+              <div class="form-group">
+                <label for="pdfFile">Documento PDF</label>
+                <div class="file-upload-container">
+                  <input type="file" id="pdfFile" @change="handleFileUpload" accept=".pdf" required class="file-input"/>
+                  <div class="file-upload-label">
+                    <svg v-if="!archivoPdf" class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+                      <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <svg v-else class="upload-icon success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+                      <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span v-if="!archivoPdf" class="file-placeholder">Haz clic para seleccionar un PDF o arrástralo aquí</span>
+                    <span v-else class="file-selected">{{ archivoPdf.name }} · {{ formatFileSize(archivoPdf.size) }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button type="button" class="btn-ghost" id="btn-cancelar-form" @click="cancelarFormulario">Cancelar</button>
+                <button type="submit" class="btn-primary" id="btn-submit-articulo" :disabled="isLoading">
+                  <svg v-if="isLoading" class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke-linecap="round"/>
+                  </svg>
+                  {{ isLoading ? 'Registrando...' : 'Registrar artículo' }}
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      </template>
+
     </main>
-
   </div>
-
 </template>
 
-
-
 <script setup lang="ts">
-
+// ── Lógica original intacta + integración localStorage ─────────────────────
 import { useRouter } from 'vue-router'
-import { ref } from 'vue'
-
-
+import { ref, onMounted, computed } from 'vue'
 
 const router = useRouter()
 
-const message = ref<string>('Esperando comunicación con el Backend...')
-const status = ref<string>('idle') // idle | waiting | success | error
+const vistaActiva = ref<string>('overview')
+
+// ─── Usuario de sesión (desde localStorage) ───────────────────────────────
+interface CurrentUser {
+  id: string
+  email: string
+  nombre: string
+  rol: string
+  carrera: string
+  especialidades: string[]
+}
+
+const currentUser = ref<CurrentUser | null>(null)
+
+onMounted(() => {
+  try {
+    const raw = localStorage.getItem('user')
+    if (raw) currentUser.value = JSON.parse(raw)
+  } catch {
+    currentUser.value = null
+  }
+})
+
+const userInitial = computed(() =>
+  currentUser.value?.nombre ? currentUser.value.nombre[0].toUpperCase() : 'A'
+)
+
+// ─── Formulario ─────────────────────────────────────────────────────────
+const message = ref<string>('')
+const status = ref<string>('idle')
 const mostrarFormulario = ref<boolean>(true)
 const tituloArticulo = ref<string>('')
-const nombreAutor = ref<string>('')
-const autorId = ref<string>('')
 const archivoPdf = ref<File | null>(null)
 const isLoading = ref<boolean>(false)
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 
-const goBack = () => {
-
-  router.push('/')
-
-}
+const goBack = () => router.push('/')
 
 const submitArticulo = async () => {
   try {
     isLoading.value = true
-    
-    // Generar UUIDs si no están presentes
     const articuloId = generateUUID()
-    const autorIdFinal = autorId.value || generateUUID()
-    
-    // Preparar el DTO según lo espera el backend
+    // Usar el ID real del usuario en sesión; si no hay, generar uno temporal
+    const autorIdFinal = currentUser.value?.id || autorId.value || generateUUID()
     const createArticuloDto = {
       id: articuloId,
       titulo: tituloArticulo.value,
       autor_id: autorIdFinal,
-      pdf_url: '', // Se actualizará después de subir el archivo
-      keywords: [] // Opcional, por ahora vacío
+      pdf_url: '',
+      keywords: []
     }
-    
     console.log('Enviando artículo:', createArticuloDto)
-    
-    // Enviar al backend
     const response = await fetch(`${API_BASE_URL}/articulos`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(createArticuloDto)
     })
-    
-    if (!response.ok) {
-      throw new Error(`Error HTTP: ${response.status}`)
-    }
-    
+    if (!response.ok) throw new Error(`Error HTTP: ${response.status}`)
     const result = await response.json()
     console.log('Artículo registrado:', result)
-    
     alert(`Artículo "${tituloArticulo.value}" registrado con éxito (ID: ${articuloId})`)
-    
-    // Limpiar formulario
     tituloArticulo.value = ''
-    nombreAutor.value = ''
-    autorId.value = ''
     archivoPdf.value = null
-    
   } catch (error) {
     console.error('Error al registrar artículo:', error)
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
@@ -179,25 +251,18 @@ const submitArticulo = async () => {
   }
 }
 
-const generateUUID = (): string => {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+const generateUUID = (): string =>
+  'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = Math.random() * 16 | 0
-    const v = c === 'x' ? r : (r & 0x3 | 0x8)
-    return v.toString(16)
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16)
   })
-}
 
 const handleFileUpload = (event: Event) => {
   const target = event.target as HTMLInputElement
   if (target.files && target.files[0]) {
     const file = target.files[0]
-    // Validar que sea un PDF
-    if (file.type === 'application/pdf') {
-      archivoPdf.value = file
-    } else {
-      alert('Por favor, seleccione un archivo PDF válido')
-      target.value = ''
-    }
+    if (file.type === 'application/pdf') { archivoPdf.value = file }
+    else { alert('Por favor, seleccione un archivo PDF válido'); target.value = '' }
   }
 }
 
@@ -211,260 +276,151 @@ const formatFileSize = (bytes: number): string => {
 
 const cancelarFormulario = () => {
   tituloArticulo.value = ''
-  nombreAutor.value = ''
-  autorId.value = ''
   archivoPdf.value = null
 }
-
 </script>
 
-
-
 <style scoped>
+/* ─── LAYOUT ──────────────────────────────────────── */
+.dashboard { display: flex; min-height: 100vh; background: #080808; }
 
-.author-view {
+/* ─── SIDEBAR ─────────────────────────────────────── */
+.sidebar { width: 220px; min-width: 220px; border-right: 1px solid #1e1e1e; display: flex; flex-direction: column; background: #090909; position: sticky; top: 0; height: 100vh; }
+.sidebar-header { padding: 1.5rem 1.25rem 1rem; border-bottom: 1px solid #1e1e1e; }
+.brand { display: flex; align-items: center; gap: 0.45rem; }
+.brand-icon { width: 16px; height: 16px; color: #fff; }
+.brand-name { font-size: 0.9rem; font-weight: 700; color: #fff; letter-spacing: -0.02em; }
+.sidebar-nav { flex: 1; display: flex; flex-direction: column; gap: 2px; padding: 1rem 0.75rem; }
+.nav-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.75rem; border-radius: 6px; font-size: 0.8rem; font-weight: 500; color: #555; transition: all 0.15s ease; text-align: left; width: 100%; background: transparent; border: none; cursor: pointer; }
+.nav-item svg { width: 15px; height: 15px; flex-shrink: 0; }
+.nav-item:hover { background: #141414; color: #bbb; }
+.nav-item.active { background: #1a1a1a; color: #fff; }
+.sidebar-footer { padding: 1rem 0.75rem; border-top: 1px solid #1e1e1e; display: flex; flex-direction: column; gap: 0.75rem; }
+.user-chip { display: flex; align-items: center; gap: 0.6rem; }
+.user-avatar { width: 28px; height: 28px; border-radius: 50%; background: #1f1f1f; border: 1px solid #2e2e2e; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: #fff; flex-shrink: 0; }
+.user-info { display: flex; flex-direction: column; min-width: 0; }
+.user-name { font-size: 0.8rem; font-weight: 600; color: #ddd; }
+.user-role { font-size: 0.7rem; color: #555; }
+.back-btn { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: #444; transition: color 0.15s; background: transparent; border: none; cursor: pointer; padding: 0; }
+.back-btn svg { width: 13px; height: 13px; }
+.back-btn:hover { color: #888; }
 
-  min-height: 100vh;
+/* ─── MAIN ────────────────────────────────────────── */
+.main { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
 
-  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+/* ─── TOPBAR ──────────────────────────────────────── */
+.topbar { display: flex; align-items: flex-start; justify-content: space-between; padding: 2rem 2.5rem 1.5rem; border-bottom: 1px solid #1e1e1e; }
+.page-title { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.02em; color: #fff; margin-bottom: 0.2rem; }
+.page-sub { font-size: 0.8rem; color: #666; }
 
+/* ─── STAT CARDS (OVERVIEW) ───────────────────────── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-bottom: 1px solid #1e1e1e;
 }
 
-
-
-.header {
-
-  display: flex;
-
-  align-items: center;
-
-  padding: 1.5rem 2rem;
-
-  background: rgba(17, 17, 17, 0.9);
-
-  border-bottom: 1px solid #333;
-
-  backdrop-filter: blur(10px);
-
-}
-
-
-
-.back-button {
-
-  background: #1a1a1a;
-
-  border: 1px solid #444;
-
-  color: #ffffff;
-
-  padding: 0.5rem 1rem;
-
-  border-radius: 8px;
-
-  cursor: pointer;
-
-  font-size: 0.9rem;
-
-  transition: all 0.3s ease;
-
-}
-
-
-
-.back-button:hover {
-
-  background: #2a2a2a;
-
-  border-color: #666;
-
-}
-
-
-
-h1 {
-
-  margin: 0;
-
-  font-size: 1.5em;
-
-  font-weight: 600;
-
-  color: #ffffff;
-
-  flex: 1;
-
-  text-align: center;
-
-}
-
-
-
-.spacer {
-
-  width: 80px;
-
-}
-
-
-
-.main-content {
-
-  padding: 2rem;
-
-}
-
-
-
-.container {
-
-  width: 100%;
-
-  margin: 0 auto;
-
-  text-align: center;
-
-  color: #888;
-
-  font-size: 1.1rem;
-
-}
-
-.submit-button {
-  background: #ffffff;
-  color: #000000;
-  border: 1px solid #444;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: all 0.3s ease;
-}
-
-.submit-button:hover {
-  background: #f0f0f0;
-  border-color: #666;
-}
-
-.form-container {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  padding: 3rem;
-  margin-top: 2rem;
-  border: 1px solid #333;
-  max-width: 95%;
-  width: 95%;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.form-container h2 {
-  margin-top: 0;
-  font-size: 2.5em;
-  font-weight: 800;
-  background: -webkit-linear-gradient(120deg, #ffffff, #888888);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin-bottom: 2rem;
-  text-align: center;
-}
-
-.articulo-form {
+.stat-card {
+  padding: 1.75rem 2rem;
+  border-right: 1px solid #1e1e1e;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
   gap: 0.5rem;
 }
+.stat-card:last-child { border-right: none; }
 
-.form-group label {
-  color: #ffffff;
-  font-weight: 400;
-  font-size: 0.95em;
-  margin-bottom: 0.5rem;
-  font-family: 'Arial', sans-serif;
-}
-
-.form-input {
-  width: 100%;
-  padding: 0.5rem 2.5rem;
-  border: 1px solid #555;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  font-size: 1em;
-  font-weight: 300;
-  font-family: 'Arial', sans-serif;
-  transition: border-color 0.3s ease;
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: #4CAF50;
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.form-input::placeholder {
-  color: #a0a0a0;
-  font-weight: 400;
-}
-
-.form-actions {
+.stat-header {
   display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.25rem;
+}
+
+.stat-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.stat-dot.borrador  { background: #555; }
+.stat-dot.revision  { background: #e5a24c; }
+.stat-dot.aceptado  { background: #4ade80; }
+.stat-dot.rechazado { background: #f87171; }
+
+.stat-label { font-size: 0.72rem; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.05em; }
+.stat-value { font-size: 2.4rem; font-weight: 800; letter-spacing: -0.05em; color: #fff; line-height: 1; }
+.stat-desc { font-size: 0.75rem; color: #444; line-height: 1.4; margin-top: 0.2rem; }
+
+/* ─── SECCIÓN GENERAL ─────────────────────────────── */
+.section { padding: 2rem 2.5rem; flex: 1; }
+.section-title { font-size: 0.8rem; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 1.5rem; }
+
+/* ─── EMPTY STATE ─────────────────────────────────── */
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 2rem; gap: 0.75rem; text-align: center; }
+.empty-icon { width: 44px; height: 44px; color: #222; margin-bottom: 0.5rem; }
+.empty-icon svg { width: 100%; height: 100%; }
+.empty-state h3 { font-size: 0.95rem; font-weight: 600; color: #666; }
+.empty-state p { font-size: 0.82rem; color: #444; max-width: 280px; line-height: 1.6; }
+
+/* ─── FORM CENTRADO ───────────────────────────────── */
+.form-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  margin-top: 1.5rem;
+  padding: 2.5rem 1.5rem;
 }
 
-.file-upload-container {
-  position: relative;
+.form-card {
   width: 100%;
+  max-width: 560px;
+  background: #0d0d0d;
+  border: 1px solid #1e1e1e;
+  border-radius: 10px;
+  padding: 2.5rem;
 }
 
-.file-input {
-  position: absolute;
-  opacity: 0;
-  width: 100%;
-  height: 100%;
-  cursor: pointer;
-}
+.articulo-form { display: flex; flex-direction: column; gap: 1.5rem; }
+.form-group { display: flex; flex-direction: column; gap: 0.5rem; }
+.form-group label { font-size: 0.8rem; font-weight: 500; color: #bbb; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.field-hint { font-size: 0.72rem; color: #444; font-weight: 400; }
+.form-input { width: 100%; padding: 0.7rem 0.9rem; border: 1px solid #1e1e1e; border-radius: 6px; background: #111; color: #e8e8e8; font-size: 0.875rem; font-family: inherit; transition: border-color 0.15s; }
+.form-input.mono { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.8rem; }
+.form-input:focus { outline: none; border-color: #333; }
+.form-input::placeholder { color: #2e2e2e; }
 
-.file-upload-label {
-  display: block;
-  width: 100%;
-  padding: 1rem 2rem;
-  border: 2px dashed #555;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
+.file-upload-container { position: relative; }
+.file-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; z-index: 1; }
+.file-upload-label { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; padding: 1.75rem 1.5rem; border: 1px dashed #1e1e1e; border-radius: 6px; background: #0b0b0b; text-align: center; cursor: pointer; transition: border-color 0.15s; }
+.file-upload-label:hover { border-color: #333; }
+.upload-icon { width: 26px; height: 26px; color: #2a2a2a; }
+.upload-icon.success { color: #4ade80; }
+.file-placeholder { font-size: 0.8rem; color: #333; }
+.file-selected { font-size: 0.8rem; color: #4ade80; }
 
-.file-upload-label:hover {
-  border-color: #777;
-  background: rgba(255, 255, 255, 0.08);
-}
+.form-actions { display: flex; justify-content: flex-end; gap: 0.75rem; padding-top: 0.25rem; }
 
-.file-placeholder {
-  color: #a0a0a0;
-  font-style: normal;
-  font-size: 0.95em;
-  font-weight: 300;
-  font-family: 'Arial', sans-serif;
-}
+/* ─── BOTONES ─────────────────────────────────────── */
+.btn-primary { display: flex; align-items: center; gap: 0.4rem; background: #fff; color: #000; font-size: 0.825rem; font-weight: 600; padding: 0.6rem 1.2rem; border-radius: 6px; border: none; cursor: pointer; transition: opacity 0.15s; white-space: nowrap; }
+.btn-primary:hover { opacity: 0.88; }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-primary.small { font-size: 0.8rem; padding: 0.5rem 1rem; margin-top: 0.75rem; }
+.btn-ghost { background: transparent; color: #555; font-size: 0.825rem; font-weight: 500; padding: 0.6rem 1rem; border-radius: 6px; border: 1px solid #1e1e1e; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+.btn-ghost:hover { color: #999; border-color: #333; }
 
-.file-selected {
-  color: #4CAF50;
-  font-weight: 400;
-  font-size: 0.95em;
-  font-family: 'Arial', sans-serif;
-}
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner { width: 14px; height: 14px; animation: spin 0.8s linear infinite; }
 
+/* ─── RESPONSIVE ──────────────────────────────────── */
+@media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 768px) {
+  .dashboard { flex-direction: column; }
+  .sidebar { width: 100%; min-width: unset; height: auto; position: static; border-right: none; border-bottom: 1px solid #1e1e1e; }
+  .sidebar-nav { flex-direction: row; overflow-x: auto; padding: 0.5rem; }
+  .nav-item { white-space: nowrap; }
+  .topbar { flex-direction: column; gap: 1rem; padding: 1.25rem; }
+  .section { padding: 1.5rem 1.25rem; }
+  .form-center { padding: 1.5rem 1rem; }
+  .form-card { padding: 1.5rem; }
+}
 </style>
-
