@@ -1,16 +1,46 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ArticulosService } from './articulos.service';
 import { CreateArticuloDto } from './dto/create-articulo.dto';
 import { UpdateArticuloDto } from './dto/update-articulo.dto';
 import { EstadoArticulo } from './entities/articulo.entity';
+import { storageConfig, pdfFileFilter } from '../config/multer.config';
 
 @Controller('articulos')
 export class ArticulosController {
   constructor(private readonly articulosService: ArticulosService) {}
 
   @Post()
-  create(@Body() createArticuloDto: CreateArticuloDto) {
-    return this.articulosService.create(createArticuloDto);
+  @UseInterceptors(FileInterceptor('pdf', {
+    storage: storageConfig,
+    fileFilter: pdfFileFilter,
+  }))
+  create(
+    @Body() createArticuloDto: CreateArticuloDto,
+    @UploadedFile() pdf?: any,
+  ) {
+    // Parse keywords from string if needed
+    let keywords: string[] = [];
+    const rawKeywords = (createArticuloDto as any).keywords;
+    if (typeof rawKeywords === 'string') {
+      try {
+        keywords = JSON.parse(rawKeywords);
+      } catch {
+        keywords = [];
+      }
+    } else if (Array.isArray(rawKeywords)) {
+      keywords = rawKeywords;
+    }
+    
+    const pdfUrl = pdf ? `/uploads/pdfs/${pdf.filename}` : '';
+    
+    return this.articulosService.create({
+      id: createArticuloDto.id,
+      titulo: createArticuloDto.titulo,
+      autor_id: createArticuloDto.autor_id,
+      pdf_url: pdfUrl,
+      keywords: keywords,
+    });
   }
 
   @Get()

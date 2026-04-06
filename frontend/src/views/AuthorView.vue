@@ -19,6 +19,12 @@
           </svg>
           Overview
         </button>
+        <button class="nav-item" :class="{ active: vistaActiva === 'borradores' }" id="nav-borradores" @click="vistaActiva = 'borradores'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Borradores
+        </button>
         <button class="nav-item" :class="{ active: vistaActiva === 'nuevo' }" id="nav-registrar-articulo" @click="vistaActiva = 'nuevo'">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-linecap="round" stroke-linejoin="round"/>
@@ -66,7 +72,7 @@
               <span class="stat-dot borrador"></span>
               <span class="stat-label">Borrador</span>
             </div>
-            <span class="stat-value">0</span>
+            <span class="stat-value">{{ stats.borrador }}</span>
             <p class="stat-desc">Artículos guardados aún no enviados</p>
           </div>
 
@@ -75,7 +81,7 @@
               <span class="stat-dot revision"></span>
               <span class="stat-label">En revisión</span>
             </div>
-            <span class="stat-value">0</span>
+            <span class="stat-value">{{ stats.enRevision }}</span>
             <p class="stat-desc">Artículos asignados a revisores</p>
           </div>
 
@@ -84,7 +90,7 @@
               <span class="stat-dot aceptado"></span>
               <span class="stat-label">Aceptados</span>
             </div>
-            <span class="stat-value">0</span>
+            <span class="stat-value">{{ stats.aceptados }}</span>
             <p class="stat-desc">Artículos aprobados para publicación</p>
           </div>
 
@@ -93,7 +99,7 @@
               <span class="stat-dot rechazado"></span>
               <span class="stat-label">Rechazados</span>
             </div>
-            <span class="stat-value">0</span>
+            <span class="stat-value">{{ stats.rechazados }}</span>
             <p class="stat-desc">Artículos que requieren revisión mayor</p>
           </div>
         </div>
@@ -101,7 +107,7 @@
         <!-- Sección de actividad reciente -->
         <div class="section">
           <h2 class="section-title">Actividad reciente</h2>
-          <div class="empty-state">
+          <div v-if="articulos.length === 0" class="empty-state">
             <div class="empty-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
                 <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round"/>
@@ -112,6 +118,115 @@
             <button class="btn-primary small" id="btn-crear-primer-articulo" @click="vistaActiva = 'nuevo'">
               Crear artículo
             </button>
+          </div>
+          <div v-else class="articulos-list">
+            <div v-for="articulo in articulosRecientes" :key="articulo.id" class="articulo-item" @click="verArticulo(articulo.id)">
+              <div class="articulo-info">
+                <h3 class="articulo-titulo">{{ articulo.titulo }}</h3>
+                <div class="articulo-meta">
+                  <span class="estado-badge" :class="articulo.estado.toLowerCase().replace(' ', '-')">{{ articulo.estado }}</span>
+                  <span class="fecha-creacion">{{ formatDate(articulo.createdAt) }}</span>
+                </div>
+              </div>
+              <div class="articulo-actions">
+                <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- ─── VISTA BORRADORES ─────────────────────────────── -->
+      <template v-if="vistaActiva === 'borradores'">
+        <header class="topbar">
+          <div>
+            <h1 class="page-title">Mis borradores</h1>
+            <p class="page-sub">Artículos guardados como borrador</p>
+          </div>
+          <button class="btn-primary" id="btn-nuevo-desde-borradores" @click="vistaActiva = 'nuevo'">
+            + Nuevo artículo
+          </button>
+        </header>
+
+        <div class="section">
+          <div v-if="loadingArticulos" class="loading-state">
+            <div class="spinner"></div>
+            <p>Cargando borradores...</p>
+          </div>
+          <div v-else-if="borradores.length === 0" class="empty-state">
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <h3>No hay borradores</h3>
+            <p>No tienes artículos guardados como borrador.</p>
+            <button class="btn-primary small" id="btn-crear-borrador" @click="vistaActiva = 'nuevo'">
+              Crear borrador
+            </button>
+          </div>
+          <div v-else class="articulos-list">
+            <div v-for="articulo in borradores" :key="articulo.id" class="articulo-item" @click="verArticulo(articulo.id)">
+              <div class="articulo-info">
+                <h3 class="articulo-titulo">{{ articulo.titulo }}</h3>
+                <div class="articulo-meta">
+                  <span class="estado-badge borrador">{{ articulo.estado }}</span>
+                  <span class="fecha-creacion">{{ formatDate(articulo.createdAt) }}</span>
+                </div>
+              </div>
+              <div class="articulo-actions">
+                <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- ─── VISTA ARTÍCULO DETALLE ───────────────────────── -->
+      <template v-if="vistaActiva === 'articulo'">
+        <header class="topbar">
+          <div class="flex items-center gap-3">
+            <button class="btn-back" @click="vistaActiva = 'borradores'">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Volver
+            </button>
+            <div>
+              <h1 class="page-title">{{ articuloActual?.titulo || 'Artículo' }}</h1>
+              <p class="page-sub">Vista previa del documento</p>
+            </div>
+          </div>
+        </header>
+
+        <div class="articulo-detail-container">
+          <div class="pdf-viewer">
+            <div v-if="loadingPdf" class="loading-state">
+              <div class="spinner"></div>
+              <p>Cargando PDF...</p>
+            </div>
+            <div v-else-if="!articuloActual?.pdf_url" class="empty-state">
+              <div class="empty-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                  <path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <h3>No hay PDF disponible</h3>
+              <p>Este artículo no tiene un archivo PDF asociado.</p>
+            </div>
+            <div v-else class="pdf-container">
+              <iframe :src="articuloActual.pdf_url" class="pdf-frame" title="PDF del artículo"></iframe>
+            </div>
+          </div>
+          <div class="revision-panel">
+            <div class="panel-placeholder">
+              <h3>Formulario de revisión</h3>
+              <p>Esta sección estará disponible en futuras versiones para agregar formularios de revisión.</p>
+            </div>
           </div>
         </div>
       </template>
@@ -192,10 +307,48 @@ interface CurrentUser {
 
 const currentUser = ref<CurrentUser | null>(null)
 
-onMounted(() => {
+// ─── Artículos ─────────────────────────────────────────────────────────────
+interface Articulo {
+  id: string
+  titulo: string
+  estado: string
+  autor_id: string
+  pdf_url: string
+  keywords: string[]
+  createdAt?: string
+  updatedAt?: string
+}
+
+const articulos = ref<Articulo[]>([])
+const loadingArticulos = ref<boolean>(false)
+const articuloActual = ref<Articulo | null>(null)
+const loadingPdf = ref<boolean>(false)
+
+// ─── Artículos recientes (últimos 5) ─────────────────────────────────────────
+const articulosRecientes = computed(() => {
+  return articulos.value
+    .slice()
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+    .slice(0, 5)
+})
+
+// ─── Estadísticas computadas ────────────────────────────────────────────────
+const stats = computed(() => {
+  return {
+    borrador: articulos.value.filter(a => a.estado === 'Borrador').length,
+    enRevision: articulos.value.filter(a => a.estado === 'En Revisión').length,
+    aceptados: articulos.value.filter(a => a.estado === 'Aceptado').length,
+    rechazados: articulos.value.filter(a => a.estado === 'Rechazado').length
+  }
+})
+
+onMounted(async () => {
   try {
     const raw = localStorage.getItem('user')
     if (raw) currentUser.value = JSON.parse(raw)
+    
+    // Cargar artículos del usuario
+    await cargarArticulos()
   } catch {
     currentUser.value = null
   }
@@ -215,33 +368,112 @@ const isLoading = ref<boolean>(false)
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 
+// ─── Funciones para manejo de artículos ─────────────────────────────────────
+const cargarArticulos = async () => {
+  if (!currentUser.value?.id) return
+  
+  try {
+    loadingArticulos.value = true
+    const response = await fetch(`${API_BASE_URL}/articulos?autor_id=${currentUser.value.id}&include_relations=true`)
+    
+    if (!response.ok) throw new Error(`Error HTTP: ${response.status}`)
+    
+    const data = await response.json()
+    
+    // Construir URLs completas para los PDFs
+    const baseUrl = API_BASE_URL.replace('/api', '')
+    articulos.value = data.map((articulo: any) => ({
+      ...articulo,
+      pdf_url: articulo.pdf_url ? `${baseUrl}${articulo.pdf_url}` : ''
+    }))
+    
+    console.log('Artículos cargados:', articulos.value)
+  } catch (error) {
+    console.error('Error al cargar artículos:', error)
+    articulos.value = []
+  } finally {
+    loadingArticulos.value = false
+  }
+}
+
+const verArticulo = async (articuloId: string) => {
+  try {
+    loadingPdf.value = true
+    vistaActiva.value = 'articulo'
+    
+    const response = await fetch(`${API_BASE_URL}/articulos/${articuloId}?include_relations=true`)
+    
+    if (!response.ok) throw new Error(`Error HTTP: ${response.status}`)
+    
+    const data = await response.json()
+    
+    // Construir URL completa para el PDF
+    const baseUrl = API_BASE_URL.replace('/api', '')
+    if (data.pdf_url) {
+      data.pdf_url = `${baseUrl}${data.pdf_url}`
+    }
+    
+    articuloActual.value = data
+    console.log('Artículo cargado:', data)
+  } catch (error) {
+    console.error('Error al cargar artículo:', error)
+    alert('Error al cargar el artículo')
+    vistaActiva.value = 'borradores'
+  } finally {
+    loadingPdf.value = false
+  }
+}
+
+const formatDate = (dateString?: string) => {
+  if (!dateString) return 'Fecha desconocida'
+  
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  } catch {
+    return 'Fecha inválida'
+  }
+}
+
 const goBack = () => router.push('/')
 
 const submitArticulo = async () => {
   try {
     isLoading.value = true
     const articuloId = generateUUID()
-    // Usar el ID real del usuario en sesión; si no hay, generar uno temporal
-    const autorIdFinal = currentUser.value?.id || autorId.value || generateUUID()
-    const createArticuloDto = {
-      id: articuloId,
-      titulo: tituloArticulo.value,
-      autor_id: autorIdFinal,
-      pdf_url: '',
-      keywords: []
+    const autorIdFinal = currentUser.value?.id || generateUUID()
+    
+    // Usar FormData para subir archivo
+    const formData = new FormData()
+    formData.append('id', articuloId)
+    formData.append('titulo', tituloArticulo.value)
+    formData.append('autor_id', autorIdFinal)
+    formData.append('keywords', JSON.stringify([]))
+    
+    if (archivoPdf.value) {
+      formData.append('pdf', archivoPdf.value)
     }
-    console.log('Enviando artículo:', createArticuloDto)
+    
+    console.log('Enviando artículo con PDF:', articuloId, archivoPdf.value?.name)
     const response = await fetch(`${API_BASE_URL}/articulos`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(createArticuloDto)
+      body: formData // No Content-Type header needed for FormData
     })
+    
     if (!response.ok) throw new Error(`Error HTTP: ${response.status}`)
     const result = await response.json()
     console.log('Artículo registrado:', result)
-    alert(`Artículo "${tituloArticulo.value}" registrado con éxito (ID: ${articuloId})`)
+    alert(`Artículo "${tituloArticulo.value}" registrado con éxito`)
     tituloArticulo.value = ''
     archivoPdf.value = null
+    
+    // Recargar artículos y volver a borradores
+    await cargarArticulos()
+    vistaActiva.value = 'borradores'
   } catch (error) {
     console.error('Error al registrar artículo:', error)
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
@@ -362,6 +594,49 @@ const cancelarFormulario = () => {
 .empty-state h3 { font-size: 0.95rem; font-weight: 600; color: #666; }
 .empty-state p { font-size: 0.82rem; color: #444; max-width: 280px; line-height: 1.6; }
 
+/* ─── LOADING STATE ─────────────────────────────────── */
+.loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 2rem; gap: 1rem; text-align: center; }
+.loading-state .spinner { width: 32px; height: 32px; }
+.loading-state p { font-size: 0.82rem; color: #444; }
+
+/* ─── ARTÍCULOS LIST ─────────────────────────────────── */
+.articulos-list { display: flex; flex-direction: column; gap: 0.75rem; }
+.articulo-item { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; border: 1px solid #1e1e1e; border-radius: 8px; background: #0d0d0d; cursor: pointer; transition: all 0.15s ease; }
+.articulo-item:hover { border-color: #333; background: #111; }
+.articulo-info { flex: 1; min-width: 0; }
+.articulo-titulo { font-size: 0.95rem; font-weight: 600; color: #fff; margin-bottom: 0.5rem; line-height: 1.4; }
+.articulo-meta { display: flex; align-items: center; gap: 0.75rem; }
+.estado-badge { font-size: 0.7rem; font-weight: 500; padding: 0.25rem 0.5rem; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+.estado-badge.borrador { background: #1a1a1a; color: #666; }
+.estado-badge.en-revision { background: #2a1f0a; color: #e5a24c; }
+.estado-badge.aceptado { background: #0a2a0a; color: #4ade80; }
+.estado-badge.rechazado { background: #2a0a0a; color: #f87171; }
+.fecha-creacion { font-size: 0.75rem; color: #555; }
+.articulo-actions { display: flex; align-items: center; }
+.arrow-icon { width: 16px; height: 16px; color: #444; transition: color 0.15s; }
+.articulo-item:hover .arrow-icon { color: #888; }
+
+/* ─── ARTÍCULO DETAIL ───────────────────────────────── */
+.articulo-detail-container { display: flex; flex: 1; gap: 0; height: calc(100vh - 120px); }
+.pdf-viewer { flex: 1; display: flex; flex-direction: column; background: #0d0d0d; border-right: 1px solid #1e1e1e; }
+.revision-panel { width: 400px; background: #090909; border-left: 1px solid #1e1e1e; display: flex; align-items: center; justify-content: center; }
+.panel-placeholder { text-align: center; padding: 2rem; }
+.panel-placeholder h3 { font-size: 1rem; font-weight: 600; color: #666; margin-bottom: 0.5rem; }
+.panel-placeholder p { font-size: 0.8rem; color: #444; line-height: 1.5; }
+
+.pdf-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.pdf-frame { flex: 1; width: 100%; height: 100%; border: none; background: #fff; }
+
+/* ─── BACK BUTTON ───────────────────────────────────── */
+.btn-back { display: flex; align-items: center; gap: 0.5rem; background: transparent; color: #666; font-size: 0.8rem; font-weight: 500; padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid #1e1e1e; cursor: pointer; transition: all 0.15s; }
+.btn-back:hover { color: #999; border-color: #333; background: #111; }
+.btn-back svg { width: 14px; height: 14px; }
+
+/* ─── FLEX UTILITIES ─────────────────────────────────── */
+.flex { display: flex; }
+.items-center { align-items: center; }
+.gap-3 { gap: 0.75rem; }
+
 /* ─── FORM CENTRADO ───────────────────────────────── */
 .form-center {
   flex: 1;
@@ -412,7 +687,10 @@ const cancelarFormulario = () => {
 .spinner { width: 14px; height: 14px; animation: spin 0.8s linear infinite; }
 
 /* ─── RESPONSIVE ──────────────────────────────────── */
-@media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 900px) { 
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .revision-panel { width: 300px; }
+}
 @media (max-width: 768px) {
   .dashboard { flex-direction: column; }
   .sidebar { width: 100%; min-width: unset; height: auto; position: static; border-right: none; border-bottom: 1px solid #1e1e1e; }
@@ -422,5 +700,8 @@ const cancelarFormulario = () => {
   .section { padding: 1.5rem 1.25rem; }
   .form-center { padding: 1.5rem 1rem; }
   .form-card { padding: 1.5rem; }
+  .articulo-detail-container { flex-direction: column; height: auto; }
+  .pdf-viewer { height: 60vh; border-right: none; border-bottom: 1px solid #1e1e1e; }
+  .revision-panel { width: 100%; height: 30vh; border-left: none; border-top: 1px solid #1e1e1e; }
 }
 </style>

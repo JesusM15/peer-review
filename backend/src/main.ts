@@ -1,20 +1,34 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { join } from 'path';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import * as fs from 'fs';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // Todo el backend responderá mediante /api/ (ej. /api/ping)
+  // Create uploads directory if it doesn't exist
+  const uploadsDir = join(__dirname, '..', 'uploads', 'pdfs');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  // Serve static files from uploads folder
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads/',
+  });
+
+  // API will respond via /api/ (e.g. /api/ping)
   app.setGlobalPrefix('api');
 
-  // Configuración de CORS permitiendo el frontend en Vite (localhost:5173)
+  // CORS config allowing Vite frontend (localhost:5173, 5174)
   app.enableCors({
-    origin: ['http://localhost:5173'],
+    origin: ['http://localhost:5173', 'http://localhost:5174'],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
 
-  // Escuchar en todas las interfaces (0.0.0.0) para que el contenedor de Docker exponga el puerto
+  // Listen on all interfaces for Docker
   await app.listen(process.env.PORT || 3000, '0.0.0.0');
 }
 bootstrap();
