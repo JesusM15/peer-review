@@ -9,18 +9,16 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
 @Module({
   imports: [
-    // Configuración de MariaDB a través de TypeORM
+    // MariaDB configuration
     TypeOrmModule.forRoot({
-      type: 'mariadb',
-      url: process.env.MARIADB_URI || 'mysql://dbuser:dbpassword@mariadb:3306/peer_review_db',
+      type: 'mysql',
+      url: process.env.MARIADB_URI || 'mysql://dbuser:dbpassword@localhost:3307/peer_review_db',
       autoLoadEntities: true,
-      synchronize: true, // ¡La magia! Crea las tablas automáticamente
+      synchronize: true,
     }),
     
-    // Configuración de MongoDB a través de Mongoose
-    MongooseModule.forRoot(
-      process.env.MONGODB_URI || 'mongodb://mongoadmin:mongopassword@mongodb:27017/peer_review_nosql?authSource=admin'
-    ),
+    // MongoDB configuration
+    MongooseModule.forRoot(process.env.MONGODB_URI || 'mongodb://mongoadmin:mongopassword@localhost:27017/peer_review_nosql?authSource=admin'),
     
     UsersModule,
     ArticulosModule,
