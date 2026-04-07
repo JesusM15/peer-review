@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { join } from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
@@ -6,6 +7,12 @@ import * as fs from 'fs';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Enable validation pipe for DTOs
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true,
+    transform: true,
+  }));
 
   // Create uploads directory if it doesn't exist
   const uploadsDir = join(__dirname, '..', 'uploads', 'pdfs');

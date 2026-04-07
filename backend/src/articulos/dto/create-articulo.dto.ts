@@ -1,13 +1,13 @@
-import { IsString, IsOptional, IsArray, IsUUID } from 'class-validator';
+import { IsString, IsOptional, IsArray } from 'class-validator';
 
 export class CreateArticuloDto {
-  @IsUUID(4)
+  @IsString()
   id: string;
 
   @IsString()
   titulo: string;
 
-  @IsUUID(4)
+  @IsString()
   autor_id: string;
 
   @IsOptional()
@@ -15,7 +15,6 @@ export class CreateArticuloDto {
   pdf_url?: string;
 
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  keywords?: string[];
+  @IsString()
+  keywords?: string;
 }
