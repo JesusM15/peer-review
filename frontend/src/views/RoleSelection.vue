@@ -11,7 +11,25 @@
         </svg>
         <span class="brand-name">Diego</span>
       </div>
-      <span class="nav-tag">Sistema de Revisión por Pares</span>
+      <div style="display: flex; align-items: center; gap: 1.25rem;">
+        <span class="nav-tag">Sistema de Revisión por Pares</span>
+        <button class="theme-btn" @click="toggleTheme" :title="isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'">
+          <svg v-if="isDark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+      </div>
     </nav>
 
     <!-- Hero -->
@@ -58,8 +76,10 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { useTheme } from '../composables/useTheme'
 
 const router = useRouter()
+const { isDark, toggleTheme } = useTheme()
 
 const roles = [
   {
@@ -132,7 +152,7 @@ const selectRole = (role: string) => {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #080808;
+  background: var(--bg-base);
 }
 
 /* ─── NAV ─────────────────────────────────────────── */
@@ -142,7 +162,7 @@ const selectRole = (role: string) => {
   align-items: center;
   justify-content: space-between;
   padding: 1.25rem 2.5rem;
-  border-bottom: 1px solid #222;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .nav-brand {
@@ -154,22 +174,42 @@ const selectRole = (role: string) => {
 .brand-icon {
   width: 18px;
   height: 18px;
-  color: #fff;
+  color: var(--text-strong);
 }
 
 .brand-name {
   font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: #fff;
+  color: var(--text-strong);
 }
 
 .nav-tag {
   font-size: 0.75rem;
-  color: #666;
+  color: var(--text-faint);
   font-weight: 400;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.theme-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--text-strong);
+  transition: background 0.2s;
+}
+
+.theme-btn:hover {
+  background: var(--bg-card-hover);
+}
+
+.theme-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 /* ─── HERO ────────────────────────────────────────── */
@@ -185,7 +225,7 @@ const selectRole = (role: string) => {
   font-size: 0.75rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #777;
+  color: var(--text-muted);
   margin-bottom: 1.25rem;
 }
 
@@ -194,14 +234,14 @@ const selectRole = (role: string) => {
   font-weight: 800;
   line-height: 1.05;
   letter-spacing: -0.03em;
-  color: #ffffff;
+  color: var(--text-strong);
   margin-bottom: 1.5rem;
 }
 
 .hero-sub {
   font-size: 1rem;
   line-height: 1.7;
-  color: #999;
+  color: var(--text-normal);
   max-width: 520px;
 }
 
@@ -209,18 +249,17 @@ const selectRole = (role: string) => {
 .roles {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  border-top: 1px solid #222;
+  border-top: 1px solid var(--border-color);
   flex: 1;
 }
 
 .role-card {
   display: flex;
   flex-direction: column;
-  /* Más padding para mayor separación visual */
   padding: 3.5rem 3rem;
-  border-right: 1px solid #222;
+  border-right: 1px solid var(--border-color);
   text-align: left;
-  color: #fff;
+  color: var(--text-strong);
   background: transparent;
   transition: background 0.25s ease;
   cursor: pointer;
@@ -232,7 +271,7 @@ const selectRole = (role: string) => {
 }
 
 .role-card:hover {
-  background: #101010;
+  background: var(--bg-card-hover);
 }
 
 .role-card-top {
@@ -247,10 +286,9 @@ const selectRole = (role: string) => {
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  /* Mayor contraste en el badge */
-  color: #ddd;
-  background: #1f1f1f;
-  border: 1px solid #333;
+  color: var(--text-normal);
+  background: var(--bg-card);
+  border: 1px solid var(--border-hover);
   border-radius: 4px;
   padding: 0.3rem 0.6rem;
 }
@@ -258,20 +296,19 @@ const selectRole = (role: string) => {
 .role-arrow {
   width: 17px;
   height: 17px;
-  color: #444;
+  color: var(--text-faint);
   transition: color 0.2s, transform 0.2s;
 }
 
 .role-card:hover .role-arrow {
-  color: #fff;
+  color: var(--text-strong);
   transform: translate(3px, -3px);
 }
 
 .role-icon-wrap {
   width: 40px;
   height: 40px;
-  /* Ícono más visible */
-  color: #444;
+  color: var(--text-muted);
   margin-bottom: 2rem;
   transition: color 0.2s;
 }
@@ -282,7 +319,7 @@ const selectRole = (role: string) => {
 }
 
 .role-card:hover .role-icon-wrap {
-  color: #aaa;
+  color: var(--text-strong);
 }
 
 .role-name {
@@ -290,24 +327,22 @@ const selectRole = (role: string) => {
   font-weight: 700;
   letter-spacing: -0.02em;
   margin-bottom: 0.85rem;
-  /* Blanco puro para máximo contraste */
-  color: #ffffff;
+  color: var(--text-strong);
 }
 
 .role-desc {
   font-size: 0.875rem;
   line-height: 1.7;
-  /* Gris más claro para mejor legibilidad */
-  color: #888;
+  color: var(--text-normal);
   margin-top: auto;
 }
 
 /* ─── FOOTER ──────────────────────────────────────── */
 .footer {
-  border-top: 1px solid #222;
+  border-top: 1px solid var(--border-color);
   padding: 1.25rem 2.5rem;
   font-size: 0.75rem;
-  color: #555;
+  color: var(--text-muted);
 }
 
 /* ─── RESPONSIVE ──────────────────────────────────── */
@@ -315,7 +350,7 @@ const selectRole = (role: string) => {
   .nav { padding: 1rem 1.25rem; }
   .hero { padding: 3rem 1.25rem 2rem; }
   .roles { grid-template-columns: 1fr; }
-  .role-card { border-right: none; border-bottom: 1px solid #1a1a1a; }
+  .role-card { border-right: none; border-bottom: 1px solid var(--border-color); }
   .role-card:last-child { border-bottom: none; }
 }
 

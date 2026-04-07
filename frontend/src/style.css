@@ -1,20 +1,83 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 /* ─── Reset total ─────────────────────────────────────────── */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-/* ─── Raíz ────────────────────────────────────────────────── */
+/* ─── Variables de Color (Light Mode - Por defecto) ───────── */
 :root {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+
+  --bg-base: #f9f9f9;
+  --bg-sidebar: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f3f4f6;
+  --bg-input: #f9fafb;
+
+  --border-color: #e5e7eb;
+  --border-hover: #d1d5db;
+  --border-focus: #9ca3af;
+
+  --text-strong: #111827;
+  --text-normal: #374151;
+  --text-muted: #6b7280;
+  --text-faint: #9ca3af;
+
+  --btn-primary-bg: #111827;
+  --btn-primary-text: #ffffff;
+  --btn-primary-hover: #1f2937;
+
+  --btn-ghost-text: #4b5563;
+  --btn-ghost-hover-text: #111827;
+  --btn-ghost-hover-bg: #f3f4f6;
+
+  --stat-borrador: #9ca3af;
+  --stat-revision: #f59e0b;
+  --stat-aceptado: #10b981;
+  --stat-rechazado: #ef4444;
+  --stat-progreso: #3b82f6;
 }
 
-/* ─── html y body: sin centrar, sin max-width, sin padding ── */
+/* ─── Variables de Color (Dark Mode) ──────────────────────── */
+[data-theme="dark"] {
+  --bg-base: #080808;
+  --bg-sidebar: #0f0f0f;
+  --bg-card: #151515;
+  --bg-card-hover: #1f1f1f;
+  --bg-input: #121212;
+
+  /* Bordes más visibles en modo oscuro */
+  --border-color: #2a2a2a;
+  --border-hover: #3a3a3a;
+  --border-focus: #555555;
+
+  /* Textos con mayor contraste (más claros) */
+  --text-strong: #ffffff;
+  --text-normal: #e5e7eb;
+  --text-muted: #9ca3af;
+  --text-faint: #6b7280;
+
+  --btn-primary-bg: #ffffff;
+  --btn-primary-text: #000000;
+  --btn-primary-hover: #e5e7eb;
+
+  --btn-ghost-text: #9ca3af;
+  --btn-ghost-hover-text: #ffffff;
+  --btn-ghost-hover-bg: #1f1f1f;
+
+  --stat-borrador: #9ca3af;
+  --stat-revision: #fbbf24;
+  --stat-aceptado: #34d399;
+  --stat-rechazado: #f87171;
+  --stat-progreso: #60a5fa;
+}
+
+/* ─── Raíz ────────────────────────────────────────────────── */
 html {
   width: 100%;
   height: 100%;
@@ -25,16 +88,17 @@ body {
   min-height: 100vh;
   margin: 0;
   padding: 0;
-  background-color: #080808;
-  color: #e8e8e8;
-  /* SIN display:flex ni place-items que centraría el contenido */
+  font-family: var(--font-family);
+  background-color: var(--bg-base);
+  color: var(--text-normal);
+  transition: background-color 0.3s ease, color 0.3s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* ─── #app: ocupa TODO el espacio disponible ──────────────── */
 #app {
   width: 100%;
   min-height: 100vh;
-  /* SIN max-width, SIN margin auto, SIN padding, SIN text-align */
 }
 
 /* ─── Utilidades globales ─────────────────────────────────── */
