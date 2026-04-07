@@ -1,6 +1,8 @@
 import { DataSource } from 'typeorm';
 import { User, Rol } from '../users/entities/user.entity';
 import { Perfil } from '../users/entities/perfil.entity';
+import { Articulo, EstadoArticulo } from '../articulos/entities/articulo.entity';
+import { Asignacion } from '../asignaciones/entities/asignacion.entity';
 
 /**
  * SEED: Usuarios de prueba (1 por rol)
@@ -13,7 +15,7 @@ import { Perfil } from '../users/entities/perfil.entity';
 const AppDataSource = new DataSource({
   type: 'mariadb',
   url: process.env.MARIADB_URI || 'mysql://dbuser:dbpassword@mariadb:3306/peer_review_db',
-  entities: [User, Perfil],
+  entities: [User, Perfil, Articulo, Asignacion],
   synchronize: false,
 });
 
@@ -54,6 +56,8 @@ async function runSeed() {
 
   const userRepo = AppDataSource.getRepository(User);
   const perfilRepo = AppDataSource.getRepository(Perfil);
+  const articuloRepo = AppDataSource.getRepository(Articulo);
+  const asignacionRepo = AppDataSource.getRepository(Asignacion);
 
   for (const seed of SEED_USERS) {
     const existingUser = await userRepo.findOne({ where: { id: seed.id } });
@@ -80,6 +84,54 @@ async function runSeed() {
     await perfilRepo.save(perfil);
 
     console.log(`✅ Usuario creado: ${seed.email} [${seed.rol}] — ID: ${seed.id}`);
+  }
+
+  // ASIGNACIÓN DE PRUEBA: Asignar revisor al artículo "ultimo"
+  console.log('\n📝 Buscando artículo para asignar...');
+  
+  const revisor = await userRepo.findOne({ where: { email: 'revisor@diego.edu' } });
+  
+  // Buscar artículo por título que contenga "ultimo" o similar
+  const articulos = await articuloRepo.find();
+  const articuloUltimo = articulos.find(a => 
+    a.titulo.toLowerCase().includes('ultimo') || 
+    a.titulo.toLowerCase().includes('último')
+  );
+
+  if (!revisor) {
+    console.log('❌ No se encontró el revisor de prueba (revisor@diego.edu)');
+  } else if (!articuloUltimo) {
+    console.log('❌ No se encontró ningún artículo con "ultimo" en el título');
+    console.log(`   Artículos disponibles: ${articulos.map(a => `"${a.titulo}"`).join(', ')}`);
+  } else {
+    // Verificar si ya existe una asignación
+    const asignacionExistente = await asignacionRepo.findOne({
+      where: {
+        articulo_id: articuloUltimo.id,
+        revisor_id: revisor.id,
+      },
+    });
+
+    if (asignacionExistente) {
+      console.log(`⚠️  Ya existe asignación entre revisor "${revisor.email}" y artículo "${articuloUltimo.titulo}"`);
+    } else {
+      const asignacion = asignacionRepo.create({
+        id: 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa',
+        articulo_id: articuloUltimo.id,
+        revisor_id: revisor.id,
+        fecha_limite: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 días
+      });
+      await asignacionRepo.save(asignacion);
+
+      // Actualizar estado del artículo a "En Revisión"
+      articuloUltimo.estado = EstadoArticulo.EN_REVISION;
+      await articuloRepo.save(articuloUltimo);
+
+      console.log(`✅ Asignación creada:`);
+      console.log(`   📄 Artículo: "${articuloUltimo.titulo}" (ID: ${articuloUltimo.id})`);
+      console.log(`   👤 Revisor: ${revisor.email}`);
+      console.log(`   📅 Fecha límite: ${asignacion.fecha_limite.toLocaleDateString()}`);
+    }
   }
 
   console.log('\n🎉 Seed completado.');
