@@ -33,19 +33,41 @@
         </button>
       </nav>
 
-      <div class="sidebar-footer">
-        <div class="user-chip">
+      <div class="sidebar-footer relative-footer">
+        <div class="user-menu-dropdown" v-if="showUserMenu">
+           <button class="menu-item" @click="toggleTheme">
+              <svg v-if="isDark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+              </svg>
+              <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+              </svg>
+              Tema: {{ isDark ? 'Oscuro' : 'Claro' }}
+           </button>
+           <button class="menu-item text-danger" id="btn-salir-editor" @click="goBack">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Cerrar sesión
+           </button>
+        </div>
+        <button class="user-chip user-chip-btn" @click="showUserMenu = !showUserMenu" :class="{ active: showUserMenu }">
           <div class="user-avatar">E</div>
           <div class="user-info">
             <span class="user-name">Editor</span>
             <span class="user-role">editor@uni.edu</span>
           </div>
-        </div>
-        <button class="back-btn" id="btn-salir-editor" @click="goBack">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke-linecap="round" stroke-linejoin="round"/>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
-          Salir
         </button>
       </div>
     </aside>
@@ -166,62 +188,78 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { ref } from 'vue'
+import { useTheme } from '../composables/useTheme'
 
 const router = useRouter()
+const { isDark, toggleTheme } = useTheme()
+
+const showUserMenu = ref(false)
 const vistaActiva = ref<string>('overview')
 const goBack = () => router.push('/')
 </script>
 
 <style scoped>
-.dashboard { display: flex; min-height: 100vh; background: #080808; }
-.sidebar { width: 220px; min-width: 220px; border-right: 1px solid #1e1e1e; display: flex; flex-direction: column; background: #090909; position: sticky; top: 0; height: 100vh; }
-.sidebar-header { padding: 1.5rem 1.25rem 1rem; border-bottom: 1px solid #1e1e1e; }
+.dashboard { display: flex; min-height: 100vh; background: transparent; }
+.sidebar { width: 220px; min-width: 220px; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; background: var(--bg-sidebar); position: sticky; top: 0; height: 100vh; }
+.sidebar-header { padding: 1.5rem 1.25rem 1rem; border-bottom: 1px solid var(--border-color); }
 .brand { display: flex; align-items: center; gap: 0.45rem; }
-.brand-icon { width: 16px; height: 16px; color: #fff; }
-.brand-name { font-size: 0.9rem; font-weight: 700; color: #fff; letter-spacing: -0.02em; }
+.brand-icon { width: 16px; height: 16px; color: var(--text-strong); }
+.brand-name { font-size: 0.9rem; font-weight: 700; color: var(--text-strong); letter-spacing: -0.02em; }
 .sidebar-nav { flex: 1; display: flex; flex-direction: column; gap: 2px; padding: 1rem 0.75rem; }
-.nav-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.75rem; border-radius: 6px; font-size: 0.8rem; font-weight: 500; color: #555; transition: all 0.15s ease; text-align: left; width: 100%; background: transparent; border: none; cursor: pointer; }
+.nav-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.75rem; border-radius: 6px; font-size: 0.8rem; font-weight: 500; color: var(--text-muted); transition: all 0.15s ease; text-align: left; width: 100%; background: transparent; border: none; cursor: pointer; }
 .nav-item svg { width: 15px; height: 15px; flex-shrink: 0; }
-.nav-item:hover { background: #141414; color: #bbb; }
-.nav-item.active { background: #1a1a1a; color: #fff; }
-.sidebar-footer { padding: 1rem 0.75rem; border-top: 1px solid #1e1e1e; display: flex; flex-direction: column; gap: 0.75rem; }
+.nav-item:hover { background: var(--bg-card-hover); color: var(--text-normal); }
+.nav-item.active { background: var(--bg-input); color: var(--text-strong); }
+.sidebar-footer { padding: 1rem 0.75rem; border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.75rem; }
+.relative-footer { position: relative; }
+.user-chip-btn { text-align: left; width: 100%; border: none; background: transparent; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s; }
+.user-chip-btn:hover { background: var(--bg-card-hover); }
+.user-chip-btn.active { background: var(--bg-input); }
+.user-chip-btn .chevron { width: 16px; height: 16px; color: var(--text-faint); margin-left: auto; transition: transform 0.2s; }
+.user-chip-btn.active .chevron { transform: rotate(180deg); }
 .user-chip { display: flex; align-items: center; gap: 0.6rem; }
-.user-avatar { width: 28px; height: 28px; border-radius: 50%; background: #1f1f1f; border: 1px solid #2e2e2e; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: #fff; flex-shrink: 0; }
+.user-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--bg-input); border: 1px solid var(--border-hover); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: var(--text-strong); flex-shrink: 0; }
 .user-info { display: flex; flex-direction: column; min-width: 0; }
-.user-name { font-size: 0.8rem; font-weight: 600; color: #ddd; }
-.user-role { font-size: 0.7rem; color: #555; }
-.back-btn { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: #444; transition: color 0.15s; background: transparent; border: none; cursor: pointer; padding: 0; }
-.back-btn svg { width: 13px; height: 13px; }
-.back-btn:hover { color: #888; }
+.user-name { font-size: 0.8rem; font-weight: 600; color: var(--text-strong); }
+.user-role { font-size: 0.7rem; color: var(--text-muted); }
+
+.user-menu-dropdown { position: absolute; bottom: calc(100% + 5px); left: 0.75rem; right: 0.75rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 0.25rem; z-index: 50; }
+[data-theme="dark"] .user-menu-dropdown { box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+.menu-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; width: 100%; border: none; background: transparent; text-align: left; font-size: 0.8rem; color: var(--text-normal); font-weight: 500; cursor: pointer; border-radius: 4px; transition: background 0.2s; }
+.menu-item svg { width: 15px; height: 15px; color: var(--text-muted); }
+.menu-item:hover { background: var(--bg-card-hover); color: var(--text-strong); }
+.menu-item.text-danger { color: var(--stat-rechazado); }
+.menu-item.text-danger svg { color: var(--stat-rechazado); }
+.menu-item.text-danger:hover { background: rgba(248, 113, 113, 0.1); }
 .main { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
-.topbar { display: flex; align-items: flex-start; justify-content: space-between; padding: 2rem 2.5rem 1.5rem; border-bottom: 1px solid #1e1e1e; }
-.page-title { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.02em; color: #fff; margin-bottom: 0.2rem; }
-.page-sub { font-size: 0.8rem; color: #666; }
-.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid #1e1e1e; }
-.stat-card { padding: 1.75rem 2rem; border-right: 1px solid #1e1e1e; display: flex; flex-direction: column; gap: 0.5rem; }
+.topbar { display: flex; align-items: flex-start; justify-content: space-between; padding: 2rem 2.5rem 1.5rem; border-bottom: 1px solid var(--border-color); }
+.page-title { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.02em; color: var(--text-strong); margin-bottom: 0.2rem; }
+.page-sub { font-size: 0.8rem; color: var(--text-faint); }
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--border-color); }
+.stat-card { padding: 1.75rem 2rem; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.5rem; }
 .stat-card:last-child { border-right: none; }
 .stat-header { display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.25rem; }
 .stat-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.stat-dot.recibido  { background: #888; }
-.stat-dot.revision  { background: #e5a24c; }
-.stat-dot.aceptado  { background: #4ade80; }
-.stat-dot.rechazado { background: #f87171; }
-.stat-label { font-size: 0.72rem; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.05em; }
-.stat-value { font-size: 2.4rem; font-weight: 800; letter-spacing: -0.05em; color: #fff; line-height: 1; }
-.stat-desc { font-size: 0.75rem; color: #444; line-height: 1.4; margin-top: 0.2rem; }
+.stat-dot.recibido  { background: var(--stat-borrador); }
+.stat-dot.revision  { background: var(--stat-revision); }
+.stat-dot.aceptado  { background: var(--stat-aceptado); }
+.stat-dot.rechazado { background: var(--stat-rechazado); }
+.stat-label { font-size: 0.72rem; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.stat-value { font-size: 2.4rem; font-weight: 800; letter-spacing: -0.05em; color: var(--text-strong); line-height: 1; }
+.stat-desc { font-size: 0.75rem; color: var(--text-faint); line-height: 1.4; margin-top: 0.2rem; }
 .section { padding: 2rem 2.5rem; flex: 1; }
-.section-title { font-size: 0.8rem; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 1.5rem; }
+.section-title { font-size: 0.8rem; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 1.5rem; }
 .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 2rem; gap: 0.75rem; text-align: center; }
-.empty-icon { width: 44px; height: 44px; color: #222; margin-bottom: 0.5rem; }
+.empty-icon { width: 44px; height: 44px; color: var(--border-hover); margin-bottom: 0.5rem; }
 .empty-icon svg { width: 100%; height: 100%; }
-.empty-state h3 { font-size: 0.95rem; font-weight: 600; color: #666; }
-.empty-state p { font-size: 0.82rem; color: #444; max-width: 280px; line-height: 1.6; }
-.btn-primary { background: #fff; color: #000; font-size: 0.825rem; font-weight: 600; padding: 0.6rem 1.2rem; border-radius: 6px; border: none; cursor: pointer; transition: opacity 0.15s; white-space: nowrap; }
+.empty-state h3 { font-size: 0.95rem; font-weight: 600; color: var(--text-faint); }
+.empty-state p { font-size: 0.82rem; color: var(--text-muted); max-width: 280px; line-height: 1.6; }
+.btn-primary { background: var(--btn-primary-bg); color: var(--btn-primary-text); font-size: 0.825rem; font-weight: 600; padding: 0.6rem 1.2rem; border-radius: 6px; border: none; cursor: pointer; transition: opacity 0.15s; white-space: nowrap; }
 .btn-primary:hover { opacity: 0.88; }
 @media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 768px) {
   .dashboard { flex-direction: column; }
-  .sidebar { width: 100%; min-width: unset; height: auto; position: static; border-right: none; border-bottom: 1px solid #1e1e1e; }
+  .sidebar { width: 100%; min-width: unset; height: auto; position: static; border-right: none; border-bottom: 1px solid var(--border-color); }
   .sidebar-nav { flex-direction: row; overflow-x: auto; padding: 0.5rem; }
   .nav-item { white-space: nowrap; }
   .topbar { flex-direction: column; gap: 1rem; padding: 1.25rem; }
