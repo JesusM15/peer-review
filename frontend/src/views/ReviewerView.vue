@@ -71,7 +71,7 @@
               <span class="stat-dot pendiente"></span>
               <span class="stat-label">Pendientes</span>
             </div>
-            <span class="stat-value">0</span>
+            <span class="stat-value">{{ asignacionesPendientes.length }}</span>
             <p class="stat-desc">Artículos asignados sin iniciar</p>
           </div>
           <div class="stat-card">
@@ -79,7 +79,7 @@
               <span class="stat-dot progreso"></span>
               <span class="stat-label">En progreso</span>
             </div>
-            <span class="stat-value">0</span>
+            <span class="stat-value">{{ asignacionesEnProgreso.length }}</span>
             <p class="stat-desc">Revisiones actualmente en curso</p>
           </div>
           <div class="stat-card">
@@ -87,14 +87,20 @@
               <span class="stat-dot completado"></span>
               <span class="stat-label">Completadas</span>
             </div>
-            <span class="stat-value">0</span>
+            <span class="stat-value">{{ asignacionesCompletadas.length }}</span>
             <p class="stat-desc">Revisiones enviadas al editor</p>
           </div>
         </div>
 
         <div class="section">
           <h2 class="section-title">Asignaciones recientes</h2>
-          <div class="empty-state">
+          
+          <div v-if="isLoadingAsignaciones" class="loading-state">
+            <div class="spinner"></div>
+            <p>Cargando asignaciones...</p>
+          </div>
+          
+          <div v-else-if="asignaciones.length === 0" class="empty-state">
             <div class="empty-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
                 <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/>
@@ -102,6 +108,21 @@
             </div>
             <h3>Sin asignaciones pendientes</h3>
             <p>Cuando el editor te asigne un artículo para revisar, aparecerá aquí.</p>
+          </div>
+          
+          <div v-else class="assignments-list">
+            <div v-for="asignacion in asignaciones.slice(0, 5)" :key="asignacion.id" class="assignment-card">
+              <div class="assignment-info">
+                <h4 class="assignment-title">{{ asignacion.articulo?.titulo || 'Sin título' }}</h4>
+                <p class="assignment-meta">
+                  Autor: {{ asignacion.articulo?.autor?.nombre || 'Desconocido' }} · 
+                  Fecha límite: {{ formatDate(asignacion.fecha_limite) }}
+                </p>
+              </div>
+              <button class="btn-primary" @click="irARevision(asignacion.id, asignacion.articulo_id)">
+                Revisar
+              </button>
+            </div>
           </div>
         </div>
       </template>
@@ -115,7 +136,12 @@
           </div>
         </header>
         <div class="section">
-          <div class="empty-state">
+          <div v-if="isLoadingAsignaciones" class="loading-state">
+            <div class="spinner"></div>
+            <p>Cargando asignaciones...</p>
+          </div>
+          
+          <div v-else-if="asignaciones.length === 0" class="empty-state">
             <div class="empty-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
                 <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/>
@@ -123,6 +149,36 @@
             </div>
             <h3>Sin asignaciones activas</h3>
             <p>Cuando el editor te asigne un artículo, aparecerá en esta sección.</p>
+          </div>
+          
+          <div v-else class="assignments-list">
+            <div v-for="asignacion in asignaciones" :key="asignacion.id" class="assignment-card full">
+              <div class="assignment-header">
+                <div class="assignment-status" :class="asignacion.articulo?.estado?.toLowerCase().replace(' ', '-')">
+                  {{ asignacion.articulo?.estado || 'Pendiente' }}
+                </div>
+              </div>
+              <div class="assignment-info">
+                <h4 class="assignment-title">{{ asignacion.articulo?.titulo || 'Sin título' }}</h4>
+                <p class="assignment-meta">
+                  <span class="meta-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    {{ asignacion.articulo?.autor?.nombre || 'Desconocido' }}
+                  </span>
+                  <span class="meta-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    {{ formatDate(asignacion.fecha_limite) }}
+                  </span>
+                </p>
+              </div>
+              <button class="btn-primary" @click="irARevision(asignacion.id, asignacion.articulo_id)">
+                Revisar
+              </button>
+            </div>
           </div>
         </div>
       </template>
@@ -193,12 +249,69 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 interface CurrentUser { id: string; email: string; nombre: string; rol: string }
 const currentUser = ref<CurrentUser | null>(null)
 
+// ─── Asignaciones ──────────────────────────────────────────────────────────────
+interface Asignacion {
+  id: string
+  articulo_id: string
+  revisor_id: string
+  fecha_limite: string
+  articulo?: {
+    id: string
+    titulo: string
+    estado: string
+    autor?: { nombre: string; email: string }
+  }
+}
+
+const asignaciones = ref<Asignacion[]>([])
+const isLoadingAsignaciones = ref(false)
+
 onMounted(() => {
   try {
     const raw = localStorage.getItem('user')
-    if (raw) currentUser.value = JSON.parse(raw)
+    if (raw) {
+      currentUser.value = JSON.parse(raw)
+      // Cargar asignaciones del revisor
+      if (currentUser.value?.id) {
+        cargarAsignaciones()
+      }
+    }
   } catch { currentUser.value = null }
 })
+
+const cargarAsignaciones = async () => {
+  if (!currentUser.value?.id) return
+  
+  try {
+    isLoadingAsignaciones.value = true
+    const response = await fetch(
+      `${API_BASE_URL}/asignaciones?revisor_id=${currentUser.value.id}&include_relations=true`
+    )
+    if (response.ok) {
+      asignaciones.value = await response.json()
+    }
+  } catch (error) {
+    console.error('Error al cargar asignaciones:', error)
+  } finally {
+    isLoadingAsignaciones.value = false
+  }
+}
+
+const asignacionesPendientes = computed(() =>
+  asignaciones.value.filter(a => !a.articulo?.estado?.includes('Revisión'))
+)
+
+const asignacionesEnProgreso = computed(() =>
+  asignaciones.value.filter(a => a.articulo?.estado?.includes('Revisión'))
+)
+
+const asignacionesCompletadas = computed(() =>
+  asignaciones.value.filter(a => a.articulo?.estado?.includes('Aceptado') || a.articulo?.estado?.includes('Rechazado'))
+)
+
+const irARevision = (asignacionId: string, articuloId: string) => {
+  router.push(`/reviewer/revision/${articuloId}`)
+}
 
 const userInitial = computed(() =>
   currentUser.value?.nombre ? currentUser.value.nombre[0].toUpperCase() : 'R'
@@ -249,6 +362,7 @@ const formatFileSize = (bytes: number): string => {
 }
 
 const cancelarFormulario = () => { tituloArticulo.value = ''; archivoPdf.value = null }
+const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString()
 </script>
 
 <style scoped>
@@ -320,6 +434,120 @@ const cancelarFormulario = () => { tituloArticulo.value = ''; archivoPdf.value =
 .btn-ghost:hover { color: #999; border-color: #333; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .spinner { width: 14px; height: 14px; animation: spin 0.8s linear infinite; }
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  gap: 1rem;
+  color: #666;
+}
+
+.loading-state p {
+  font-size: 0.9rem;
+}
+
+.assignments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.assignment-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  background: #0d0d0d;
+  border: 1px solid #1e1e1e;
+  border-radius: 8px;
+  transition: border-color 0.15s;
+}
+
+.assignment-card:hover {
+  border-color: #2a2a2a;
+}
+
+.assignment-card.full {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.assignment-header {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.assignment-status {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.35rem 0.75rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.assignment-status.borrador {
+  background: rgba(229, 162, 76, 0.1);
+  color: #e5a24c;
+}
+
+.assignment-status.en-revisión,
+.assignment-status.en-revision {
+  background: rgba(96, 165, 250, 0.1);
+  color: #60a5fa;
+}
+
+.assignment-status.aceptado {
+  background: rgba(74, 222, 128, 0.1);
+  color: #4ade80;
+}
+
+.assignment-status.rechazado {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.assignment-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.assignment-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 0.35rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.assignment-meta {
+  font-size: 0.78rem;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.meta-item svg {
+  width: 14px;
+  height: 14px;
+  color: #444;
+}
+
 @media (max-width: 768px) {
   .dashboard { flex-direction: column; }
   .sidebar { width: 100%; min-width: unset; height: auto; position: static; border-right: none; border-bottom: 1px solid #1e1e1e; }

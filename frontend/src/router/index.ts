@@ -3,6 +3,7 @@ import RoleSelection from '../views/RoleSelection.vue'
 import EditorView from '../views/EditorView.vue'
 import ReviewerView from '../views/ReviewerView.vue'
 import AuthorView from '../views/AuthorView.vue'
+import RevisionForm from '../views/RevisionForm.vue'
 
 const routes = [
   {
@@ -19,6 +20,11 @@ const routes = [
     path: '/reviewer',
     name: 'Reviewer',
     component: ReviewerView
+  },
+  {
+    path: '/reviewer/revision/:id',
+    name: 'RevisionForm',
+    component: RevisionForm
   },
   {
     path: '/author',

@@ -15,6 +15,14 @@ export class AsignacionesService {
     return this.asignacionRepository.find({ relations });
   }
 
+  async findByRevisor(revisorId: string, includeRelations: boolean = false) {
+    const relations = includeRelations ? ['articulo', 'revisor', 'articulo.autor'] : [];
+    return this.asignacionRepository.find({
+      where: { revisor_id: revisorId },
+      relations
+    });
+  }
+
   async findOne(id: string, includeRelations: boolean = false) {
     const relations = includeRelations ? ['articulo', 'revisor', 'articulo.autor'] : [];
     const asignacion = await this.asignacionRepository.findOne({ where: { id }, relations });
