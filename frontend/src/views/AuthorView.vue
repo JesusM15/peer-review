@@ -313,9 +313,11 @@
 import { useRouter } from 'vue-router'
 import { ref, onMounted, computed } from 'vue'
 import { useTheme } from '../composables/useTheme'
+import { useToast } from '../composables/useToast'
 
 const router = useRouter()
 const { isDark, toggleTheme } = useTheme()
+const { showToast } = useToast()
 
 const showUserMenu = ref(false)
 
@@ -443,7 +445,7 @@ const verArticulo = async (articuloId: string) => {
     console.log('Artículo cargado:', data)
   } catch (error) {
     console.error('Error al cargar artículo:', error)
-    alert('Error al cargar el artículo')
+    showToast('Error al cargar el artículo', 'error')
     vistaActiva.value = 'borradores'
   } finally {
     loadingPdf.value = false
@@ -493,7 +495,7 @@ const submitArticulo = async () => {
     if (!response.ok) throw new Error(`Error HTTP: ${response.status}`)
     const result = await response.json()
     console.log('Artículo registrado:', result)
-    alert(`Artículo "${tituloArticulo.value}" registrado con éxito`)
+    showToast(`Artículo "${tituloArticulo.value}" registrado con éxito`, 'success')
     tituloArticulo.value = ''
     archivoPdf.value = null
     
@@ -503,7 +505,7 @@ const submitArticulo = async () => {
   } catch (error) {
     console.error('Error al registrar artículo:', error)
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-    alert(`Error al registrar artículo: ${errorMessage}`)
+    showToast(`Error al registrar artículo: ${errorMessage}`, 'error')
   } finally {
     isLoading.value = false
   }
@@ -520,7 +522,7 @@ const handleFileUpload = (event: Event) => {
   if (target.files && target.files[0]) {
     const file = target.files[0]
     if (file.type === 'application/pdf') { archivoPdf.value = file }
-    else { alert('Por favor, seleccione un archivo PDF válido'); target.value = '' }
+    else { showToast('Por favor, seleccione un archivo PDF válido', 'error'); target.value = '' }
   }
 }
 

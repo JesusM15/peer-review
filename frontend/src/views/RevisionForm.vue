@@ -271,9 +271,11 @@
 <script setup lang="ts">
 import { useRouter, useRoute } from 'vue-router'
 import { ref, onMounted, computed } from 'vue'
+import { useToast } from '../composables/useToast'
 
 const router = useRouter()
 const route = useRoute()
+const { showToast } = useToast()
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 
@@ -383,11 +385,11 @@ const submitRevision = async () => {
       throw new Error(`Error HTTP: ${response.status}`)
     }
 
-    alert('Revisión enviada con éxito')
+    showToast('Revisión enviada con éxito', 'success')
     router.push('/reviewer')
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-    alert(`Error al enviar la revisión: ${errorMessage}`)
+    showToast(`Error al enviar la revisión: ${errorMessage}`, 'error')
   } finally {
     isSubmitting.value = false
   }
