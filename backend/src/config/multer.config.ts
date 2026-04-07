@@ -1,8 +1,16 @@
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import * as fs from 'fs';
+
+const uploadsDir = process.env.UPLOADS_DIR || './uploads/pdfs';
+
+// Ensure directory exists
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 export const storageConfig = diskStorage({
-  destination: './uploads/pdfs',
+  destination: uploadsDir,
   filename: (req, file, cb) => {
     const randomName = Array(32)
       .fill(null)

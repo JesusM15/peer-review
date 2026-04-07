@@ -5,6 +5,11 @@ import { AsignacionesService } from './asignaciones.service';
 export class AsignacionesController {
   constructor(private readonly asignacionesService: AsignacionesService) {}
 
+  @Get('revisores')
+  findRevisoresConConteo() {
+    return this.asignacionesService.findRevisoresConConteo();
+  }
+
   @Get()
   findAll(@Query('include_relations') includeRelations?: string, @Query('revisor_id') revisorId?: string) {
     const include = includeRelations === 'true';
@@ -14,21 +19,16 @@ export class AsignacionesController {
     return this.asignacionesService.findAll(include);
   }
 
-  @Get('revisores')
-  findRevisoresConConteo() {
-    return this.asignacionesService.findRevisoresConConteo();
+  @Get('revisor/:revisor_id')
+  findByRevisor(@Param('revisor_id') revisorId: string, @Query('include_relations') includeRelations?: string) {
+    const include = includeRelations === 'true';
+    return this.asignacionesService.findByRevisor(revisorId, include);
   }
 
   @Get(':id')
   findOne(@Param('id') id: string, @Query('include_relations') includeRelations?: string) {
     const include = includeRelations === 'true';
     return this.asignacionesService.findOne(id, include);
-  }
-
-  @Get('revisor/:revisor_id')
-  findByRevisor(@Param('revisor_id') revisorId: string, @Query('include_relations') includeRelations?: string) {
-    const include = includeRelations === 'true';
-    return this.asignacionesService.findByRevisor(revisorId, include);
   }
 
   @Post()

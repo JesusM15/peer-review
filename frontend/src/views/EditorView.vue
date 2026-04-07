@@ -228,7 +228,7 @@
             <h3 class="sub-title">Revisores ya asignados</h3>
             <div class="revisores-asignados-list">
               <div v-for="rv in revisoresDelArticulo" :key="rv.revisor_id" class="revisor-asignado-chip">
-                <span class="chip-avatar">{{ (rv.revisor?.perfil?.nombre || rv.revisor_id).charAt(0).toUpperCase() }}</span>
+                <span class="chip-avatar">{{ ((rv.revisor?.perfil?.nombre || rv.revisor_id || '?') as string).charAt(0).toUpperCase() }}</span>
                 <span>{{ rv.revisor?.perfil?.nombre || rv.revisor_id }}</span>
                 <button class="chip-remove" @click="eliminarAsignacion(rv.id)" title="Quitar revisor">×</button>
               </div>
@@ -253,7 +253,7 @@
                 @click="abrirModalRevisor(rev)"
               >
                 <div class="revisor-card-top">
-                  <div class="rev-avatar">{{ rev.nombre.charAt(0).toUpperCase() }}</div>
+                  <div class="rev-avatar">{{ (rev.nombre || '?').charAt(0).toUpperCase() }}</div>
                   <div class="rev-info">
                     <span class="rev-nombre">{{ rev.nombre }}</span>
                     <span class="rev-carrera">{{ rev.carrera }}</span>
@@ -265,7 +265,7 @@
                   </div>
                 </div>
                 <div class="rev-tags">
-                  <span v-for="esp in rev.especialidades.slice(0,2)" :key="esp" class="tag">{{ esp }}</span>
+                  <span v-for="esp in (rev.especialidades || []).slice(0,2)" :key="esp" class="tag">{{ esp }}</span>
                 </div>
                 <div class="rev-footer">
                   <span v-if="estaAsignado(rev.id)" class="status-chip asignado-chip">Ya asignado</span>
@@ -324,7 +324,7 @@
                 @click="abrirModalRevisor(rev)"
               >
                 <div class="revisor-card-top">
-                  <div class="rev-avatar rev-avatar-lg">{{ rev.nombre.charAt(0).toUpperCase() }}</div>
+                  <div class="rev-avatar rev-avatar-lg">{{ (rev.nombre || '?').charAt(0).toUpperCase() }}</div>
                   <div class="rev-info">
                     <span class="rev-nombre">{{ rev.nombre }}</span>
                     <span class="rev-carrera">{{ rev.carrera }}</span>
@@ -357,7 +357,7 @@
       <div class="modal-card">
         <button class="modal-close" @click="cerrarModal">×</button>
         <div class="modal-header">
-          <div class="modal-avatar">{{ modalRevisor.nombre.charAt(0).toUpperCase() }}</div>
+          <div class="modal-avatar">{{ (modalRevisor.nombre || '?').charAt(0).toUpperCase() }}</div>
           <div>
             <h2 class="modal-nombre">{{ modalRevisor.nombre }}</h2>
             <span class="modal-email">{{ modalRevisor.email }}</span>
