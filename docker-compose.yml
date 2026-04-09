@@ -12,12 +12,14 @@ services:
     env_file:
       - ./backend/.env
     depends_on:
-      - mariadb
-      - mongodb
-      - redis
-
-      
+      mariadb:
+        condition: service_healthy
+      mongodb:
+        condition: service_started
+      redis:
+        condition: service_started
     command: npm run start:dev
+    restart: unless-stopped
 
   mariadb:
     image: mariadb:10.11
@@ -32,6 +34,12 @@ services:
       - '3307:3306'
     volumes:
       - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   mongodb:
     image: mongo:6.0
