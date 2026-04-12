@@ -1,6 +1,5 @@
 import { DataSource } from 'typeorm';
 import { User, Rol } from '../users/entities/user.entity';
-import { Perfil } from '../users/entities/perfil.entity';
 import { Articulo, EstadoArticulo } from '../articulos/entities/articulo.entity';
 import { Asignacion } from '../asignaciones/entities/asignacion.entity';
 
@@ -15,7 +14,7 @@ import { Asignacion } from '../asignaciones/entities/asignacion.entity';
 const AppDataSource = new DataSource({
   type: 'mariadb',
   url: process.env.MARIADB_URI || 'mysql://dbuser:dbpassword@mariadb:3306/peer_review_db',
-  entities: [User, Perfil, Articulo, Asignacion],
+  entities: [User, Articulo, Asignacion],
   synchronize: false,
 });
 
@@ -26,8 +25,6 @@ const SEED_USERS = [
     password: 'password123',
     rol: Rol.AUTOR,
     nombre: 'Ana García',
-    carrera: 'Ingeniería de Software',
-    especialidades: ['Machine Learning', 'Bases de Datos'],
   },
   {
     id: '22222222-2222-4222-a222-222222222222',
@@ -35,8 +32,6 @@ const SEED_USERS = [
     password: 'password123',
     rol: Rol.REVISOR,
     nombre: 'Carlos Martínez',
-    carrera: 'Ciencias de la Computación',
-    especialidades: ['Algoritmos', 'Seguridad Informática'],
   },
   {
     id: '33333333-3333-4333-a333-333333333333',
@@ -44,8 +39,13 @@ const SEED_USERS = [
     password: 'password123',
     rol: Rol.EDITOR,
     nombre: 'Laura Torres',
-    carrera: 'Sistemas de Información',
-    especialidades: ['Gestión Editorial', 'Investigación Académica'],
+  },
+  {
+    id: '44444444-4444-4444-a444-444444444444',
+    email: 'admin@diego.edu',
+    password: 'admin123',
+    rol: Rol.ADMIN,
+    nombre: 'Administrador',
   },
 ];
 
@@ -55,7 +55,6 @@ async function runSeed() {
   console.log('✅ Conectado.\n');
 
   const userRepo = AppDataSource.getRepository(User);
-  const perfilRepo = AppDataSource.getRepository(Perfil);
   const articuloRepo = AppDataSource.getRepository(Articulo);
   const asignacionRepo = AppDataSource.getRepository(Asignacion);
 
@@ -69,19 +68,12 @@ async function runSeed() {
 
     const user = userRepo.create({
       id: seed.id,
+      nombre: seed.nombre,
       email: seed.email,
       password: seed.password,
       rol: seed.rol,
     });
     await userRepo.save(user);
-
-    const perfil = perfilRepo.create({
-      id: seed.id, // mismo UUID que User
-      nombre: seed.nombre,
-      carrera: seed.carrera,
-      especialidades: seed.especialidades,
-    });
-    await perfilRepo.save(perfil);
 
     console.log(`✅ Usuario creado: ${seed.email} [${seed.rol}] — ID: ${seed.id}`);
   }

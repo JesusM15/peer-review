@@ -52,7 +52,7 @@
               </svg>
               Tema: {{ isDark ? 'Oscuro' : 'Claro' }}
            </button>
-           <button class="menu-item text-danger" id="btn-salir-autor" @click="goBack">
+           <button class="menu-item text-danger" id="btn-salir-autor" @click="logout">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
@@ -314,26 +314,19 @@ import { useRouter } from 'vue-router'
 import { ref, onMounted, computed } from 'vue'
 import { useTheme } from '../composables/useTheme'
 import { useToast } from '../composables/useToast'
+import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
 const { isDark, toggleTheme } = useTheme()
 const { showToast } = useToast()
+const authStore = useAuthStore()
 
 const showUserMenu = ref(false)
 
 const vistaActiva = ref<string>('overview')
 
-// ─── Usuario de sesión (desde localStorage) ───────────────────────────────
-interface CurrentUser {
-  id: string
-  email: string
-  nombre: string
-  rol: string
-  carrera: string
-  especialidades: string[]
-}
-
-const currentUser = ref<CurrentUser | null>(null)
+// ─── Usuario de sesión (desde Pinia store) ───────────────────────────────
+const currentUser = computed(() => authStore.user)
 
 // ─── Artículos ─────────────────────────────────────────────────────────────
 interface Articulo {
@@ -371,20 +364,25 @@ const stats = computed(() => {
 })
 
 onMounted(async () => {
-  try {
-    const raw = localStorage.getItem('user')
-    if (raw) currentUser.value = JSON.parse(raw)
-    
-    // Cargar artículos del usuario
-    await cargarArticulos()
-  } catch {
-    currentUser.value = null
+  // Verificar autenticación
+  if (!authStore.isAuthenticated) {
+    router.push('/login')
+    return
   }
+  
+  // Cargar artículos del usuario
+  await cargarArticulos()
 })
 
 const userInitial = computed(() =>
   currentUser.value?.nombre ? currentUser.value.nombre[0].toUpperCase() : 'A'
 )
+
+// ─── Logout ─────────────────────────────────────────────────────────
+const logout = () => {
+  authStore.logout()
+  router.push('/login')
+}
 
 // ─── Formulario ─────────────────────────────────────────────────────────
 const message = ref<string>('')

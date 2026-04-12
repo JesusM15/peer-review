@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Asignacion } from './entities/asignacion.entity';
 import { User, Rol } from '../users/entities/user.entity';
-import { Perfil } from '../users/entities/perfil.entity';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -13,8 +12,6 @@ export class AsignacionesService {
     private readonly asignacionRepository: Repository<Asignacion>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    @InjectRepository(Perfil)
-    private readonly perfilRepository: Repository<Perfil>,
   ) {}
 
   async findAll(includeRelations: boolean = false) {
@@ -65,9 +62,9 @@ export class AsignacionesService {
           id: revisor.id,
           email: revisor.email,
           rol: revisor.rol,
-          nombre: revisor.perfil?.nombre || revisor.email,
-          carrera: revisor.perfil?.carrera || '',
-          especialidades: revisor.perfil?.especialidades || [],
+          nombre: revisor.nombre || revisor.email,
+          carrera: '',
+          especialidades: [],
           articulos_asignados: totalAsignados,
           puede_recibir_mas: totalAsignados < 3,
           articulos: asignaciones.map((a) => ({
