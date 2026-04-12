@@ -262,6 +262,11 @@
                     <span class="rev-count" :class="{ 'count-full': rev.articulos_asignados >= 3 }">
                       {{ rev.articulos_asignados }}/3
                     </span>
+                    <button class="gmail-btn gmail-btn-sm" @click.stop="enviarCorreoGmail(rev.email)" title="Enviar correo por Gmail">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
                   </div>
                 </div>
                 <div class="rev-tags">
@@ -335,6 +340,11 @@
                       {{ rev.articulos_asignados }}/3
                     </span>
                     <span class="rev-count-label">artículos</span>
+                    <button class="gmail-btn" @click.stop="enviarCorreoGmail(rev.email)" title="Enviar correo por Gmail">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
                   </div>
                 </div>
                 <div class="rev-tags">
@@ -594,6 +604,15 @@ async function eliminarAsignacion(asignacionId: string) {
   }
 }
 
+// ── Gmail button ───────────────────────────────────────
+function enviarCorreoGmail(reviewerEmail: string) {
+  const editorEmail = 'editor@uni.edu'
+  const subject = encodeURIComponent('Comunicación sobre revisión de artículo')
+  const body = encodeURIComponent(`Estimado/a revisor/a,\n\nLe escribo en relación con la revisión de artículos en el sistema.\n\nAtentamente,\nEditor`)
+  const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${reviewerEmail}&cc=${editorEmail}&su=${subject}&body=${body}`
+  window.open(gmailUrl, '_blank')
+}
+
 // ── Init ──────────────────────────────────────────────
 onMounted(async () => {
   await cargarArticulos()
@@ -727,6 +746,11 @@ onMounted(async () => {
 .rev-count.count-full { background: rgba(248,113,113,0.12); color: #dc2626; border-color: rgba(248,113,113,0.3); }
 [data-theme="dark"] .rev-count.count-full { color: #f87171; }
 .rev-count-label { font-size: 0.65rem; color: var(--text-faint); }
+.gmail-btn { background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 0.3rem; border-radius: 4px; transition: all 0.15s; margin-top: 0.2rem; }
+.gmail-btn:hover { background: var(--bg-card-hover); color: #ea4335; }
+.gmail-btn svg { width: 16px; height: 16px; }
+.gmail-btn-sm { padding: 0.2rem; }
+.gmail-btn-sm svg { width: 14px; height: 14px; }
 .rev-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; }
 .tag { font-size: 0.68rem; font-weight: 500; padding: 0.2rem 0.5rem; border-radius: 99px; background: var(--bg-input); color: var(--text-muted); border: 1px solid var(--border-color); }
 .rev-footer { margin-top: 0.75rem; }
