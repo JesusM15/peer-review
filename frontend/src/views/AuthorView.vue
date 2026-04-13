@@ -363,6 +363,11 @@ const stats = computed(() => {
   }
 })
 
+// ─── Borradores ─────────────────────────────────────────────────────────────
+const borradores = computed(() => {
+  return articulos.value.filter(a => a.estado === 'Borrador')
+})
+
 onMounted(async () => {
   // Verificar autenticación
   if (!authStore.isAuthenticated) {

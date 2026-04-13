@@ -1,5 +1,6 @@
 import { DataSource } from 'typeorm';
 import { User, Rol } from '../users/entities/user.entity';
+import { Perfil } from '../users/entities/perfil.entity';
 import { Articulo, EstadoArticulo } from '../articulos/entities/articulo.entity';
 import { Asignacion } from '../asignaciones/entities/asignacion.entity';
 
@@ -14,7 +15,7 @@ import { Asignacion } from '../asignaciones/entities/asignacion.entity';
 const AppDataSource = new DataSource({
   type: 'mariadb',
   url: process.env.MARIADB_URI || 'mysql://dbuser:dbpassword@mariadb:3306/peer_review_db',
-  entities: [User, Articulo, Asignacion],
+  entities: [User, Perfil, Articulo, Asignacion],
   synchronize: false,
 });
 
@@ -59,13 +60,23 @@ async function runSeed() {
   const asignacionRepo = AppDataSource.getRepository(Asignacion);
 
   for (const seed of SEED_USERS) {
-    const existingUser = await userRepo.findOne({ where: { id: seed.id } });
-
-    if (existingUser) {
-      console.log(`⚠️  Usuario "${seed.email}" ya existe. Saltando...`);
-      continue;
+    // Buscar usuario por email (para detectar si existe aunque el ID cambie)
+    const existingUserByEmail = await userRepo.findOne({ where: { email: seed.email } });
+    
+    if (existingUserByEmail) {
+      // Eliminar usuario existente para recrearlo con contraseña hasheada
+      await userRepo.remove(existingUserByEmail);
+      console.log(`🗑️  Usuario existente eliminado: ${seed.email} (será recreado con hash)`);
     }
 
+    // También verificar por ID por si cambió el email
+    const existingUserById = await userRepo.findOne({ where: { id: seed.id } });
+    if (existingUserById && existingUserById.email !== seed.email) {
+      await userRepo.remove(existingUserById);
+      console.log(`🗑️  Usuario con ID existente eliminado: ${existingUserById.email}`);
+    }
+
+    // Crear usuario nuevo (la contraseña se hashea automáticamente por @BeforeInsert)
     const user = userRepo.create({
       id: seed.id,
       nombre: seed.nombre,
