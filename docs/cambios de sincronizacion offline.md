@@ -30,46 +30,31 @@ El motor de sincronización (`useSyncEngine.ts`) funciona como un "middleware" e
     });
     ```
 
-3.  **Estrategia de Sincronización**:
-    *   **Inmediata**: Si hay internet al registrar la acción, se intenta sincronizar al instante.
-    *   **Basada en Eventos**: Escucha el evento `window.online` para disparar el procesamiento de la cola.
-    *   **Proactiva**: Al iniciar la aplicación (`onMounted` en `App.vue`), revisa si hay tareas pendientes.
+### 📋 Bitácora de Prompts Reales del Usuario
 
-## 🛠️ Compatibilidad con MariaDB y MongoDB (Dual DB)
+Para mantener la trazabilidad de los cambios solicitados en esta sesión, se registran los prompts literales utilizados:
 
-El motor está preparado para flujos de trabajo de "Doble Escritura". Para la funcionalidad de revisiones, el flujo es el siguiente:
+*   **Error de Sincronización**: *"cuando tengo red me sale esto, puedes ayudarme a solucionarlo?"* (Referente a errores 404/500 al enviar revisiones).
+*   **Actualización de Dashboard**: *"bien funciona, ahora el problema es uno mas sencillo en el dashboard no se actualizan correctamente los numeros de los articulos completados o asi"*.
+*   **Persistencia y Estados**: *"quiero que esto se active en cuanto se inicie el llenado de uno de estos campos... el articulo se ponga a en progreso... y que si llene introduccion o alguna otra seccion y me salgo se guarde mi progreso... esto de forma offline"*.
+*   **Layout y Responsive**: *"ayudame con la vista de revision de articulos, el scroll rompe la web, el chiste es que solo haya scroll en cada seccion es decir, el scroll sea para el formulario y para el pdf pero no modifiquen la latura del sidebar y asi, y asegurate todo sea responsive"*.
+*   **Estética y Consistencia**: *"modfiicaste muchos estilos, quitaste colores iconos y cosas asi, la flechita de volver atras se ve gigante, corrigelo para que se vea bien con la estetica que acostumbramos"*.
+*   **Identidad Visual**: *"conserva esencia no pongas el logo de la web si no lo tiene, usa el mismo sidebar en cuestion de estilos, y no quites las descripciones... has que el pdf abarque la pantalla completa y se pueda scrollear por su visor"*.
+*   **Temas y UI**: *"el veredicto final la parte de los selectores en modo claro se ven en modo oscuro no revisa eso, y debe poder permitirme cambiar de modo claro modo oscuro de la misma forma que el sidebar original"*.
+*   **Filtros de Lista**: *"pues que al completarlo ya no me deberia salir para revisar, me deberia salir completado"*.
+*   **Modo Lectura**: *"si aparte debo poder ver en solo lectura los articulos"*.
+*   **Visibilidad de Datos**: *"no se ve lo que comente en secciones debe verse lo que revise... eso esta dentro de secciones en el schema de mongo db"*.
+*   **Privacidad (Ciegas)**: *"no debo poder ver al autor por que se supone es a ciegas y otra cosa, sigo sin ver nada, sera que no guardo los datos cuando reviso?"*.
+*   **Bug de Estados**: *"hay un bug, los que ya revise si le pico en el historial a ver, me cambia el estado a en revision, no deberia pasar eso"*.
 
-1.  **Frontend**: Envía el objeto de revisión completo.
-2.  **Backend (`submitRevision`)**:
-    *   **MongoDB**: Guarda el documento JSON flexible en la colección `Revision` (comentarios, estructura dinámica).
-    *   **MariaDB**: Actualiza la entidad `Articulo` cambiando su estado (ej. de "En Revisión" a "Publicado" o "En Edición") y limpia la asignación del revisor.
-
-## 📝 Bitácora de Prompts y Ajustes (Sesión de Sincronización y UI)
-
-A continuación se detallan las correcciones, aceptaciones y mejoras solicitadas por el usuario durante la implementación del motor offline y la interfaz de revisión:
-
-### 1. Correcciones de Errores Críticos (Bugs)
-*   **Error de IndexedDB (`NotFoundError`)**: Se corrigió el error al intentar transaccionar sobre stores no existentes mediante una migración de base de datos a la versión 3.
-*   **Error de Clonación (`DataCloneError`)**: Se solucionó el fallo al intentar guardar objetos complejos con Proxies de Vue en IndexedDB, asegurando el uso de `JSON.parse(JSON.stringify())` antes de persistir.
-*   **Errores 404/500 en API**: Se ajustaron los endpoints y se robusteció el servicio de asignaciones para manejar correctamente la doble escritura entre MariaDB y MongoDB.
-
-### 2. Estética y UI (Correcciones de diseño)
-*   **Scroll "Roto"**: Se corrigió el scroll global que rompía la web. **Solución aceptada**: Paneles independientes (PDF a la izquierda con su propio scroll y Formulario a la derecha con el suyo).
-*   **Flecha de Retroceso**: Se corrigió el tamaño excesivo de la flecha de "Volver atrás" y se ajustó a la estética general.
-*   **Sidebar y Logo**: Se eliminó el logo genérico inyectado por error y se restauró el sidebar original con el nombre "Diego" y la iconografía oficial de 1.5px.
-*   **Modo Claro/Oscuro**: Se sincronizaron las tarjetas de veredicto y el sidebar para que respondan correctamente al `useTheme` global, eliminando estilos "hardcoded" que se veían mal en modo claro.
-
-### 3. Funcionalidad y UX (Mejoras solicitadas)
-*   **Autosave**: Implementación de guardado automático de borradores en IndexedDB mientras el usuario escribe.
-*   **Activación de Estado**: El artículo cambia automáticamente a "En Revisión" en el servidor en cuanto el revisor comienza a completar cualquier campo.
-*   **Modo Solo Lectura**: Se implementó una vista de consulta para artículos ya revisados, recuperando los comentarios desde MongoDB y bloqueando la edición.
-*   **Historial en Dashboard**: Se separaron las asignaciones "En curso" de las "Completadas", eliminando el botón de revisar en estas últimas y moviéndolas a una sección de historial.
-
-### 4. Elementos Aceptados y Destacados
-*   **Selector de Veredicto**: El sistema de tarjetas con iconos (Aceptado, Revisión, Rechazado) fue del agrado del usuario tras ajustar sus colores para que coincidan con la plataforma.
-*   **Layout Responsive**: El apilamiento vertical en móviles para mantener el PDF accesible sobre el formulario fue validado positivamente.
+### ✅ Cambios Aceptados y Aplicados
+1.  **Layout de Doble Panel**: Scroll independiente para PDF y Formulario.
+2.  **Sistema de Temas**: Sincronización completa con el toggle del sidebar original.
+3.  **Mapeo MongoDB**: Uso del campo `secciones` para comentarios detallados.
+4.  **Política Blind Review**: Eliminación total del nombre del autor en la interfaz del revisor.
+5.  **Historial de Revisiones**: Sección dedicada en el dashboard para artículos finalizados.
 
 ---
 
 > [!NOTE]
-> Las revisiones offline ahora se guardan en IndexedDB, eliminando la dependencia de `localStorage` y permitiendo un manejo de errores más detallado con reintentos automáticos.
+> Esta documentación sirve como referencia técnica para futuras expansiones del PWA y el motor de sincronización.
