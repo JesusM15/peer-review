@@ -425,7 +425,7 @@ const chartOptions = {
     legend: {
       position: 'bottom' as const,
       labels: {
-        color: 'var(--text-normal)',
+        color: isDark.value ? '#ffffff' : '#374151',
         padding: 20,
         font: {
           size: 14,
@@ -529,18 +529,18 @@ const barChartOptions = {
   scales: {
     x: {
       ticks: {
-        color: 'var(--text-normal)',
+        color: isDark.value ? '#e5e7eb' : '#6b7280',
       },
       grid: {
-        color: 'var(--border-color)',
+        color: isDark.value ? '#2a2a2a' : '#e5e7eb',
       },
     },
     y: {
       ticks: {
-        color: 'var(--text-normal)',
+        color: isDark.value ? '#e5e7eb' : '#6b7280',
       },
       grid: {
-        color: 'var(--border-color)',
+        color: isDark.value ? '#2a2a2a' : '#e5e7eb',
       },
       beginAtZero: true,
     },
@@ -800,7 +800,7 @@ onMounted(() => {
 
 .stat-label {
   font-size: 0.875rem;
-  color: var(--text-muted);
+  color: var(--text-normal);
   margin-top: 0.25rem;
 }
 
@@ -830,14 +830,20 @@ onMounted(() => {
 }
 
 .btn-primary {
-  background: #fff;
-  color: #000;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
   border: none;
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
   margin-bottom: 1.5rem;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  background: var(--btn-primary-hover);
+  transform: translateY(-1px);
 }
 
 .table-container {
@@ -862,7 +868,7 @@ onMounted(() => {
 .users-table th {
   background: var(--bg-input);
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--text-strong);
 }
 
 .role-badge {
@@ -920,8 +926,9 @@ onMounted(() => {
 .form-group label {
   display: block;
   margin-bottom: 0.5rem;
-  color: var(--text-muted);
+  color: var(--text-normal);
   font-size: 0.875rem;
+  font-weight: 500;
 }
 
 .form-group input,
