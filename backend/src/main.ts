@@ -28,10 +28,11 @@ async function bootstrap() {
   // API will respond via /api/ (e.g. /api/ping)
   app.setGlobalPrefix('api');
 
-  // CORS config allowing Vite frontend (localhost:5173, 5174)
+  // CORS config allowing Vite frontend (localhost:5173, 5174) and any origin in development
   app.enableCors({
-    origin: ['http://localhost:5173', 'http://localhost:5174'],
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    origin: ['http://localhost:5173', 'http://localhost:5174', 'http://127.0.0.1:5173', 'http://127.0.0.1:5174'],
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type, Accept, Authorization',
     credentials: true,
   });
 
