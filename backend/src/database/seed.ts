@@ -1,5 +1,6 @@
 import { DataSource } from 'typeorm';
 import { User, Rol } from '../users/entities/user.entity';
+import { Perfil } from '../users/entities/perfil.entity';
 import { Articulo, EstadoArticulo } from '../articulos/entities/articulo.entity';
 import { Asignacion } from '../asignaciones/entities/asignacion.entity';
 
@@ -14,7 +15,7 @@ import { Asignacion } from '../asignaciones/entities/asignacion.entity';
 const AppDataSource = new DataSource({
   type: 'mariadb',
   url: process.env.MARIADB_URI || 'mysql://dbuser:dbpassword@mariadb:3306/peer_review_db',
-  entities: [User, Articulo, Asignacion],
+  entities: [User, Perfil, Articulo, Asignacion],
   synchronize: false,
 });
 
