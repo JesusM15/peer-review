@@ -33,6 +33,20 @@
         </button>
       </nav>
 
+      <!-- Indicador de conexión -->
+      <div v-if="isOffline" class="connection-status offline">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m0 0L9 12" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Sin conexión</span>
+      </div>
+      <div v-else class="connection-status online">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M5 12.55a11 11 0 0114.08 0M1.42 9a16 16 0 0121.16 0M8.53 16.11a6 16 0 016.95 0M12 20h.01" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>En línea</span>
+      </div>
+
       <div class="sidebar-footer relative-footer">
         <div class="user-menu-dropdown" v-if="showUserMenu">
            <button class="menu-item" @click="toggleTheme">
@@ -141,9 +155,17 @@
                   Fecha límite: {{ formatDate(asignacion.fecha_limite) }}
                 </p>
               </div>
-              <button class="btn-primary" @click="irARevision(asignacion.id, asignacion.articulo_id)">
-                Revisar
-              </button>
+              <div class="assignment-actions">
+                <button class="btn-primary" @click="irARevision(asignacion.id, asignacion.articulo_id)">
+                  Revisar
+                </button>
+                <span v-if="asignacion.pdfDescargado" class="offline-badge-small">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Offline
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -197,9 +219,31 @@
                   </span>
                 </p>
               </div>
-              <button class="btn-primary" @click="irARevision(asignacion.id, asignacion.articulo_id)">
-                Revisar
-              </button>
+              <div class="assignment-actions">
+                <button class="btn-primary" @click="irARevision(asignacion.id, asignacion.articulo_id)">
+                  Revisar
+                </button>
+                <button
+                  v-if="!isOffline && !asignacion.pdfDescargado"
+                  class="btn-secondary"
+                  @click="descargarParaOffline(asignacion)"
+                  :disabled="asignacion.descargando"
+                >
+                  <svg v-if="asignacion.descargando" class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke-linecap="round"/>
+                  </svg>
+                  <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  {{ asignacion.descargando ? 'Descargando...' : 'Guardar offline' }}
+                </button>
+                <span v-else-if="asignacion.pdfDescargado" class="offline-badge">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Disponible offline
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -261,11 +305,13 @@ import { ref, onMounted, computed } from 'vue'
 import { useTheme } from '../composables/useTheme'
 import { useToast } from '../composables/useToast'
 import { useAuthStore } from '../stores/auth'
+import { useOfflineStorage } from '../composables/useOfflineStorage'
 
 const router = useRouter()
 const { isDark, toggleTheme } = useTheme()
 const { showToast } = useToast()
 const authStore = useAuthStore()
+const offlineStorage = useOfflineStorage()
 
 const logout = () => {
   authStore.logout()
@@ -277,6 +323,7 @@ const vistaActiva = ref<string>('overview')
 const tituloArticulo = ref<string>('')
 const archivoPdf = ref<File | null>(null)
 const isLoading = ref<boolean>(false)
+const isOffline = ref(false)
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 
@@ -290,6 +337,8 @@ interface Asignacion {
   articulo_id: string
   revisor_id: string
   fecha_limite: string
+  pdfDescargado?: boolean
+  descargando?: boolean
   articulo?: {
     id: string
     titulo: string
@@ -300,6 +349,8 @@ interface Asignacion {
 
 const asignaciones = ref<Asignacion[]>([])
 const isLoadingAsignaciones = ref(false)
+const isSyncingPdfs = ref(false)
+const offlineAssignments = ref<any[]>([])
 
 onMounted(() => {
   try {
@@ -312,24 +363,130 @@ onMounted(() => {
       }
     }
   } catch { currentUser.value = null }
+
+  // Detectar estado de conexión
+  isOffline.value = !offlineStorage.isOnline()
+  window.addEventListener('online', () => isOffline.value = false)
+  window.addEventListener('offline', () => isOffline.value = true)
 })
 
 const cargarAsignaciones = async () => {
   if (!currentUser.value?.id) return
-  
+
   try {
     isLoadingAsignaciones.value = true
+
+    // Si está offline, cargar desde IndexedDB
+    if (!offlineStorage.isOnline()) {
+      offlineAssignments.value = await offlineStorage.getAllAssignments()
+      asignaciones.value = offlineAssignments.value.map(oa => ({
+        id: oa.asignacionId,
+        articulo_id: oa.articuloId,
+        revisor_id: currentUser.value!.id,
+        fecha_limite: oa.fechaLimite,
+        articulo: {
+          id: oa.articuloId,
+          titulo: oa.titulo,
+          estado: oa.estado,
+          autor: { nombre: oa.autorNombre, email: '' }
+        }
+      }))
+      return
+    }
+
     const response = await fetch(
       `${API_BASE_URL}/asignaciones?revisor_id=${currentUser.value.id}&include_relations=true`
     )
     if (response.ok) {
       asignaciones.value = await response.json()
+
+      // Verificar cuáles ya están descargados
+      await verificarPdfsOffline()
+
+      // Descargar PDFs en background para modo offline (silencioso)
+      await sincronizarPdfsOffline()
     }
   } catch (error) {
     console.error('Error al cargar asignaciones:', error)
+    // Fallback a offline si hay error
+    try {
+      offlineAssignments.value = await offlineStorage.getAllAssignments()
+      asignaciones.value = offlineAssignments.value.map(oa => ({
+        id: oa.asignacionId,
+        articulo_id: oa.articuloId,
+        revisor_id: currentUser.value!.id,
+        fecha_limite: oa.fechaLimite,
+        articulo: {
+          id: oa.articuloId,
+          titulo: oa.titulo,
+          estado: oa.estado,
+          autor: { nombre: oa.autorNombre, email: '' }
+        }
+      }))
+    } catch (offlineError) {
+      console.error('Error cargando offline:', offlineError)
+    }
   } finally {
     isLoadingAsignaciones.value = false
   }
+}
+
+const sincronizarPdfsOffline = async () => {
+  console.log('[sincronizarPdfsOffline] Iniciando sincronización...')
+  if (!offlineStorage.isOnline()) {
+    console.log('[sincronizarPdfsOffline] Sin conexión, cancelando')
+    return
+  }
+
+  isSyncingPdfs.value = true
+  const asignacionesPendientes = asignaciones.value.filter(
+    a => !a.articulo?.estado?.includes('Aceptado') && !a.articulo?.estado?.includes('Rechazado')
+  )
+  console.log(`[sincronizarPdfsOffline] ${asignacionesPendientes.length} asignaciones pendientes`)
+
+  for (const asignacion of asignacionesPendientes) {
+    try {
+      // Verificar si ya está guardado
+      const existingPdf = await offlineStorage.getPdf(asignacion.articulo_id)
+      if (existingPdf) {
+        console.log(`[sincronizarPdfsOffline] ${asignacion.articulo?.titulo} ya está guardado`)
+        asignacion.pdfDescargado = true
+        continue
+      }
+
+      console.log(`[sincronizarPdfsOffline] Descargando: ${asignacion.articulo?.titulo}`)
+
+      // Guardar info de asignación
+      await offlineStorage.storeAssignment({
+        asignacionId: asignacion.id,
+        articuloId: asignacion.articulo_id,
+        titulo: asignacion.articulo?.titulo || 'Sin título',
+        autorNombre: asignacion.articulo?.autor?.nombre || 'Desconocido',
+        fechaLimite: asignacion.fecha_limite,
+        estado: asignacion.articulo?.estado || 'Pendiente',
+        synced: true
+      })
+
+      // Descargar y guardar PDF
+      const success = await offlineStorage.downloadAndStorePdf(
+        asignacion.articulo_id,
+        asignacion.articulo?.titulo || 'articulo',
+        API_BASE_URL
+      )
+
+      if (success) {
+        console.log(`[sincronizarPdfsOffline] ✅ PDF guardado: ${asignacion.articulo?.titulo}`)
+        asignacion.pdfDescargado = true
+      } else {
+        console.log(`[sincronizarPdfsOffline] ❌ Error descargando: ${asignacion.articulo?.titulo}`)
+      }
+    } catch (error) {
+      console.error(`[sincronizarPdfsOffline] Error en ${asignacion.articulo_id}:`, error)
+    }
+  }
+
+  isSyncingPdfs.value = false
+  console.log('[sincronizarPdfsOffline] Sincronización completada')
 }
 
 const asignacionesPendientes = computed(() =>
@@ -345,7 +502,67 @@ const asignacionesCompletadas = computed(() =>
 )
 
 const irARevision = (asignacionId: string, articuloId: string) => {
+  // Guardar el asignacionId en localStorage para referencia
+  localStorage.setItem('current_revision_asignacion_id', asignacionId)
   router.push(`/reviewer/revision/${articuloId}`)
+}
+
+const tienePdfOffline = async (articuloId: string): Promise<boolean> => {
+  const pdf = await offlineStorage.getPdf(articuloId)
+  return !!pdf
+}
+
+const descargarParaOffline = async (asignacion: any) => {
+  console.log('[descargarParaOffline] Iniciando descarga:', asignacion)
+  asignacion.descargando = true
+  try {
+    // Verificar datos
+    if (!asignacion.articulo_id) {
+      console.error('[descargarParaOffline] No hay articulo_id')
+      showToast('Error: No se encontró el ID del artículo', 'error')
+      return
+    }
+
+    // Guardar info de asignación
+    console.log('[descargarParaOffline] Guardando asignación...')
+    await offlineStorage.storeAssignment({
+      asignacionId: asignacion.id,
+      articuloId: asignacion.articulo_id,
+      titulo: asignacion.articulo?.titulo || 'Sin título',
+      autorNombre: asignacion.articulo?.autor?.nombre || 'Desconocido',
+      fechaLimite: asignacion.fecha_limite,
+      estado: asignacion.articulo?.estado || 'Pendiente',
+      synced: true
+    })
+    console.log('[descargarParaOffline] Asignación guardada')
+
+    // Descargar PDF
+    console.log('[descargarParaOffline] Descargando PDF:', asignacion.articulo_id)
+    const success = await offlineStorage.downloadAndStorePdf(
+      asignacion.articulo_id,
+      asignacion.articulo?.titulo || 'articulo',
+      API_BASE_URL
+    )
+
+    if (success) {
+      asignacion.pdfDescargado = true
+      showToast(`"${asignacion.articulo?.titulo}" guardado para revisión offline`, 'success')
+    } else {
+      showToast('Error al descargar el PDF - revisa la consola', 'error')
+    }
+  } catch (error) {
+    console.error('[descargarParaOffline] Error:', error)
+    showToast(`Error: ${error instanceof Error ? error.message : 'Desconocido'}`, 'error')
+  } finally {
+    asignacion.descargando = false
+  }
+}
+
+// Verificar qué asignaciones tienen PDF descargado al cargar
+const verificarPdfsOffline = async () => {
+  for (const asignacion of asignaciones.value) {
+    asignacion.pdfDescargado = await tienePdfOffline(asignacion.articulo_id)
+  }
 }
 
 const userInitial = computed(() =>
@@ -594,6 +811,107 @@ const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString()
   width: 14px;
   height: 14px;
   color: var(--text-faint);
+}
+
+/* Acciones de asignación */
+.assignment-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-secondary {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.5rem 0.875rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--bg-card-hover);
+  color: var(--text-normal);
+  border-color: var(--border-hover);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary svg {
+  width: 14px;
+  height: 14px;
+}
+
+.offline-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--stat-aceptado);
+  background: rgba(74, 222, 128, 0.1);
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+}
+
+.offline-badge svg {
+  width: 12px;
+  height: 12px;
+}
+
+.offline-badge-small {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--stat-aceptado);
+  background: rgba(74, 222, 128, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.offline-badge-small svg {
+  width: 10px;
+  height: 10px;
+}
+
+/* Indicador de conexión */
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  margin: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.connection-status svg {
+  width: 14px;
+  height: 14px;
+}
+
+.connection-status.online {
+  background: rgba(74, 222, 128, 0.1);
+  color: #4ade80;
+  border: 1px solid rgba(74, 222, 128, 0.2);
+}
+
+.connection-status.offline {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
 @media (max-width: 768px) {

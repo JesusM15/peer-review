@@ -41,7 +41,10 @@
     <main class="main">
       <header class="topbar">
         <div>
-          <h1 class="page-title">Revisión de artículo</h1>
+          <h1 class="page-title">
+            Revisión de artículo
+            <span v-if="isOffline" class="offline-badge">OFFLINE</span>
+          </h1>
           <p class="page-sub" v-if="articulo">{{ articulo.titulo }}</p>
         </div>
       </header>
@@ -270,12 +273,14 @@
 
 <script setup lang="ts">
 import { useRouter, useRoute } from 'vue-router'
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { useToast } from '../composables/useToast'
+import { useOfflineStorage } from '../composables/useOfflineStorage'
 
 const router = useRouter()
 const route = useRoute()
 const { showToast } = useToast()
+const offlineStorage = useOfflineStorage()
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 
@@ -308,6 +313,9 @@ const articulo = ref<Articulo | null>(null)
 const isSubmitting = ref(false)
 const loadingPdf = ref(false)
 const decision = ref<'aceptado' | 'revision' | 'rechazado' | null>(null)
+const isOffline = ref(false)
+const pdfBlobUrl = ref<string | null>(null)
+const asignacionId = ref<string | null>(null)
 
 const revision = ref<Revision>({
   introduccion: '',
@@ -319,16 +327,32 @@ const revision = ref<Revision>({
   comentariosGenerales: ''
 })
 
-onMounted(() => {
+onMounted(async () => {
   const raw = localStorage.getItem('user')
   if (raw) {
     currentUser.value = JSON.parse(raw)
   }
 
+  // Obtener asignacionId guardado
+  asignacionId.value = localStorage.getItem('current_revision_asignacion_id')
+
   const articuloId = route.params.id as string
   if (articuloId) {
-    fetchArticulo(articuloId)
+    await fetchArticulo(articuloId)
   }
+
+  // Escuchar cambios de conexión
+  window.addEventListener('online', () => isOffline.value = false)
+  window.addEventListener('offline', () => isOffline.value = true)
+})
+
+onUnmounted(() => {
+  // Limpiar URL blob al salir
+  if (pdfBlobUrl.value) {
+    offlineStorage.revokePdfUrl(pdfBlobUrl.value)
+  }
+  window.removeEventListener('online', () => isOffline.value = false)
+  window.removeEventListener('offline', () => isOffline.value = true)
 })
 
 const userInitial = computed(() =>
@@ -342,6 +366,31 @@ const goBack = () => {
 const fetchArticulo = async (id: string) => {
   try {
     loadingPdf.value = true
+    isOffline.value = !offlineStorage.isOnline()
+
+    if (isOffline.value) {
+      // Modo offline: cargar desde IndexedDB
+      const storedPdf = await offlineStorage.getPdf(id)
+      const storedAssignments = await offlineStorage.getAllAssignments()
+      const assignment = storedAssignments.find(a => a.articuloId === id)
+
+      if (storedPdf) {
+        // Crear URL blob para mostrar el PDF
+        pdfBlobUrl.value = offlineStorage.createPdfUrl(storedPdf.blob)
+        articulo.value = {
+          id,
+          titulo: storedPdf.titulo,
+          estado: assignment?.estado || 'En Revisión',
+          pdf_url: pdfBlobUrl.value
+        }
+        showToast('Modo offline: Mostrando PDF guardado localmente', 'info')
+      } else {
+        showToast('No se encontró el PDF guardado localmente', 'error')
+      }
+      return
+    }
+
+    // Modo online: cargar desde servidor
     const response = await fetch(`${API_BASE_URL}/articulos/${id}?include_relations=true`)
     if (response.ok) {
       const data = await response.json()
@@ -351,26 +400,84 @@ const fetchArticulo = async (id: string) => {
         data.pdf_url = `${baseUrl}${data.pdf_url}`
       }
       articulo.value = data
+
+      // Guardar en IndexedDB para modo offline
+      await guardarPdfOffline(id)
     }
   } catch (error) {
     console.error('Error al cargar artículo:', error)
+    // Intentar cargar desde offline como fallback
+    await cargarDesdeOffline(id)
   } finally {
     loadingPdf.value = false
+  }
+}
+
+const cargarDesdeOffline = async (id: string) => {
+  try {
+    const storedPdf = await offlineStorage.getPdf(id)
+    const storedAssignments = await offlineStorage.getAllAssignments()
+    const assignment = storedAssignments.find(a => a.articuloId === id)
+
+    if (storedPdf) {
+      pdfBlobUrl.value = offlineStorage.createPdfUrl(storedPdf.blob)
+      articulo.value = {
+        id,
+        titulo: storedPdf.titulo,
+        estado: assignment?.estado || 'En Revisión',
+        pdf_url: pdfBlobUrl.value
+      }
+      isOffline.value = true
+      showToast('Usando PDF guardado localmente', 'info')
+    }
+  } catch (offlineError) {
+    console.error('Error cargando desde offline:', offlineError)
+  }
+}
+
+const guardarPdfOffline = async (articuloId: string) => {
+  try {
+    // Verificar si ya está guardado
+    const existingPdf = await offlineStorage.getPdf(articuloId)
+    if (existingPdf) return
+
+    const success = await offlineStorage.downloadAndStorePdf(
+      articuloId,
+      articulo.value?.titulo || 'articulo',
+      API_BASE_URL
+    )
+
+    if (success) {
+      console.log('PDF guardado para modo offline')
+    }
+  } catch (error) {
+    console.error('Error guardando PDF offline:', error)
   }
 }
 
 const submitRevision = async () => {
   if (!decision.value) return
 
+  const articuloId = articulo.value?.id || route.params.id as string
+
   try {
     isSubmitting.value = true
 
     const revisionData = {
-      articulo_id: articulo.value?.id || route.params.id,
+      articulo_id: articuloId,
       revisor_id: currentUser.value?.id,
       decision: decision.value,
       comentarios: revision.value,
       fecha_revision: new Date().toISOString()
+    }
+
+    // Si está offline, guardar revisión pendiente y eliminar PDF local
+    if (!offlineStorage.isOnline()) {
+      await guardarRevisionPendiente(revisionData)
+      await eliminarPdfLocal(articuloId)
+      showToast('Revisión guardada localmente. Se enviará cuando haya conexión.', 'success')
+      router.push('/reviewer')
+      return
     }
 
     const response = await fetch(`${API_BASE_URL}/revisiones`, {
@@ -385,6 +492,9 @@ const submitRevision = async () => {
       throw new Error(`Error HTTP: ${response.status}`)
     }
 
+    // Eliminar PDF local al completar la revisión
+    await eliminarPdfLocal(articuloId)
+
     showToast('Revisión enviada con éxito', 'success')
     router.push('/reviewer')
   } catch (error) {
@@ -394,6 +504,35 @@ const submitRevision = async () => {
     isSubmitting.value = false
   }
 }
+
+const eliminarPdfLocal = async (articuloId: string) => {
+  try {
+    await offlineStorage.deletePdf(articuloId)
+    if (asignacionId.value) {
+      await offlineStorage.deleteAssignment(asignacionId.value)
+    }
+    console.log(`PDF y asignación eliminados localmente: ${articuloId}`)
+  } catch (error) {
+    console.error('Error eliminando datos locales:', error)
+  }
+}
+
+const guardarRevisionPendiente = async (revisionData: any) => {
+  // Guardar en localStorage para envío posterior
+  const pendingRevisions = JSON.parse(localStorage.getItem('pending_revisions') || '[]')
+  pendingRevisions.push({
+    ...revisionData,
+    id: generateUUID(),
+    savedAt: new Date().toISOString()
+  })
+  localStorage.setItem('pending_revisions', JSON.stringify(pendingRevisions))
+}
+
+const generateUUID = (): string =>
+  'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16)
+  })
 </script>
 
 <style scoped>
@@ -572,6 +711,32 @@ const submitRevision = async () => {
   letter-spacing: -0.02em;
   color: #fff;
   margin-bottom: 0.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.offline-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  letter-spacing: 0.05em;
+}
+
+.offline-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: #ef4444;
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
 }
 
 .page-sub {
@@ -888,6 +1053,15 @@ const submitRevision = async () => {
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
   }
 }
 
