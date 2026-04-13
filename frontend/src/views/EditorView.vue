@@ -213,14 +213,66 @@
         </header>
         <div class="section">
           <!-- Selector de artículo -->
-          <div class="form-group">
-            <label class="form-label">Seleccionar artículo</label>
-            <select class="form-select" v-model="articuloSeleccionadoId" @change="onArticuloChange">
-              <option value="">-- Selecciona un artículo --</option>
-              <option v-for="art in articulos" :key="art.id" :value="art.id">
-                {{ art.titulo }} ({{ art.estado }})
-              </option>
-            </select>
+          <!-- Article Picker (Mejorado) -->
+          <div class="article-picker-container">
+            <div class="picker-controls">
+              <div class="search-input-group">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input 
+                  type="text" 
+                  v-model="searchArticulo" 
+                  placeholder="Buscar artículo por título..." 
+                  class="form-input search-bar"
+                >
+              </div>
+              <CustomSelect 
+                v-model="filtroEstadoArticulo" 
+                :options="OPCIONES_ESTADO"
+                class="filter-select"
+              />
+            </div>
+
+            <div v-if="articulosFiltrados.length === 0" class="empty-state-sm">
+              No se encontraron artículos con esos filtros.
+            </div>
+            <div v-else class="articulos-picker-grid">
+              <div 
+                v-for="art in articulosFiltrados" 
+                :key="art.id" 
+                class="art-picker-card"
+                :class="{ active: articuloSeleccionadoId === art.id }"
+                @click="seleccionarArticulo(art)"
+              >
+                <div class="art-card-main">
+                  <div class="art-card-id-row">
+                    <span class="badge" :class="badgeClass(art.estado)">{{ art.estado }}</span>
+                    <span class="art-time">ID: {{ art.id.split('-')[0] }}</span>
+                  </div>
+                  <h4 class="art-card-title">{{ art.titulo }}</h4>
+                  <div class="art-card-meta">
+                    <div class="meta-item" title="Autor del artículo">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                      </svg>
+                      <span>Anónimo</span>
+                    </div>
+                    <div class="meta-item" title="Revisores asignados actualmente">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 00-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 010 7.75"></path>
+                      </svg>
+                      <span class="rev-pill">{{ (art.asignaciones || []).length }} revisores</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Revisores ya asignados al artículo seleccionado -->
@@ -429,6 +481,7 @@ import { useRouter } from 'vue-router'
 import { ref, computed, onMounted } from 'vue'
 import { useTheme } from '../composables/useTheme'
 import { useAuthStore } from '../stores/auth'
+import CustomSelect from '../components/CustomSelect.vue'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
@@ -456,6 +509,27 @@ const modalRevisor = ref<any>(null)
 const asignando = ref(false)
 const mensajeAsignacion = ref<{ texto: string; tipo: string } | null>(null)
 const mensajeModal = ref<{ texto: string; tipo: string } | null>(null)
+
+// ── Search & Filter (Asignaciones) ────────────────────
+const searchArticulo = ref('')
+const filtroEstadoArticulo = ref('')
+
+const OPCIONES_ESTADO = [
+  { label: 'Cualquier estado', value: '' },
+  { label: 'Recibidos (Borrador)', value: 'Borrador' },
+  { label: 'En proceso', value: 'En Revisión' },
+  { label: 'Aceptados', value: 'Aceptado' },
+  { label: 'Rechazados', value: 'Rechazado' },
+]
+
+const articulosFiltrados = computed(() => {
+  return articulos.value.filter(art => {
+    const textMatch = art.titulo.toLowerCase().includes(searchArticulo.value.toLowerCase()) ||
+                     (art.autor?.perfil?.nombre || '').toLowerCase().includes(searchArticulo.value.toLowerCase())
+    const statusMatch = !filtroEstadoArticulo.value || art.estado === filtroEstadoArticulo.value
+    return textMatch && statusMatch
+  })
+})
 
 // ── Stats computed ────────────────────────────────────
 const articulosRecientes = computed(() => articulos.value)
@@ -538,6 +612,11 @@ async function onArticuloChange() {
 function abrirAsignacionDesdeArticulo(art: any) {
   articuloSeleccionadoId.value = art.id
   irAAsignaciones().then(() => onArticuloChange())
+}
+
+function seleccionarArticulo(art: any) {
+  articuloSeleccionadoId.value = art.id
+  onArticuloChange()
 }
 
 // ── Revisor ya asignado al artículo actual ────────────
@@ -725,8 +804,56 @@ onMounted(async () => {
 .form-label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem; }
 .form-select { width: 100%; max-width: 480px; padding: 0.6rem 0.9rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-input); color: var(--text-strong); font-size: 0.85rem; cursor: pointer; }
 .form-select:focus { outline: none; border-color: var(--border-hover); }
+.form-input { width: 100%; padding: 0.6rem 0.9rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-input); color: var(--text-strong); font-size: 0.85rem; }
+.form-input:focus { outline: none; border-color: var(--border-hover); }
 
-/* ── Revisores grid ── */
+/* ── Article Picker ── */
+.article-picker-container { margin-bottom: 2rem; }
+.picker-controls { display: flex; gap: 1rem; margin-bottom: 1.25rem; }
+.search-input-group { flex: 1; position: relative; }
+.search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--text-faint); pointer-events: none; }
+.search-bar { padding-left: 2.5rem; }
+.filter-select { width: 180px; }
+
+.articulos-picker-grid { 
+  display: grid; 
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); 
+  gap: 1rem; 
+  max-height: 280px; 
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+.articulos-picker-grid::-webkit-scrollbar { width: 6px; }
+.articulos-picker-grid::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+
+.art-picker-card { 
+  background: var(--bg-card); 
+  border: 1px solid var(--border-color); 
+  border-radius: 10px; 
+  padding: 1rem; 
+  cursor: pointer; 
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+.art-picker-card:hover { border-color: var(--border-hover); background: var(--bg-card-hover); }
+.art-picker-card.active { border-color: var(--btn-primary-bg); background: var(--bg-input); box-shadow: 0 0 0 2px var(--btn-primary-bg); }
+
+.art-card-id-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem; }
+.art-time { font-size: 0.65rem; color: var(--text-faint); font-weight: 600; text-transform: uppercase; }
+.art-card-title { font-size: 0.9rem; font-weight: 700; color: var(--text-strong); margin-bottom: 0.75rem; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; height: 2.8em; }
+.art-card-meta { display: flex; align-items: center; gap: 1rem; }
+.meta-item { display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--text-muted); font-weight: 500; }
+.meta-item svg { width: 14px; height: 14px; color: var(--text-faint); }
+.rev-pill { 
+  background: var(--bg-input); 
+  padding: 0.2rem 0.6rem; 
+  border-radius: 99px; 
+  border: 1px solid var(--border-color);
+  font-weight: 600;
+  font-size: 0.68rem;
+  color: var(--text-strong);
+}
 .revisores-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; margin-top: 0.5rem; }
 .revisores-grid-full { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; }
 .revisor-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; }

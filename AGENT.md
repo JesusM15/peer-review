@@ -74,7 +74,8 @@ La interfaz debe ser **minimalista, funcional y de alto contraste**.
 ## 🚀 Reglas del Agente
 1.  **Priorizar Simplicidad:** Evitar infraestructuras complejas a menos que el escalamiento lo exija.
 2.  **No Cajas Negras:** No implementar Firebase/Supabase para sincronización; trabajar sobre el motor manual de `SyncEngine`.
-3.  **Consistencia UI:** Seguir estrictamente la estética de bordes definidos, tipografía limpia e iconos de Lucide.
+3.  **Consistencia UI:** Seguir estrictamente la estética de bordes definidos, tipografía limpia e iconos (SVG/Lucide). Está prohibido usar emojis.
+4.  **Componentes Ad-hoc:** Priorizar siempre la creación y uso de componentes custom (`CustomSelect`, `CustomInput`, etc.) sobre los nativos de HTML para mantener la estética premium.
 
 ---
 **Última actualización:** Marzo 2026.
