@@ -35,11 +35,7 @@ services:
     volumes:
       - mariadb_data:/var/lib/mysql
     healthcheck:
-<<<<<<< HEAD
       test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
-=======
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
->>>>>>> master
       start_period: 10s
       interval: 10s
       timeout: 5s

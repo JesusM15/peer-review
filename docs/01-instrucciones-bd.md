@@ -33,7 +33,7 @@ Usamos dos bases de datos en sincronía gracias a esto:
   * Es el centro del sistema. Guarda su `id` principal (UUID), un `email` único, su `password` y su `rol` (Autor, Revisor, o Editor).
 * **🪪 `Perfil` (Datos de Usuario):** 
   * Se enlaza en una relación **1 a 1** con el Usuario. 
-  * *Abstracción:* Para hacer fácil la consulta, ¡el ID del perfil es el mismísimo ID del usuario! Guarda el `nombre`, `carrera` y un arreglo básico de `especialidades`.
+  * *Abstracción:* Para hacer fácil la consulta, ¡el ID del perfil es el mismísimo ID del usuario! Guarda el `nombre`, `carrera` y un 5arreglo básico de `especialidades`.
 * **📄 `Articulo` (Punto central de publicación):**
   * Se enlaza en relación **N a 1** con un Autor (`User`). Muchos artículos pueden ser de un solo autor. 
   * Guarda el `titulo`, el `estado` (ej. Borrador, Aceptado), y el ID de su autor foráneo.
