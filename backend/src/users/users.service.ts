@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ConflictException } from '@nestjs/common
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, Rol } from './entities/user.entity';
+import { Perfil } from './entities/perfil.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { v4 as uuidv4 } from 'uuid';
@@ -11,6 +12,8 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Perfil)
+    private readonly perfilRepository: Repository<Perfil>,
   ) {}
 
   async findAll(options: { rol?: Rol; include_relations?: boolean }) {
@@ -43,6 +46,14 @@ export class UsersService {
     });
 
     await this.userRepository.save(user);
+
+    const perfil = this.perfilRepository.create({
+      id: user.id,
+      nombre: user.nombre,
+      carrera: '',
+      especialidades: [],
+    });
+    await this.perfilRepository.save(perfil);
 
     // Retornar sin password
     const { password, ...result } = user;
