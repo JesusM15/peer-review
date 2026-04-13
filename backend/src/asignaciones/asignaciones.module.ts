@@ -5,15 +5,17 @@ import { Asignacion } from './entities/asignacion.entity';
 import { Revision, RevisionSchema } from './schemas/revision.schema';
 import { User } from '../users/entities/user.entity';
 import { Perfil } from '../users/entities/perfil.entity';
+import { Articulo } from '../articulos/entities/articulo.entity';
 import { AsignacionesController } from './asignaciones.controller';
+import { RevisionesController } from './revisiones.controller';
 import { AsignacionesService } from './asignaciones.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Asignacion, User, Perfil]),
+    TypeOrmModule.forFeature([Asignacion, User, Perfil, Articulo]),
     MongooseModule.forFeature([{ name: Revision.name, schema: RevisionSchema }]),
   ],
-  controllers: [AsignacionesController],
+  controllers: [AsignacionesController, RevisionesController],
   providers: [AsignacionesService],
   exports: [TypeOrmModule, MongooseModule, AsignacionesService],
 })

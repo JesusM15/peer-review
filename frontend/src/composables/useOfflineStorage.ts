@@ -4,9 +4,12 @@
  */
 
 const DB_NAME = 'peer_review_offline'
-const DB_VERSION = 1
+const DB_VERSION = 3
 const STORE_PDFS = 'pdfs'
 const STORE_ASSIGNMENTS = 'assignments'
+const STORE_SYNC_QUEUE = 'sync_queue'
+const STORE_DRAFTS = 'draft_revisions'
+
 
 interface StoredPdf {
   articuloId: string
@@ -51,6 +54,18 @@ async function initDB(): Promise<IDBDatabase> {
         const assignmentStore = database.createObjectStore(STORE_ASSIGNMENTS, { keyPath: 'asignacionId' })
         assignmentStore.createIndex('articuloId', 'articuloId', { unique: false })
         assignmentStore.createIndex('synced', 'synced', { unique: false })
+      }
+
+      if (!database.objectStoreNames.contains(STORE_SYNC_QUEUE)) {
+        const syncStore = database.createObjectStore(STORE_SYNC_QUEUE, { keyPath: 'id' })
+        syncStore.createIndex('type', 'type', { unique: false })
+        syncStore.createIndex('status', 'status', { unique: false })
+        syncStore.createIndex('timestamp', 'timestamp', { unique: false })
+      }
+
+      if (!database.objectStoreNames.contains(STORE_DRAFTS)) {
+        const draftStore = database.createObjectStore(STORE_DRAFTS, { keyPath: 'articuloId' })
+        draftStore.createIndex('updatedAt', 'updatedAt', { unique: false })
       }
     }
   })
@@ -163,6 +178,62 @@ async function deleteAssignment(asignacionId: string): Promise<void> {
 }
 
 /**
+ * Guarda un borrador de revisión en IndexedDB
+ */
+async function storeDraft(articuloId: string, data: any): Promise<void> {
+  const database = await initDB()
+
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction([STORE_DRAFTS], 'readwrite')
+    const store = transaction.objectStore(STORE_DRAFTS)
+
+    const request = store.put({
+      articuloId,
+      data,
+      updatedAt: Date.now()
+    })
+
+    request.onsuccess = () => resolve()
+    request.onerror = () => reject(request.error)
+  })
+}
+
+/**
+ * Obtiene un borrador de revisión
+ */
+async function getDraft(articuloId: string): Promise<any | null> {
+  const database = await initDB()
+
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction([STORE_DRAFTS], 'readonly')
+    const store = transaction.objectStore(STORE_DRAFTS)
+    const request = store.get(articuloId)
+
+    request.onsuccess = () => {
+      const result = request.result
+      resolve(result ? result.data : null)
+    }
+    request.onerror = () => reject(request.error)
+  })
+}
+
+/**
+ * Elimina un borrador de revisión
+ */
+async function deleteDraft(articuloId: string): Promise<void> {
+  const database = await initDB()
+
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction([STORE_DRAFTS], 'readwrite')
+    const store = transaction.objectStore(STORE_DRAFTS)
+    const request = store.delete(articuloId)
+
+    request.onsuccess = () => resolve()
+    request.onerror = () => reject(request.error)
+  })
+}
+
+/**
  * Crea una URL blob para mostrar el PDF
  */
 function createPdfUrl(blob: Blob): string {
@@ -267,10 +338,12 @@ async function clearAllOfflineData(): Promise<void> {
   const database = await initDB()
 
   return new Promise((resolve, reject) => {
-    const transaction = database.transaction([STORE_PDFS, STORE_ASSIGNMENTS], 'readwrite')
+    const transaction = database.transaction([STORE_PDFS, STORE_ASSIGNMENTS, STORE_SYNC_QUEUE, STORE_DRAFTS], 'readwrite')
     
     transaction.objectStore(STORE_PDFS).clear()
     transaction.objectStore(STORE_ASSIGNMENTS).clear()
+    transaction.objectStore(STORE_SYNC_QUEUE).clear()
+    transaction.objectStore(STORE_DRAFTS).clear()
 
     transaction.oncomplete = () => resolve()
     transaction.onerror = () => reject(transaction.error)
@@ -291,6 +364,11 @@ export function useOfflineStorage() {
     storeAssignment,
     getAllAssignments,
     deleteAssignment,
+
+    // Draft operations
+    storeDraft,
+    getDraft,
+    deleteDraft,
 
     // Utilities
     isOnline,

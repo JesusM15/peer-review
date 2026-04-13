@@ -11,6 +11,18 @@ export class Revision {
   @Prop({ type: String, required: true })
   articulo_id: string;
 
+  @Prop({ type: String, required: true })
+  revisor_id: string;
+
+  @Prop({ type: String, required: true })
+  decision: string;
+
+  @Prop({ type: MongooseSchema.Types.Mixed })
+  comentarios: any;
+
+  @Prop({ type: Date, default: Date.now })
+  fecha_revision: Date;
+
   @Prop({ type: MongooseSchema.Types.Mixed })
   secciones: any;
 

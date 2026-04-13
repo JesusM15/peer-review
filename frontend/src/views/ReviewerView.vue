@@ -151,7 +151,6 @@
               <div class="assignment-info">
                 <h4 class="assignment-title">{{ asignacion.articulo?.titulo || 'Sin título' }}</h4>
                 <p class="assignment-meta">
-                  Autor: {{ asignacion.articulo?.autor?.nombre || 'Desconocido' }} · 
                   Fecha límite: {{ formatDate(asignacion.fecha_limite) }}
                 </p>
               </div>
@@ -196,53 +195,46 @@
           </div>
           
           <div v-else class="assignments-list">
-            <div v-for="asignacion in asignaciones" :key="asignacion.id" class="assignment-card full">
+            <!-- Sección: Pendientes / En Progreso -->
+            <h3 v-if="[...asignacionesEnProgreso, ...asignacionesPendientes].length > 0" class="sub-section-title">Asignaciones en curso</h3>
+            <div v-for="asignacion in [...asignacionesEnProgreso, ...asignacionesPendientes]" :key="asignacion.id" class="assignment-card full">
               <div class="assignment-header">
                 <div class="assignment-status" :class="asignacion.articulo?.estado?.toLowerCase().replace(' ', '-')">
-                  {{ asignacion.articulo?.estado || 'Pendiente' }}
+                  {{ asignacion.articulo?.estado || 'En Revisión' }}
                 </div>
               </div>
               <div class="assignment-info">
                 <h4 class="assignment-title">{{ asignacion.articulo?.titulo || 'Sin título' }}</h4>
-                <p class="assignment-meta">
-                  <span class="meta-item">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                      <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    {{ asignacion.articulo?.autor?.nombre || 'Desconocido' }}
-                  </span>
-                  <span class="meta-item">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                      <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    {{ formatDate(asignacion.fecha_limite) }}
-                  </span>
-                </p>
+                <p class="assignment-meta">Límite: {{ formatDate(asignacion.fecha_limite) }}</p>
               </div>
               <div class="assignment-actions">
                 <button class="btn-primary" @click="irARevision(asignacion.id, asignacion.articulo_id)">
                   Revisar
                 </button>
-                <button
-                  v-if="!isOffline && !asignacion.pdfDescargado"
-                  class="btn-secondary"
-                  @click="descargarParaOffline(asignacion)"
-                  :disabled="asignacion.descargando"
-                >
-                  <svg v-if="asignacion.descargando" class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke-linecap="round"/>
-                  </svg>
-                  <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  {{ asignacion.descargando ? 'Descargando...' : 'Guardar offline' }}
+                <button v-if="!isOffline && !asignacion.pdfDescargado" class="btn-secondary" @click="descargarParaOffline(asignacion)">
+                  Guardar offline
                 </button>
-                <span v-else-if="asignacion.pdfDescargado" class="offline-badge">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  Disponible offline
-                </span>
+              </div>
+            </div>
+
+            <!-- Sección: Historial de Completados -->
+            <div v-if="asignacionesCompletadas.length > 0" style="margin-top: 3rem;">
+              <h3 class="sub-section-title">Historial de Revisiones</h3>
+              <div v-for="asignacion in asignacionesCompletadas" :key="'comp-' + asignacion.id" class="assignment-card full" style="opacity: 0.8;">
+                <div class="assignment-header">
+                  <div class="assignment-status" :class="asignacion.articulo?.estado?.toLowerCase()">
+                    {{ asignacion.articulo?.estado }}
+                  </div>
+                </div>
+                <div class="assignment-info">
+                    <h4 class="assignment-title" style="font-weight: 700; color: var(--text-strong);">{{ asignacion.articulo?.titulo || 'Sin título' }}</h4>
+                    <p class="assignment-meta">Revision finalizada satisfactoriamente</p>
+                </div>
+                <div class="assignment-actions">
+                  <button class="btn-secondary" @click="irARevision(asignacion.id, asignacion.articulo_id)">
+                    Ver revisión
+                  </button>
+                </div>
               </div>
             </div>
           </div>

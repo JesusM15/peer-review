@@ -12,27 +12,55 @@
       </div>
 
       <nav class="sidebar-nav">
+        <button class="nav-item" @click="goBack">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Overview
+        </button>
         <button class="nav-item active">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          Revisión de artículo
+          Revisión
         </button>
       </nav>
 
-      <div class="sidebar-footer">
-        <div class="user-chip">
+      <div class="sidebar-footer relative-footer">
+        <div class="user-menu-dropdown" v-if="showUserMenu">
+           <button class="menu-item" @click="toggleTheme">
+              <svg v-if="isDark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+              </svg>
+              <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+              </svg>
+              Tema: {{ isDark ? 'Oscuro' : 'Claro' }}
+           </button>
+           <button class="menu-item text-danger" @click="logout">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Cerrar sesión
+           </button>
+        </div>
+        <button class="user-chip user-chip-btn" @click="showUserMenu = !showUserMenu" :class="{ active: showUserMenu }">
           <div class="user-avatar">{{ userInitial }}</div>
           <div class="user-info">
             <span class="user-name">{{ currentUser?.nombre || 'Revisor' }}</span>
             <span class="user-role">{{ currentUser?.email || 'revisor@diego.edu' }}</span>
           </div>
-        </div>
-        <button class="back-btn" @click="goBack">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M10 19l-7-7m0 0l7-7m-7 7h18" stroke-linecap="round" stroke-linejoin="round"/>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
-          Volver
         </button>
       </div>
     </aside>
@@ -42,228 +70,123 @@
       <header class="topbar">
         <div>
           <h1 class="page-title">
-            Revisión de artículo
-            <span v-if="isOffline" class="offline-badge">OFFLINE</span>
+            {{ isReadOnly ? 'Consulta de Revisión' : 'Revisión de Artículo' }}
+            <span v-if="isOffline" class="offline-badge-pill">OFFLINE</span>
+            <span v-if="isReadOnly" class="read-only-badge">SÓLO LECTURA</span>
           </h1>
-          <p class="page-sub" v-if="articulo">{{ articulo.titulo }}</p>
+          <p class="page-sub">{{ articulo?.titulo || 'Cargando artículo...' }}</p>
         </div>
       </header>
 
-      <!-- Split view: PDF + Form -->
-      <div class="review-split-container">
-        <!-- PDF Viewer (Left side) -->
+      <div class="review-layout">
+        <!-- Panel de PDF (Izquierda) -->
         <div class="pdf-panel">
-          <div v-if="loadingPdf" class="loading-state">
+          <div v-if="loadingPdf" class="panel-loading">
             <div class="spinner"></div>
-            <p>Cargando PDF...</p>
+            <p>Cargando documento...</p>
           </div>
-          <div v-else-if="!articulo?.pdf_url" class="empty-state">
-            <div class="empty-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-                <path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
-            <h3>No hay PDF disponible</h3>
-            <p>Este artículo no tiene un archivo PDF asociado.</p>
-          </div>
-          <div v-else class="pdf-container">
-            <iframe :src="articulo.pdf_url" class="pdf-frame" title="PDF del artículo"></iframe>
+          <iframe v-else-if="pdfBlobUrl || articulo?.pdf_url" :src="pdfBlobUrl || articulo?.pdf_url" class="pdf-viewer"></iframe>
+          <div v-else class="panel-empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+              <path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            <p>PDF no disponible</p>
           </div>
         </div>
 
-        <!-- Review Form (Right side) -->
+        <!-- Panel de Formulario (Derecha) -->
         <div class="form-panel">
-          <div class="form-scroll-content">
-            <div class="review-form">
-          <!-- Sección: Introducción -->
-          <div class="review-section">
-            <div class="section-header">
-              <h3 class="section-title">Introducción</h3>
-              <span class="section-badge">Requerida</span>
-            </div>
-            <p class="section-desc">Evalúa la claridad del problema, la justificación y los objetivos del artículo.</p>
-            <div class="comment-box">
-              <label for="comentario-intro">Comentarios sobre la introducción</label>
-              <textarea
-                id="comentario-intro"
-                v-model="revision.introduccion"
-                placeholder="Escribe tus comentarios sobre la introducción del artículo..."
-                rows="4"
-              ></textarea>
-            </div>
-          </div>
-
-          <!-- Sección: Metodología -->
-          <div class="review-section">
-            <div class="section-header">
-              <h3 class="section-title">Metodología</h3>
-              <span class="section-badge">Requerida</span>
-            </div>
-            <p class="section-desc">Evalúa la adecuación del diseño metodológico, las técnicas de recolección de datos y el análisis.</p>
-            <div class="comment-box">
-              <label for="comentario-metodologia">Comentarios sobre la metodología</label>
-              <textarea
-                id="comentario-metodologia"
-                v-model="revision.metodologia"
-                placeholder="Escribe tus comentarios sobre la metodología utilizada..."
-                rows="4"
-              ></textarea>
-            </div>
-          </div>
-
-          <!-- Sección: Resultados -->
-          <div class="review-section">
-            <div class="section-header">
-              <h3 class="section-title">Resultados</h3>
-              <span class="section-badge">Requerida</span>
-            </div>
-            <p class="section-desc">Evalúa la presentación, coherencia y relevancia de los resultados obtenidos.</p>
-            <div class="comment-box">
-              <label for="comentario-resultados">Comentarios sobre los resultados</label>
-              <textarea
-                id="comentario-resultados"
-                v-model="revision.resultados"
-                placeholder="Escribe tus comentarios sobre los resultados presentados..."
-                rows="4"
-              ></textarea>
-            </div>
-          </div>
-
-          <!-- Sección: Discusión -->
-          <div class="review-section">
-            <div class="section-header">
-              <h3 class="section-title">Discusión</h3>
-              <span class="section-badge">Requerida</span>
-            </div>
-            <p class="section-desc">Evalúa la interpretación de los resultados, su relación con la literatura y las implicaciones.</p>
-            <div class="comment-box">
-              <label for="comentario-discusion">Comentarios sobre la discusión</label>
-              <textarea
-                id="comentario-discusion"
-                v-model="revision.discusion"
-                placeholder="Escribe tus comentarios sobre la discusión del artículo..."
-                rows="4"
-              ></textarea>
-            </div>
-          </div>
-
-          <!-- Sección: Conclusiones -->
-          <div class="review-section">
-            <div class="section-header">
-              <h3 class="section-title">Conclusiones</h3>
-              <span class="section-badge">Requerida</span>
-            </div>
-            <p class="section-desc">Evalúa si las conclusiones responden a los objetivos y son coherentes con los resultados.</p>
-            <div class="comment-box">
-              <label for="comentario-conclusiones">Comentarios sobre las conclusiones</label>
-              <textarea
-                id="comentario-conclusiones"
-                v-model="revision.conclusiones"
-                placeholder="Escribe tus comentarios sobre las conclusiones..."
-                rows="4"
-              ></textarea>
-            </div>
-          </div>
-
-          <!-- Sección: Referencias -->
-          <div class="review-section">
-            <div class="section-header">
-              <h3 class="section-title">Referencias</h3>
-              <span class="section-badge">Requerida</span>
-            </div>
-            <p class="section-desc">Evalúa la actualidad, relevancia y formato de las referencias bibliográficas.</p>
-            <div class="comment-box">
-              <label for="comentario-referencias">Comentarios sobre las referencias</label>
-              <textarea
-                id="comentario-referencias"
-                v-model="revision.referencias"
-                placeholder="Escribe tus comentarios sobre las referencias bibliográficas..."
-                rows="4"
-              ></textarea>
-            </div>
-          </div>
-
-          <!-- Sección: Comentarios generales -->
-          <div class="review-section general-section">
-            <div class="section-header">
-              <h3 class="section-title">Comentarios generales</h3>
-            </div>
-            <p class="section-desc">Observaciones adicionales que apliquen al artículo completo.</p>
-            <div class="comment-box">
-              <label for="comentario-general">Comentarios generales</label>
-              <textarea
-                id="comentario-general"
-                v-model="revision.comentariosGenerales"
-                placeholder="Escribe tus comentarios generales sobre el artículo..."
-                rows="6"
-              ></textarea>
-            </div>
-          </div>
-        </div>
-
-        <!-- Botones de decisión final -->
-        <div class="decision-panel">
-          <h3 class="decision-title">Decisión final</h3>
-          <p class="decision-desc">Selecciona el veredicto para este artículo</p>
-          
-          <div class="decision-buttons">
-            <button 
-              class="decision-btn accepted"
-              :class="{ selected: decision === 'aceptado' }"
-              @click="decision = 'aceptado'"
-            >
+          <div class="form-scrollable-area">
+            <div class="autosave-bar" v-if="hasStartedTyping && !isReadOnly">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M5 13l4 4L19 7" />
               </svg>
-              <div class="btn-content">
-                <span class="btn-label">Aceptado</span>
-                <span class="btn-sublabel">Sin cambios necesarios</span>
-              </div>
-            </button>
+              Progreso guardado automáticamente
+            </div>
 
-            <button 
-              class="decision-btn revision"
-              :class="{ selected: decision === 'revision' }"
-              @click="decision = 'revision'"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <div class="btn-content">
-                <span class="btn-label">Revisión con cambios</span>
-                <span class="btn-sublabel">Se requieren modificaciones</span>
+            <form @submit.prevent="submitRevision" class="revision-form-container">
+              <!-- Secciones del Formulario -->
+              <div v-for="(label, key) in sections" :key="key" class="form-section">
+                <div class="section-top">
+                  <h3 class="section-name">{{ label }}</h3>
+                  <span class="section-tag" v-if="!isReadOnly">Requerido</span>
+                </div>
+                <p class="section-instruction">{{ sectionDescriptions[key] }}</p>
+                <div class="textarea-container">
+                  <textarea 
+                    v-model="revision[key as keyof Revision]" 
+                    :placeholder="isReadOnly ? 'Sin comentarios' : 'Escribe aquí tus comentarios sobre ' + label.toLowerCase() + '...'"
+                    :disabled="isReadOnly"
+                    rows="4"
+                  ></textarea>
+                </div>
               </div>
-            </button>
 
-            <button 
-              class="decision-btn rejected"
-              :class="{ selected: decision === 'rechazado' }"
-              @click="decision = 'rechazado'"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <div class="btn-content">
-                <span class="btn-label">Rechazado</span>
-                <span class="btn-sublabel">No cumple con los criterios</span>
+              <!-- Comentarios Generales -->
+              <div class="form-section highlight-section">
+                <h3 class="section-name">Comentarios Generales</h3>
+                <p class="section-instruction">Observaciones generales finales.</p>
+                <div class="textarea-container">
+                  <textarea 
+                    v-model="revision.comentariosGenerales" 
+                    :placeholder="isReadOnly ? 'Sin comentarios' : 'Escribe cualquier observación adicional...'"
+                    :disabled="isReadOnly"
+                    rows="5"
+                  ></textarea>
+                </div>
               </div>
-            </button>
-          </div>
 
-          <div class="submit-actions">
-            <button class="btn-ghost" @click="goBack">Cancelar</button>
-            <button 
-              class="btn-primary" 
-              @click="submitRevision"
-              :disabled="!decision || isSubmitting"
-            >
-              <svg v-if="isSubmitting" class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke-linecap="round"/>
-              </svg>
-              {{ isSubmitting ? 'Enviando...' : 'Enviar revisión' }}
-            </button>
-          </div>
-        </div>
+              <!-- Decisión Final -->
+              <div class="conclusion-panel">
+                <h3 class="conclusion-title">{{ isReadOnly ? 'Evaluación Final' : 'Veredicto Final' }}</h3>
+                <p class="conclusion-sub">{{ isReadOnly ? 'Resultado de tu revisión' : 'Selecciona el estado en el que dejas el artículo' }}</p>
+                
+                <div class="verdict-options" :class="{ 'pointer-none': isReadOnly }">
+                  <button 
+                    type="button"
+                    class="verdict-card accepted"
+                    :class="{ selected: decision === 'aceptado' }"
+                    @click="!isReadOnly && (decision = 'aceptado')"
+                  >
+                    <div class="verdict-icon">✓</div>
+                    <div class="verdict-label">Aceptado</div>
+                  </button>
+
+                  <button 
+                    type="button"
+                    class="verdict-card revision"
+                    :class="{ selected: decision === 'revision' }"
+                    @click="!isReadOnly && (decision = 'revision')"
+                  >
+                    <div class="verdict-icon">✎</div>
+                    <div class="verdict-label">Revisión</div>
+                  </button>
+
+                  <button 
+                    type="button"
+                    class="verdict-card rejected"
+                    :class="{ selected: decision === 'rechazado' }"
+                    @click="!isReadOnly && (decision = 'rechazado')"
+                  >
+                    <div class="verdict-icon">✕</div>
+                    <div class="verdict-label">Rechazado</div>
+                  </button>
+                </div>
+
+                <div class="action-footer">
+                  <button type="button" class="btn-cancel" @click="goBack">{{ isReadOnly ? 'Volver' : 'Cancelar' }}</button>
+                  <button 
+                    v-if="!isReadOnly"
+                    type="submit" 
+                    class="btn-submit-main" 
+                    :disabled="!decision || isSubmitting"
+                  >
+                    <div v-if="isSubmitting" class="loader-white"></div>
+                    {{ isSubmitting ? 'Enviando...' : 'Finalizar revisión' }}
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
       </div>
@@ -273,24 +196,28 @@
 
 <script setup lang="ts">
 import { useRouter, useRoute } from 'vue-router'
-import { ref, onMounted, computed, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useToast } from '../composables/useToast'
 import { useOfflineStorage } from '../composables/useOfflineStorage'
+import { useSyncEngine } from '../composables/useSyncEngine'
+import { useTheme } from '../composables/useTheme'
+import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
 const route = useRoute()
 const { showToast } = useToast()
 const offlineStorage = useOfflineStorage()
+const syncEngine = useSyncEngine()
+const { isDark, toggleTheme } = useTheme()
+const authStore = useAuthStore()
+
+const showUserMenu = ref(false)
+const hasStartedTyping = ref(false)
+const isReadOnly = ref(false)
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 
-interface CurrentUser {
-  id: string
-  email: string
-  nombre: string
-  rol: string
-}
-
+interface CurrentUser { id: string; email: string; nombre: string; rol: string }
 interface Articulo {
   id: string
   titulo: string
@@ -306,6 +233,24 @@ interface Revision {
   conclusiones: string
   referencias: string
   comentariosGenerales: string
+}
+
+const sections = {
+  introduccion: 'Introducción',
+  metodologia: 'Metodología',
+  resultados: 'Resultados',
+  discusion: 'Discusión',
+  conclusiones: 'Conclusiones',
+  referencias: 'Referencias'
+}
+
+const sectionDescriptions: Record<string, string> = {
+  introduccion: 'Evalúa la claridad del planteamiento del problema y la importancia del estudio.',
+  metodologia: 'Analiza si el diseño del estudio es adecuado y si los métodos están bien descritos.',
+  resultados: 'Verifica si los resultados son claros, coherentes y están bien sustentados.',
+  discusion: 'Evalúa si la interpretación de los resultados es razonable y se compara con otros estudios.',
+  conclusiones: 'Evalúa si las conclusiones responden a los objetivos y son coherentes con los resultados.',
+  referencias: 'Evalúa la actualidad, relevancia y formato de las referencias bibliográficas.'
 }
 
 const currentUser = ref<CurrentUser | null>(null)
@@ -329,38 +274,77 @@ const revision = ref<Revision>({
 
 onMounted(async () => {
   const raw = localStorage.getItem('user')
-  if (raw) {
-    currentUser.value = JSON.parse(raw)
-  }
+  if (raw) currentUser.value = JSON.parse(raw)
 
-  // Obtener asignacionId guardado
   asignacionId.value = localStorage.getItem('current_revision_asignacion_id')
 
-  const articuloId = route.params.id as string
-  if (articuloId) {
-    await fetchArticulo(articuloId)
+  const articuloIdParam = route.params.id as string
+  if (articuloIdParam) {
+    // 1. Cargamos datos básicos del artículo
+    await fetchArticulo(articuloIdParam)
+    
+    // 2. Si el artículo ya está en un estado final, activamos lectura de inmediato
+    if (articulo.value?.estado === 'Aceptado' || articulo.value?.estado === 'Rechazado') {
+      isReadOnly.value = true
+    }
+
+    // 3. Buscamos si ya existe revisión del usuario
+    const existingRev = await fetchExistingRevision(articuloIdParam)
+    
+    // 4. Si existe revisión, forzamos lectura (por seguridad)
+    if (existingRev) {
+      isReadOnly.value = true
+      console.log('[onMounted] Modo lectura detectado por revisión existente')
+    } else if (!isReadOnly.value) {
+      // 5. Solo si NO es lectura, cargamos borrador
+      const draft = await offlineStorage.getDraft(articuloIdParam)
+      if (draft) {
+        revision.value = draft
+        hasStartedTyping.value = true
+      }
+    }
   }
 
-  // Escuchar cambios de conexión
+  isOffline.value = !offlineStorage.isOnline()
   window.addEventListener('online', () => isOffline.value = false)
   window.addEventListener('offline', () => isOffline.value = true)
 })
 
 onUnmounted(() => {
-  // Limpiar URL blob al salir
-  if (pdfBlobUrl.value) {
-    offlineStorage.revokePdfUrl(pdfBlobUrl.value)
-  }
-  window.removeEventListener('online', () => isOffline.value = false)
-  window.removeEventListener('offline', () => isOffline.value = true)
+  if (pdfBlobUrl.value) offlineStorage.revokePdfUrl(pdfBlobUrl.value)
 })
 
-const userInitial = computed(() =>
-  currentUser.value?.nombre ? currentUser.value.nombre[0].toUpperCase() : 'R'
+watch(
+  revision,
+  async (newVal) => {
+    if (isReadOnly.value) return // No guardar borradores en modo lectura
+
+    const hasContent = Object.values(newVal).some(v => typeof v === 'string' && v.trim().length > 0)
+    const articuloIdParam = articulo.value?.id || route.params.id as string
+
+    if (hasContent && articuloIdParam) {
+      await offlineStorage.storeDraft(articuloIdParam, { ...newVal })
+      if (!hasStartedTyping.value) {
+        hasStartedTyping.value = true
+        await syncEngine.enqueue('START_REVIEW', {
+          articulo_id: articuloIdParam,
+          estado: 'En Revisión'
+        })
+      }
+    }
+  },
+  { deep: true }
 )
 
-const goBack = () => {
-  router.push('/reviewer')
+const userInitial = computed(() =>
+  currentUser.value?.nombre ? currentUser.value.nombre[0].toUpperCase() : '?'
+)
+
+const goBack = () => router.push('/reviewer')
+
+const logout = () => {
+  authStore.logout()
+  router.push('/login')
 }
 
 const fetchArticulo = async (id: string) => {
@@ -369,195 +353,136 @@ const fetchArticulo = async (id: string) => {
     isOffline.value = !offlineStorage.isOnline()
 
     if (isOffline.value) {
-      // Modo offline: cargar desde IndexedDB
       const storedPdf = await offlineStorage.getPdf(id)
       const storedAssignments = await offlineStorage.getAllAssignments()
       const assignment = storedAssignments.find(a => a.articuloId === id)
-
       if (storedPdf) {
-        // Crear URL blob para mostrar el PDF
         pdfBlobUrl.value = offlineStorage.createPdfUrl(storedPdf.blob)
-        articulo.value = {
-          id,
-          titulo: storedPdf.titulo,
-          estado: assignment?.estado || 'En Revisión',
-          pdf_url: pdfBlobUrl.value
-        }
-        showToast('Modo offline: Mostrando PDF guardado localmente', 'info')
-      } else {
-        showToast('No se encontró el PDF guardado localmente', 'error')
+        articulo.value = { id, titulo: storedPdf.titulo, estado: assignment?.estado || 'En Revisión', pdf_url: pdfBlobUrl.value }
       }
       return
     }
 
-    // Modo online: cargar desde servidor
     const response = await fetch(`${API_BASE_URL}/articulos/${id}?include_relations=true`)
     if (response.ok) {
       const data = await response.json()
-      // Construir URL completa para el PDF
       const baseUrl = API_BASE_URL.replace('/api', '')
-      if (data.pdf_url) {
-        data.pdf_url = `${baseUrl}${data.pdf_url}`
-      }
+      if (data.pdf_url) data.pdf_url = `${baseUrl}${data.pdf_url}`
       articulo.value = data
-
-      // Guardar en IndexedDB para modo offline
       await guardarPdfOffline(id)
     }
-  } catch (error) {
-    console.error('Error al cargar artículo:', error)
-    // Intentar cargar desde offline como fallback
-    await cargarDesdeOffline(id)
-  } finally {
-    loadingPdf.value = false
-  }
+  } catch (error) { console.error(error) } finally { loadingPdf.value = false }
 }
 
-const cargarDesdeOffline = async (id: string) => {
+const fetchExistingRevision = async (articuloId: string): Promise<boolean> => {
+  if (!currentUser.value?.id) return false
   try {
-    const storedPdf = await offlineStorage.getPdf(id)
-    const storedAssignments = await offlineStorage.getAllAssignments()
-    const assignment = storedAssignments.find(a => a.articuloId === id)
-
-    if (storedPdf) {
-      pdfBlobUrl.value = offlineStorage.createPdfUrl(storedPdf.blob)
-      articulo.value = {
-        id,
-        titulo: storedPdf.titulo,
-        estado: assignment?.estado || 'En Revisión',
-        pdf_url: pdfBlobUrl.value
+    const response = await fetch(`${API_BASE_URL}/revisiones?articulo_id=${articuloId}&revisor_id=${currentUser.value.id}`)
+    if (response.ok) {
+      const data = await response.json()
+      // En MongoDB los comentarios están en 'secciones' según el esquema
+      const obs = data.secciones || data.comentarios
+      if (data && obs) {
+        // Bloqueamos el guardado automático ANTES de poblar los datos
+        isReadOnly.value = true
+        
+        // Mapeo explícito
+        revision.value = {
+          introduccion: obs.introduccion || '',
+          metodologia: obs.metodologia || '',
+          resultados: obs.resultados || '',
+          discusion: obs.discusion || '',
+          conclusiones: obs.conclusiones || '',
+          referencias: obs.referencias || '',
+          comentariosGenerales: obs.comentariosGenerales || ''
+        }
+        decision.value = data.decision
+        console.log('[fetchExistingRevision] Datos cargados:', revision.value)
+        return true
       }
-      isOffline.value = true
-      showToast('Usando PDF guardado localmente', 'info')
     }
-  } catch (offlineError) {
-    console.error('Error cargando desde offline:', offlineError)
+    return false
+  } catch (error) {
+    console.error('Error al cargar revision existente:', error)
+    return false
   }
 }
 
 const guardarPdfOffline = async (articuloId: string) => {
   try {
-    // Verificar si ya está guardado
     const existingPdf = await offlineStorage.getPdf(articuloId)
     if (existingPdf) return
-
-    const success = await offlineStorage.downloadAndStorePdf(
-      articuloId,
-      articulo.value?.titulo || 'articulo',
-      API_BASE_URL
-    )
-
-    if (success) {
-      console.log('PDF guardado para modo offline')
-    }
-  } catch (error) {
-    console.error('Error guardando PDF offline:', error)
-  }
+    await offlineStorage.downloadAndStorePdf(articuloId, articulo.value?.titulo || 'articulo', API_BASE_URL)
+  } catch (error) { console.error(error) }
 }
 
 const submitRevision = async () => {
-  if (!decision.value) return
-
+  if (!decision.value || isReadOnly.value) return
   const articuloId = articulo.value?.id || route.params.id as string
-
   try {
     isSubmitting.value = true
-
     const revisionData = {
       articulo_id: articuloId,
       revisor_id: currentUser.value?.id,
       decision: decision.value,
-      comentarios: revision.value,
+      secciones: { ...revision.value }, // Mapeo a secciones
+      comentarios: { ...revision.value }, // Fallback para compatibilidad
       fecha_revision: new Date().toISOString()
     }
 
-    // Si está offline, guardar revisión pendiente y eliminar PDF local
     if (!offlineStorage.isOnline()) {
-      await guardarRevisionPendiente(revisionData)
+      await syncEngine.enqueue('REVISION', revisionData)
+      await offlineStorage.deleteDraft(articuloId)
       await eliminarPdfLocal(articuloId)
-      showToast('Revisión guardada localmente. Se enviará cuando haya conexión.', 'success')
+      showToast('Guardado local (Offline)', 'success')
       router.push('/reviewer')
       return
     }
 
     const response = await fetch(`${API_BASE_URL}/revisiones`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(revisionData)
     })
 
-    if (!response.ok) {
-      throw new Error(`Error HTTP: ${response.status}`)
+    if (response.ok) {
+      await offlineStorage.deleteDraft(articuloId)
+      await eliminarPdfLocal(articuloId)
+      showToast('Revisión completada', 'success')
+      router.push('/reviewer')
     }
-
-    // Eliminar PDF local al completar la revisión
-    await eliminarPdfLocal(articuloId)
-
-    showToast('Revisión enviada con éxito', 'success')
-    router.push('/reviewer')
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-    showToast(`Error al enviar la revisión: ${errorMessage}`, 'error')
-  } finally {
-    isSubmitting.value = false
-  }
+  } catch (error) { showToast('Error al enviar', 'error') } finally { isSubmitting.value = false }
 }
 
 const eliminarPdfLocal = async (articuloId: string) => {
   try {
     await offlineStorage.deletePdf(articuloId)
-    if (asignacionId.value) {
-      await offlineStorage.deleteAssignment(asignacionId.value)
-    }
-    console.log(`PDF y asignación eliminados localmente: ${articuloId}`)
-  } catch (error) {
-    console.error('Error eliminando datos locales:', error)
-  }
+    if (asignacionId.value) await offlineStorage.deleteAssignment(asignacionId.value)
+  } catch (error) { console.error(error) }
 }
-
-const guardarRevisionPendiente = async (revisionData: any) => {
-  // Guardar en localStorage para envío posterior
-  const pendingRevisions = JSON.parse(localStorage.getItem('pending_revisions') || '[]')
-  pendingRevisions.push({
-    ...revisionData,
-    id: generateUUID(),
-    savedAt: new Date().toISOString()
-  })
-  localStorage.setItem('pending_revisions', JSON.stringify(pendingRevisions))
-}
-
-const generateUUID = (): string =>
-  'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = Math.random() * 16 | 0
-    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16)
-  })
 </script>
 
 <style scoped>
 .dashboard {
   display: flex;
-  min-height: 100vh;
-  background: #080808;
+  height: 100vh;
+  background: var(--bg-base);
   overflow: hidden;
+  transition: background 0.3s;
 }
 
 .sidebar {
-  width: 220px;
-  min-width: 220px;
-  border-right: 1px solid #1e1e1e;
+  width: 260px;
+  min-width: 260px;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  background: #090909;
-  position: sticky;
-  top: 0;
-  height: 100vh;
 }
 
 .sidebar-header {
   padding: 1.5rem 1.25rem 1rem;
-  border-bottom: 1px solid #1e1e1e;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .brand {
@@ -569,13 +494,13 @@ const generateUUID = (): string =>
 .brand-icon {
   width: 16px;
   height: 16px;
-  color: #fff;
+  color: var(--text-strong);
 }
 
 .brand-name {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-strong);
   letter-spacing: -0.02em;
 }
 
@@ -595,585 +520,300 @@ const generateUUID = (): string =>
   border-radius: 6px;
   font-size: 0.8rem;
   font-weight: 500;
-  color: #555;
+  color: var(--text-muted);
   transition: all 0.15s ease;
   text-align: left;
   width: 100%;
-  background: transparent;
-  border: none;
-  cursor: pointer;
 }
 
-.nav-item svg {
-  width: 15px;
-  height: 15px;
-  flex-shrink: 0;
-}
+.nav-item svg { width: 15px; height: 15px; }
 
 .nav-item:hover {
-  background: #141414;
-  color: #bbb;
+  background: var(--bg-card-hover);
+  color: var(--text-normal);
 }
 
 .nav-item.active {
-  background: #1a1a1a;
-  color: #fff;
+  background: var(--bg-input);
+  color: var(--text-strong);
 }
 
 .sidebar-footer {
   padding: 1rem 0.75rem;
-  border-top: 1px solid #1e1e1e;
+  border-top: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
+
+.relative-footer { position: relative; }
 
 .user-chip {
   display: flex;
   align-items: center;
   gap: 0.6rem;
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: background 0.2s;
 }
+
+.user-chip-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.user-chip-btn:hover { background: var(--bg-card-hover); }
+.user-chip-btn.active { background: var(--bg-input); }
 
 .user-avatar {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #1f1f1f;
-  border: 1px solid #2e2e2e;
+  background: var(--bg-input);
+  border: 1px solid var(--border-hover);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.75rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-strong);
   flex-shrink: 0;
 }
 
-.user-info {
+.user-info { display: flex; flex-direction: column; min-width: 0; text-align: left; }
+.user-name { font-size: 0.8rem; font-weight: 600; color: var(--text-strong); }
+.user-role { font-size: 0.7rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--text-faint);
+  margin-left: auto;
+  transition: transform 0.2s;
+}
+
+.user-chip-btn.active .chevron { transform: rotate(180deg); }
+
+.user-menu-dropdown {
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 0.75rem;
+  right: 0.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   display: flex;
   flex-direction: column;
-  min-width: 0;
+  gap: 0.25rem;
+  z-index: 50;
 }
 
-.user-name {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #ddd;
-}
-
-.user-role {
-  font-size: 0.7rem;
-  color: #555;
-}
-
-.back-btn {
+.menu-item {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: 0.75rem;
-  color: #444;
-  transition: color 0.15s;
-  background: transparent;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  width: 100%;
   border: none;
+  background: transparent;
+  text-align: left;
+  font-size: 0.8rem;
+  color: var(--text-normal);
+  font-weight: 500;
   cursor: pointer;
-  padding: 0;
+  border-radius: 4px;
+  transition: background 0.2s;
 }
 
-.back-btn svg {
-  width: 13px;
-  height: 13px;
-}
-
-.back-btn:hover {
-  color: #888;
-}
+.menu-item svg { width: 15px; height: 15px; color: var(--text-muted); }
+.menu-item:hover { background: var(--bg-card-hover); color: var(--text-strong); }
+.menu-item.text-danger { color: #f87171; }
+.menu-item.text-danger svg { color: #f87171; }
 
 .main {
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
   overflow: hidden;
 }
 
 .topbar {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
   padding: 1.5rem 2rem;
-  border-bottom: 1px solid #1e1e1e;
-  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-sidebar);
 }
 
 .page-title {
   font-size: 1.25rem;
   font-weight: 700;
-  letter-spacing: -0.02em;
-  color: #fff;
-  margin-bottom: 0.2rem;
+  color: var(--text-strong);
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
 
-.offline-badge {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: #ef4444;
+.offline-badge-pill {
+  font-size: 0.65rem;
   background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
   border: 1px solid rgba(239, 68, 68, 0.2);
-  padding: 0.35rem 0.75rem;
-  border-radius: 6px;
-  letter-spacing: 0.05em;
 }
 
-.offline-badge::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  background: #ef4444;
-  border-radius: 50%;
-  animation: pulse 2s ease-in-out infinite;
+.read-only-badge {
+  font-size: 0.65rem;
+  background: var(--bg-input);
+  color: var(--text-faint);
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
 }
 
-.page-sub {
-  font-size: 0.8rem;
-  color: #666;
-}
+.page-sub { font-size: 0.8rem; color: var(--text-muted); }
 
-/* Split container with independent scrolling */
-.review-split-container {
+.review-layout {
   display: flex;
   flex: 1;
-  height: calc(100vh - 80px);
   overflow: hidden;
 }
 
-/* PDF Panel - Left side */
 .pdf-panel {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  background: #0d0d0d;
-  border-right: 1px solid #1e1e1e;
-  overflow: hidden;
-}
-
-.pdf-container {
-  flex: 1;
+  background: var(--bg-input);
+  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-.pdf-frame {
-  flex: 1;
-  width: 100%;
-  height: 100%;
-  border: none;
-  background: #fff;
-}
+.pdf-viewer { width: 100%; height: 100%; border: none; }
 
-/* Form Panel - Right side */
 .form-panel {
-  width: 480px;
-  min-width: 480px;
-  background: #080808;
+  width: 500px;
+  min-width: 500px;
+  background: var(--bg-base);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-.form-scroll-content {
+.form-scrollable-area {
   flex: 1;
   overflow-y: auto;
-  padding: 1.5rem;
+  padding: 2rem;
 }
 
-/* Scrollbar styling */
-.form-scroll-content::-webkit-scrollbar {
-  width: 6px;
-}
-
-.form-scroll-content::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.form-scroll-content::-webkit-scrollbar-thumb {
-  background: #333;
-  border-radius: 3px;
-}
-
-.form-scroll-content::-webkit-scrollbar-thumb:hover {
-  background: #444;
-}
-
-.review-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.review-section {
-  background: #0d0d0d;
-  border: 1px solid #1e1e1e;
-  border-radius: 10px;
-  padding: 1.5rem;
-}
-
-.review-section.general-section {
-  background: #111;
-  border-color: #2a2a2a;
-}
-
-.section-header {
+.autosave-bar {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--stat-aceptado);
+  background: rgba(16, 185, 129, 0.05);
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
 }
 
-.section-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #fff;
-}
+.autosave-bar svg { width: 14px; height: 14px; }
 
-.section-badge {
-  font-size: 0.65rem;
-  font-weight: 600;
-  color: #4ade80;
-  background: rgba(74, 222, 128, 0.1);
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
+.revision-form-container { display: flex; flex-direction: column; gap: 2rem; }
 
-.section-desc {
-  font-size: 0.8rem;
-  color: #666;
-  margin-bottom: 1rem;
+.form-section { display: flex; flex-direction: column; gap: 0.75rem; }
+.section-top { display: flex; align-items: center; gap: 0.75rem; }
+.section-name { font-size: 0.9rem; font-weight: 700; color: var(--text-strong); }
+.section-tag { font-size: 0.65rem; color: var(--stat-aceptado); background: rgba(16, 185, 129, 0.1); padding: 0.2rem 0.4rem; border-radius: 4px; }
+.section-instruction { font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; }
+
+.textarea-container textarea {
+  width: 100%;
+  padding: 1rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-normal);
+  font-family: inherit;
+  font-size: 0.9rem;
   line-height: 1.5;
+  resize: vertical;
+  min-height: 120px;
 }
 
-.comment-box {
+.textarea-container textarea:disabled {
+  opacity: 0.8;
+  cursor: default;
+  background: var(--bg-card);
+}
+
+.highlight-section { background: var(--bg-card); padding: 1.5rem; border-radius: 12px; border: 1px dashed var(--border-color); }
+
+.conclusion-panel {
+  margin-top: 1rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.conclusion-title { font-size: 1rem; font-weight: 700; color: var(--text-strong); }
+.conclusion-sub { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.5rem; }
+
+.verdict-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.pointer-none { pointer-events: none; }
+
+.verdict-card {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text-normal);
+}
+
+.verdict-card.selected.accepted { border-color: var(--stat-aceptado); background: rgba(16, 185, 129, 0.1); color: var(--stat-aceptado); }
+.verdict-card.selected.revision { border-color: var(--stat-revision); background: rgba(245, 158, 11, 0.1); color: var(--stat-revision); }
+.verdict-card.selected.rejected { border-color: var(--stat-rechazado); background: rgba(239, 68, 68, 0.1); color: var(--stat-rechazado); }
+
+.verdict-icon { font-size: 1.25rem; font-weight: 700; }
+.verdict-label { font-size: 0.75rem; font-weight: 600; }
+
+.action-footer { display: flex; justify-content: flex-end; gap: 1rem; }
+
+.btn-submit-main {
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
 }
 
-.comment-box label {
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: #bbb;
-}
-
-.comment-box textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #1e1e1e;
-  border-radius: 6px;
-  background: #080808;
-  color: #e8e8e8;
-  font-size: 0.875rem;
-  font-family: inherit;
-  resize: vertical;
-  min-height: 100px;
-  transition: border-color 0.15s;
-}
-
-.comment-box textarea:focus {
-  outline: none;
-  border-color: #333;
-}
-
-.comment-box textarea::placeholder {
-  color: #444;
-}
-
-.decision-panel {
-  margin-top: 2rem;
-  background: #0d0d0d;
-  border: 1px solid #1e1e1e;
-  border-radius: 10px;
-  padding: 1.5rem;
-}
-
-.decision-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #fff;
-  margin-bottom: 0.25rem;
-}
-
-.decision-desc {
-  font-size: 0.8rem;
-  color: #666;
-  margin-bottom: 1.25rem;
-}
-
-.decision-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.decision-btn {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.25rem;
-  border: 1px solid #1e1e1e;
+.btn-cancel {
+  padding: 0.75rem 1.5rem;
   border-radius: 8px;
-  background: #080808;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  text-align: left;
-}
-
-.decision-btn:hover {
-  border-color: #333;
-  background: #0f0f0f;
-}
-
-.decision-btn.selected {
-  border-width: 2px;
-}
-
-.decision-btn.selected.accepted {
-  border-color: #4ade80;
-  background: rgba(74, 222, 128, 0.05);
-}
-
-.decision-btn.selected.revision {
-  border-color: #e5a24c;
-  background: rgba(229, 162, 76, 0.05);
-}
-
-.decision-btn.selected.rejected {
-  border-color: #ef4444;
-  background: rgba(239, 68, 68, 0.05);
-}
-
-.decision-btn svg {
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-}
-
-.decision-btn.accepted svg {
-  color: #4ade80;
-}
-
-.decision-btn.revision svg {
-  color: #e5a24c;
-}
-
-.decision-btn.rejected svg {
-  color: #ef4444;
-}
-
-.btn-content {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.btn-label {
-  font-size: 0.9rem;
   font-weight: 600;
-  color: #fff;
-}
-
-.btn-sublabel {
-  font-size: 0.75rem;
-  color: #666;
-}
-
-.submit-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #1e1e1e;
-}
-
-.btn-ghost {
+  color: var(--text-muted);
   background: transparent;
-  color: #555;
-  font-size: 0.825rem;
-  font-weight: 500;
-  padding: 0.6rem 1rem;
-  border-radius: 6px;
-  border: 1px solid #1e1e1e;
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  border: 1px solid var(--border-color);
 }
 
-.btn-ghost:hover {
-  color: #999;
-  border-color: #333;
-}
-
-.btn-primary {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  background: #fff;
-  color: #000;
-  font-size: 0.825rem;
-  font-weight: 600;
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  transition: opacity 0.15s;
-}
-
-.btn-primary:hover:not(:disabled) {
-  opacity: 0.88;
-}
-
-.btn-primary:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.spinner {
-  width: 14px;
-  height: 14px;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.4;
-  }
-}
-
-@media (max-width: 768px) {
-  .dashboard {
-    flex-direction: column;
-  }
-
-  .sidebar {
-    width: 100%;
-    min-width: unset;
-    height: auto;
-    position: static;
-    border-right: none;
-    border-bottom: 1px solid #1e1e1e;
-  }
-
-  .review-split-container {
-    flex-direction: column;
-    height: auto;
-  }
-
-  .pdf-panel {
-    border-right: none;
-    border-bottom: 1px solid #1e1e1e;
-    height: 50vh;
-    min-height: 300px;
-  }
-
-  .form-panel {
-    width: 100%;
-    min-width: unset;
-    height: auto;
-    max-height: 50vh;
-  }
-
-  .topbar {
-    padding: 1.25rem;
-  }
-
-  .decision-buttons {
-    gap: 0.5rem;
-  }
-
-  .decision-btn {
-    padding: 0.875rem 1rem;
-  }
-
-  .submit-actions {
-    flex-direction: column-reverse;
-  }
-
-  .btn-primary,
-  .btn-ghost {
-    width: 100%;
-    justify-content: center;
-  }
-}
-
-/* Loading and empty states */
-.loading-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 4rem 2rem;
-  gap: 1rem;
-  text-align: center;
-  color: #666;
-}
-
-.loading-state .spinner {
-  width: 32px;
-  height: 32px;
-}
-
-.loading-state p {
-  font-size: 0.85rem;
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 4rem 2rem;
-  gap: 0.75rem;
-  text-align: center;
-}
-
-.empty-icon {
-  width: 44px;
-  height: 44px;
-  color: #333;
-  margin-bottom: 0.5rem;
-}
-
-.empty-icon svg {
-  width: 100%;
-  height: 100%;
-}
-
-.empty-state h3 {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #666;
-}
-
-.empty-state p {
-  font-size: 0.8rem;
-  color: #444;
-  max-width: 280px;
-  line-height: 1.5;
-}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loader-white { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; }
 </style>
