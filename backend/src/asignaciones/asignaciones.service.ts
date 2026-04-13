@@ -15,12 +15,12 @@ export class AsignacionesService {
   ) {}
 
   async findAll(includeRelations: boolean = false) {
-    const relations = includeRelations ? ['articulo', 'revisor', 'articulo.autor'] : [];
+    const relations = includeRelations ? ['articulo', 'revisor', 'revisor.perfil', 'articulo.autor', 'articulo.autor.perfil'] : [];
     return this.asignacionRepository.find({ relations });
   }
 
   async findByRevisor(revisorId: string, includeRelations: boolean = false) {
-    const relations = includeRelations ? ['articulo', 'revisor', 'articulo.autor'] : [];
+    const relations = includeRelations ? ['articulo', 'revisor', 'revisor.perfil', 'articulo.autor', 'articulo.autor.perfil'] : [];
     return this.asignacionRepository.find({
       where: { revisor_id: revisorId },
       relations
@@ -28,7 +28,7 @@ export class AsignacionesService {
   }
 
   async findOne(id: string, includeRelations: boolean = false) {
-    const relations = includeRelations ? ['articulo', 'revisor', 'articulo.autor'] : [];
+    const relations = includeRelations ? ['articulo', 'revisor', 'revisor.perfil', 'articulo.autor', 'articulo.autor.perfil'] : [];
     const asignacion = await this.asignacionRepository.findOne({ where: { id }, relations });
 
     if (!asignacion) {
@@ -62,9 +62,9 @@ export class AsignacionesService {
           id: revisor.id,
           email: revisor.email,
           rol: revisor.rol,
-          nombre: revisor.nombre || revisor.email,
-          carrera: '',
-          especialidades: [],
+          nombre: revisor.perfil?.nombre || revisor.nombre || revisor.email,
+          carrera: revisor.perfil?.carrera || '',
+          especialidades: revisor.perfil?.especialidades || [],
           articulos_asignados: totalAsignados,
           puede_recibir_mas: totalAsignados < 3,
           articulos: asignaciones.map((a) => ({

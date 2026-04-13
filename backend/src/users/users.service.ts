@@ -23,11 +23,13 @@ export class UsersService {
       where.rol = options.rol;
     }
     
-    return this.userRepository.find({ where });
+    const relations = options.include_relations ? ['perfil'] : [];
+    return this.userRepository.find({ where, relations });
   }
 
   async findOne(id: string, includeRelations: boolean = false) {
-    return this.userRepository.findOne({ where: { id } });
+    const relations = includeRelations ? ['perfil'] : [];
+    return this.userRepository.findOne({ where: { id }, relations });
   }
 
   async create(createUserDto: CreateUserDto) {
