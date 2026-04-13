@@ -100,4 +100,26 @@ export class UsersService {
     
     return { message: 'Usuario eliminado exitosamente' };
   }
+
+  async getStats() {
+    const users = await this.userRepository.find();
+    console.log('getStats - users found:', users.length);
+    if (users.length > 0) {
+      console.log('getStats - sample user roles:', users.slice(0, 3).map(u => ({ id: u.id, rol: u.rol, rolType: typeof u.rol })));
+    }
+
+    const usersByRole = {
+      Autor: users.filter(u => u.rol === Rol.AUTOR || (u.rol as any) === 'Autor' || (u.rol as any) === 'AUTOR').length,
+      Revisor: users.filter(u => u.rol === Rol.REVISOR || (u.rol as any) === 'Revisor' || (u.rol as any) === 'REVISOR').length,
+      Editor: users.filter(u => u.rol === Rol.EDITOR || (u.rol as any) === 'Editor' || (u.rol as any) === 'EDITOR').length,
+      Admin: users.filter(u => u.rol === Rol.ADMIN || (u.rol as any) === 'Admin' || (u.rol as any) === 'ADMIN').length,
+    };
+
+    const result = {
+      totalUsers: users.length,
+      usersByRole,
+    };
+    console.log('getStats - returning:', result);
+    return result;
+  }
 }
