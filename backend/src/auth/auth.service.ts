@@ -41,7 +41,6 @@ export class AuthService {
 
     await this.userRepository.save(user);
 
-    // Crear perfil vacío para el nuevo usuario
     const perfil = this.perfilRepository.create({
       id: user.id,
       nombre: user.nombre,

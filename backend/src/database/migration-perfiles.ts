@@ -28,26 +28,42 @@ async function runMigration() {
   console.log(`Buscando usuarios sin perfil (Total encontrados: ${users.length})`);
 
   let creados = 0;
+  let actualizados = 0;
+
+  const defaultData = {
+    [Rol.AUTOR]: { carrera: 'Ingeniería de Software', especialidades: ['Desarrollo Web', 'UX/UI'] },
+    [Rol.REVISOR]: { carrera: 'Ciencias de la Computación', especialidades: ['Ciberseguridad', 'IA', 'Cloud'] },
+    [Rol.EDITOR]: { carrera: 'Gestión Editorial', especialidades: ['Revision de Pares', 'Calidad'] },
+    [Rol.ADMIN]: { carrera: 'Arquitectura de Sistemas', especialidades: ['DevOps', 'Seguridad'] },
+  };
 
   for (const user of users) {
+    const data = defaultData[user.rol] || { carrera: 'Investigador', especialidades: ['General'] };
+
     if (!user.perfil) {
       console.log(`[+] Creando perfil para usuario: ${user.email} (${user.id})`);
       
       const nuevoPerfil = perfilRepo.create({
         id: user.id,
         nombre: user.nombre,
-        carrera: '',
-        especialidades: [],
+        carrera: data.carrera,
+        especialidades: data.especialidades,
       });
       
       await perfilRepo.save(nuevoPerfil);
       creados++;
     } else {
-      console.log(`[✓] Usuario ya tiene perfil: ${user.email}`);
+      console.log(`[~] Actualizando especialidades para usuario: ${user.email}`);
+      user.perfil.carrera = data.carrera;
+      user.perfil.especialidades = data.especialidades;
+      await perfilRepo.save(user.perfil);
+      actualizados++;
     }
   }
 
-  console.log(`\n🎉 Migración completada. Perfiles creados: ${creados}`);
+  console.log(`\n🎉 Migración completada.`);
+  console.log(`   - Perfiles creados: ${creados}`);
+  console.log(`   - Perfiles actualizados: ${actualizados}`);
   await AppDataSource.destroy();
 }
 

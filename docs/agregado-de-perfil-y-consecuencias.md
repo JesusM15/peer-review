@@ -19,6 +19,14 @@ La tabla \`perfiles\` tiene una relación **1 a 1** directa y estricta con \`usu
 - **\`carrera\` (String):** Carrera, profesión o campo de estudio al que pertenece.
 - **\`especialidades\` (Arreglo Básico):** Un arreglo indexable en MariaDB utilizando el atributo simple-array, de etiquetas de especialidad (p. ej: "Inteligencia Artificial", "Bases de Datos"). Permite búsquedas veloces si un Editor necesita asignar un artículo de cierta especialidad a un Revisor afín.
 
+#### Especialidades por Defecto (Solo en Migración):
+- **Autor:** Ingeniería de Software (Desarrollo Web, UX/UI)
+- **Revisor:** Ciencias de la Computación (Ciberseguridad, IA, Cloud)
+- **Editor:** Gestión Editorial (Revision de Pares, Calidad)
+- **Admin:** Arquitectura de Sistemas (DevOps, Seguridad)
+
+*Nota: Los usuarios nuevos creados mediante registro o por el panel de administración iniciarán con estos campos vacíos para que ellos mismos los completen.*
+
 ---
 
 ## 🛠️ Instrucciones de Aplicación de Cambios
