@@ -52,7 +52,7 @@
               </svg>
               Tema: {{ isDark ? 'Oscuro' : 'Claro' }}
            </button>
-           <button class="menu-item text-danger" id="btn-salir-revisor" @click="goBack">
+           <button class="menu-item text-danger" id="btn-salir-revisor" @click="logout">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
@@ -260,10 +260,17 @@ import { useRouter } from 'vue-router'
 import { ref, onMounted, computed } from 'vue'
 import { useTheme } from '../composables/useTheme'
 import { useToast } from '../composables/useToast'
+import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
 const { isDark, toggleTheme } = useTheme()
 const { showToast } = useToast()
+const authStore = useAuthStore()
+
+const logout = () => {
+  authStore.logout()
+  router.push('/login')
+}
 
 const showUserMenu = ref(false)
 const vistaActiva = ref<string>('overview')
