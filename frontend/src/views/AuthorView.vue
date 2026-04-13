@@ -370,6 +370,11 @@ const stats = computed(() => {
   }
 })
 
+// ─── Borradores ────────────────────────────────────────────────
+const borradores = computed(() => {
+  return articulos.value.filter(a => a.estado === 'Borrador')
+})
+
 onMounted(async () => {
   try {
     const raw = localStorage.getItem('user')
