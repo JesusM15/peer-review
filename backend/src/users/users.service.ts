@@ -6,6 +6,11 @@ import { Perfil } from './entities/perfil.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { v4 as uuidv4 } from 'uuid';
+import { Articulo } from '../articulos/entities/articulo.entity';
+import { Asignacion } from '../asignaciones/entities/asignacion.entity';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Revision } from '../asignaciones/schemas/revision.schema';
 
 @Injectable()
 export class UsersService {
@@ -14,6 +19,12 @@ export class UsersService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Perfil)
     private readonly perfilRepository: Repository<Perfil>,
+    @InjectRepository(Articulo)
+    private readonly articuloRepository: Repository<Articulo>,
+    @InjectRepository(Asignacion)
+    private readonly asignacionRepository: Repository<Asignacion>,
+    @InjectModel(Revision.name)
+    private readonly revisionModel: Model<Revision>,
   ) {}
 
   async findAll(options: { rol?: Rol; include_relations?: boolean }) {
@@ -80,8 +91,14 @@ export class UsersService {
       }
     }
 
-    // Actualizar campos
-    Object.assign(user, updateUserDto);
+    // Filtrar campos vacíos (especialmente password para no borrarla accidentalmente)
+    const { password: newPassword, ...otherFields } = updateUserDto;
+    
+    if (newPassword && newPassword.trim() !== '') {
+      user.password = newPassword;
+    }
+    
+    Object.assign(user, otherFields);
     await this.userRepository.save(user);
 
     // Retornar sin password
@@ -96,9 +113,30 @@ export class UsersService {
       throw new NotFoundException('Usuario no encontrado');
     }
 
+    // 1. Borrar datos relacionados en MongoDB (Revisiones hechas por el usuario o de sus artículos)
+    await this.revisionModel.deleteMany({ revisor_id: id }).exec();
+    
+    // 2. Borrar artículos del usuario y sus sub-relaciones
+    const articulos = await this.articuloRepository.find({ where: { autor_id: id } });
+    for (const art of articulos) {
+      // Borrar revisiones de este artículo en Mongo
+      await this.revisionModel.deleteMany({ articulo_id: art.id }).exec();
+      // Borrar asignaciones de este artículo
+      await this.asignacionRepository.delete({ articulo_id: art.id });
+      // Borrar el artículo
+      await this.articuloRepository.remove(art);
+    }
+
+    // 3. Borrar asignaciones donde el usuario era REVISOR
+    await this.asignacionRepository.delete({ revisor_id: id });
+
+    // 4. Borrar el Perfil (evita errores de Foreign Key en MariaDB)
+    await this.perfilRepository.delete({ id: id });
+
+    // 5. Finalmente borrar el usuario
     await this.userRepository.remove(user);
     
-    return { message: 'Usuario eliminado exitosamente' };
+    return { message: 'Usuario y todos sus datos relacionados eliminados exitosamente' };
   }
 
   async getStats() {

@@ -555,13 +555,18 @@ const submitUser = async () => {
     
     const method = showEditModal.value ? 'PATCH' : 'POST';
     
+    const payload = { ...userForm.value };
+    if (showEditModal.value && !payload.password) {
+      delete payload.password;
+    }
+
     const response = await fetch(url, {
       method,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${authStore.token}`
       },
-      body: JSON.stringify(userForm.value)
+      body: JSON.stringify(payload)
     });
     
     if (response.ok) {
@@ -589,6 +594,9 @@ const deleteUser = async (id: string) => {
     
     if (response.ok) {
       loadUsers();
+      loadStats();
+      loadArticleStats();
+      loadReviewerWorkload();
     }
   } catch (error) {
     console.error('Error eliminando usuario:', error);
