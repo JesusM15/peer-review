@@ -1,7 +1,7 @@
-import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { Injectable, ConflictException, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { JwtService } from '@nestjs/jwt';
 import { User, Rol } from '../users/entities/user.entity';
 import { Perfil } from '../users/entities/perfil.entity';
 import { RegisterDto } from './dto/register.dto';
@@ -20,6 +20,11 @@ export class AuthService {
 
   async register(registerDto: RegisterDto) {
     const { nombre, email, password, rol } = registerDto;
+
+    // No permitir registro público de usuarios Admin
+    if (rol === Rol.ADMIN) {
+      throw new ForbiddenException('No se permite registrar usuarios Admin desde el registro público. Solo un admin existente puede crear otros admins.');
+    }
 
     // Verificar si el email ya existe
     const existingUser = await this.userRepository.findOne({

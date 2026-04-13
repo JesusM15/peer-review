@@ -36,7 +36,6 @@
             <option value="Autor">Autor</option>
             <option value="Revisor">Revisor</option>
             <option value="Editor">Editor</option>
-            <option value="Admin">Admin</option>
           </select>
         </div>
 

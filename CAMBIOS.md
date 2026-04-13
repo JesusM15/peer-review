@@ -151,8 +151,10 @@ npm run dev
 ## 🔑 Endpoints de API
 
 ### Autenticación
-- `POST /api/auth/register` - Registro de usuarios
+- `POST /api/auth/register` - Registro de usuarios (no permite rol ADMIN)
 - `POST /api/auth/login` - Inicio de sesión (retorna JWT)
+
+**Nota:** El rol ADMIN solo puede ser asignado por un admin existente a través del endpoint `POST /api/users`
 
 ### Usuarios (Requieren JWT Bearer Token)
 - `GET /api/users` - Listar usuarios
