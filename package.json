@@ -1,0 +1,17 @@
+{
+  "name": "proyecto_final",
+  "version": "1.0.0",
+  "description": "¡Bienvenidos al proyecto! Este documento es tu mapa y brújula para entender cómo está configurado el sistema y cómo empezar a desarrollar sin estresarte instalando cosas en tu computadora.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "@types/node": "^25.6.0"
+  },
+  "scripts": {},
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

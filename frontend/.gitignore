@@ -22,3 +22,13 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.auth/
+/allure-results/
+/.trace/
+
+# Local browser binaries (only if using custom local installations)
+/.local-browsers/
