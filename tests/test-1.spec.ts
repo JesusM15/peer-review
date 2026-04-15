@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import path from 'path';
 
 test('test', async ({ page }) => {
   await page.goto('http://localhost:5173/login');
@@ -13,6 +14,6 @@ test('test', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Título del artículo' }).click();
   await page.getByRole('textbox', { name: 'Título del artículo' }).fill('articulo');
   await page.getByRole('button', { name: 'Documento PDF' }).click();
-  await page.getByRole('button', { name: 'Documento PDF' }).setInputFiles('Practica3-parte2.pdf');
+  await page.getByRole('button', { name: 'Documento PDF' }).setInputFiles(path.join(__dirname, 'Practica3-parte2.pdf'));
   await page.locator('#btn-submit-articulo').click();
 });
