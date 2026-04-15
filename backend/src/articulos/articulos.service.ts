@@ -212,4 +212,60 @@ export class ArticulosService {
       throw new InternalServerErrorException('Error al eliminar el artículo', error instanceof Error ? error.message : String(error));
     }
   }
+
+  async getStats() {
+    // 1. Artículos por estado
+    const allArticles = await this.articuloRepository.find({ relations: ['autor'] });
+    
+    const articlesByStatus = {
+      Borrador: allArticles.filter(a => a.estado === EstadoArticulo.BORRADOR || (a.estado as any) === 'Borrador').length,
+      EnRevision: allArticles.filter(a => a.estado === EstadoArticulo.EN_REVISION || (a.estado as any) === 'En Revisión' || (a.estado as any) === 'En_Revision').length,
+      Aceptado: allArticles.filter(a => a.estado === EstadoArticulo.ACEPTADO || (a.estado as any) === 'Aceptado').length,
+      Rechazado: allArticles.filter(a => a.estado === EstadoArticulo.RECHAZADO || (a.estado as any) === 'Rechazado').length,
+    };
+
+    // 2. Top 5 autores con más artículos
+    const authorCounts: Record<string, { name: string; count: number }> = {};
+    for (const article of allArticles) {
+      const authorName = article.autor?.nombre || 'Desconocido';
+      const authorId = article.autor_id;
+      if (!authorCounts[authorId]) {
+        authorCounts[authorId] = { name: authorName, count: 0 };
+      }
+      authorCounts[authorId].count++;
+    }
+    const topAuthors = Object.values(authorCounts)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    // 3. Métricas generales
+    const totalArticles = allArticles.length;
+    const articlesNeedingReview = articlesByStatus.EnRevision;
+    const completedArticles = articlesByStatus.Aceptado + articlesByStatus.Rechazado;
+    const acceptanceRate = totalArticles > 0 
+      ? Math.round((articlesByStatus.Aceptado / (articlesByStatus.Aceptado + articlesByStatus.Rechazado || 1)) * 100) 
+      : 0;
+
+    // 4. Actividad simulada por día (últimos 7 días)
+    // Como no hay campo de fecha, generamos datos de ejemplo
+    const last7Days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    const today = new Date().getDay();
+    const activityByDay = last7Days.map((day, i) => {
+      const dayIndex = (today - 6 + i + 7) % 7;
+      return {
+        day: last7Days[dayIndex],
+        count: Math.floor(Math.random() * 5), // Simulado
+      };
+    });
+
+    return {
+      totalArticles,
+      articlesByStatus,
+      topAuthors,
+      articlesNeedingReview,
+      completedArticles,
+      acceptanceRate,
+      activityByDay,
+    };
+  }
 }

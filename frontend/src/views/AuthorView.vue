@@ -8,7 +8,7 @@
           <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          <span class="brand-name">Diego</span>
+          <span class="brand-name">Peer Review System</span>
         </div>
       </div>
 
@@ -361,6 +361,11 @@ const stats = computed(() => {
     aceptados: articulos.value.filter(a => a.estado === 'Aceptado').length,
     rechazados: articulos.value.filter(a => a.estado === 'Rechazado').length
   }
+})
+
+// ─── Borradores ─────────────────────────────────────────────────────────────
+const borradores = computed(() => {
+  return articulos.value.filter(a => a.estado === 'Borrador')
 })
 
 onMounted(async () => {

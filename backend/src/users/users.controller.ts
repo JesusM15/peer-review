@@ -20,6 +20,14 @@ export class UsersController {
     return this.usersService.findAll({ rol: rolEnum, include_relations: include });
   }
 
+  @Get('stats')
+  async getStats() {
+    console.log('Controller getStats called');
+    const result = await this.usersService.getStats();
+    console.log('Controller getStats result:', result);
+    return result;
+  }
+
   @Get(':id')
   findOne(
     @Param('id') id: string,

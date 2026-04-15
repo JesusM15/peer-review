@@ -56,6 +56,11 @@ export class ArticulosController {
     return this.articulosService.findAll({ autor_id, estado, include_relations: include });
   }
 
+  @Get('stats')
+  async getStats() {
+    return this.articulosService.getStats();
+  }
+
   @Get(':id')
   findOne(
     @Param('id') id: string,

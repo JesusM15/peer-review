@@ -29,15 +29,6 @@
           />
         </div>
 
-        <div class="form-group">
-          <label for="rol">Rol</label>
-          <select id="rol" v-model="form.rol" required class="form-input">
-            <option value="" disabled>Selecciona un rol</option>
-            <option value="Autor">Autor</option>
-            <option value="Revisor">Revisor</option>
-            <option value="Editor">Editor</option>
-          </select>
-        </div>
 
         <div class="form-group">
           <label for="password">Contraseña</label>
@@ -106,7 +97,7 @@ const authStore = useAuthStore();
 const form = ref({
   nombre: '',
   email: '',
-  rol: '',
+  rol: 'Autor',
   password: '',
   confirmPassword: ''
 });
@@ -149,23 +140,7 @@ const handleRegister = async () => {
       form.value.rol
     );
 
-    // Redirigir según el rol
-    switch (form.value.rol) {
-      case 'Autor':
-        router.push('/author');
-        break;
-      case 'Revisor':
-        router.push('/reviewer');
-        break;
-      case 'Editor':
-        router.push('/editor');
-        break;
-      case 'Admin':
-        router.push('/admin');
-        break;
-      default:
-        router.push('/');
-    }
+    router.push('/author');
   } catch (err: any) {
     error.value = err.message || 'Error al registrar usuario';
   } finally {
