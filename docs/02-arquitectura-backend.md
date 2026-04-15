@@ -1,4 +1,4 @@
-# 🏛️ Arquitectura del Backend Universitario (NestJS)
+z# 🏛️ Arquitectura del Backend Universitario (NestJS)
 
 ¡Hola equipo! Nuestro backend vive dentro de un entorno ultra-organizado llamado **NestJS**. En NestJS nada vuela suelto, todo el código tiene un propósito súper específico y se organiza mediante archivos terminados en un nombre distintivo. 
 

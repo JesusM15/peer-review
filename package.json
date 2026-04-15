@@ -2,5 +2,11 @@
   "dependencies": {
     "chart.js": "^4.5.1",
     "vue-chartjs": "^5.3.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.42.1"
+  },
+  "scripts": {
+    "test:e2e": "playwright test"
   }
 }
