@@ -18,4 +18,7 @@ export class Perfil {
 
   @Column('simple-array')
   especialidades: string[];
+
+  @Column({ nullable: true })
+  telefono: string;
 }

@@ -319,6 +319,17 @@
                         <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/>
                       </svg>
                     </button>
+                    <button 
+                      class="whatsapp-btn whatsapp-btn-sm" 
+                      @click.stop="enviarWhatsApp(rev.telefono)" 
+                      title="Enviar mensaje por WhatsApp"
+                      :disabled="!rev.telefono"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M3 21l1.65-5.67A8.94 8.94 0 0121 12a9 9 0 10-9 9 8.94 8.94 0 01-3.35-.67L3 21z" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M9 10a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v2a.5.5 0 01-.5.5h-2a.5.5 0 01-.5-.5v-2zM12.5 10a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v2a.5.5 0 01-.5.5h-2a.5.5 0 01-.5-.5v-2z" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
                   </div>
                 </div>
                 <div class="rev-tags">
@@ -397,6 +408,17 @@
                         <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/>
                       </svg>
                     </button>
+                    <button 
+                      class="whatsapp-btn" 
+                      @click.stop="enviarWhatsApp(rev.telefono)" 
+                      title="Enviar mensaje por WhatsApp"
+                      :disabled="!rev.telefono"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M3 21l1.65-5.67A8.94 8.94 0 0121 12a9 9 0 10-9 9 8.94 8.94 0 01-3.35-.67L3 21z" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M9 10a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v2a.5.5 0 01-.5.5h-2a.5.5 0 01-.5-.5v-2zM12.5 10a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v2a.5.5 0 01-.5.5h-2a.5.5 0 01-.5-.5v-2z" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
                   </div>
                 </div>
                 <div class="rev-tags">
@@ -430,6 +452,10 @@
           <div class="modal-field">
             <span class="modal-field-label">Carrera</span>
             <span class="modal-field-value">{{ modalRevisor.carrera || '—' }}</span>
+          </div>
+          <div class="modal-field">
+            <span class="modal-field-label">Teléfono</span>
+            <span class="modal-field-value">{{ modalRevisor.telefono || 'No proporcionado' }}</span>
           </div>
           <div class="modal-field">
             <span class="modal-field-label">Especialidades</span>
@@ -468,6 +494,15 @@
           </div>
           <div v-else>
             <button class="btn-primary w-full" @click="irAAsignarEsteRevisor">Asignar</button>
+            <div class="modal-contact-buttons" v-if="modalRevisor.telefono">
+              <button class="btn-secondary w-full" @click="enviarWhatsApp(modalRevisor.telefono)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 16px; height: 16px; margin-right: 8px;">
+                  <path d="M3 21l1.65-5.67A8.94 8.94 0 0121 12a9 9 0 10-9 9 8.94 8.94 0 01-3.35-.67L3 21z" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M9 10a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v2a.5.5 0 01-.5.5h-2a.5.5 0 01-.5-.5v-2zM12.5 10a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v2a.5.5 0 01-.5.5h-2a.5.5 0 01-.5-.5v-2z" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Enviar mensaje por WhatsApp
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -692,6 +727,20 @@ function enviarCorreoGmail(reviewerEmail: string) {
   window.open(gmailUrl, '_blank')
 }
 
+// ── WhatsApp button ─────────────────────────────────────
+function enviarWhatsApp(phoneNumber: string | null) {
+  if (!phoneNumber) return
+  
+  // Remove any non-digit characters and ensure it starts with country code
+  const cleanPhone = phoneNumber.replace(/\D/g, '')
+  const formattedPhone = cleanPhone.startsWith('52') ? cleanPhone : `52${cleanPhone}` // Default to Mexico country code
+  
+  const message = encodeURIComponent('Estimado/a revisor/a,\n\nLe escribo en relación con la revisión de artículos en el sistema.\n\nAtentamente,\nEditor')
+  const whatsappUrl = `https://wa.me/${formattedPhone}?text=${message}`
+  
+  window.open(whatsappUrl, '_blank')
+}
+
 // ── Init ──────────────────────────────────────────────
 onMounted(async () => {
   await cargarArticulos()
@@ -770,6 +819,10 @@ onMounted(async () => {
 .btn-primary:hover:not(:disabled) { opacity: 0.88; }
 .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
 .btn-primary.w-full { width: 100%; text-align: center; padding: 0.75rem; font-size: 0.9rem; }
+.btn-secondary { background: var(--bg-input); color: var(--text-strong); font-size: 0.825rem; font-weight: 600; padding: 0.6rem 1.2rem; border-radius: 6px; border: 1px solid var(--border-color); cursor: pointer; transition: all 0.15s; white-space: nowrap; display: flex; align-items: center; justify-content: center; }
+.btn-secondary:hover { background: var(--bg-card-hover); border-color: var(--border-hover); }
+.btn-secondary.w-full { width: 100%; margin-top: 0.75rem; }
+.modal-contact-buttons { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.75rem; }
 .btn-sm { background: var(--bg-input); color: var(--text-strong); font-size: 0.75rem; font-weight: 600; padding: 0.35rem 0.85rem; border-radius: 5px; border: 1px solid var(--border-color); cursor: pointer; transition: background 0.15s; }
 .btn-sm:hover { background: var(--bg-card-hover); }
 
@@ -878,6 +931,12 @@ onMounted(async () => {
 .gmail-btn svg { width: 16px; height: 16px; }
 .gmail-btn-sm { padding: 0.2rem; }
 .gmail-btn-sm svg { width: 14px; height: 14px; }
+.whatsapp-btn { background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 0.3rem; border-radius: 4px; transition: all 0.15s; margin-top: 0.2rem; }
+.whatsapp-btn:hover:not(:disabled) { background: var(--bg-card-hover); color: #25D366; }
+.whatsapp-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.whatsapp-btn svg { width: 16px; height: 16px; }
+.whatsapp-btn-sm { padding: 0.2rem; }
+.whatsapp-btn-sm svg { width: 14px; height: 14px; }
 .rev-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; }
 .tag { font-size: 0.68rem; font-weight: 500; padding: 0.2rem 0.5rem; border-radius: 99px; background: var(--bg-input); color: var(--text-muted); border: 1px solid var(--border-color); }
 .rev-footer { margin-top: 0.75rem; }
