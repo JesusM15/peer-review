@@ -1,7 +1,7 @@
 <template>
   <div class="login-container">
     <div class="login-card">
-      <h1>🔐 Peer Review System</h1>
+      <h1>Peer Review System</h1>
       <p class="subtitle">Inicia sesión para continuar</p>
 
       <form @submit.prevent="handleLogin" class="login-form">
@@ -77,21 +77,10 @@ const handleLogin = async () => {
     // Redirigir según el rol
     const user = authStore.user;
     if (user) {
-      switch (user.rol) {
-        case 'Autor':
-          router.push('/author');
-          break;
-        case 'Revisor':
-          router.push('/reviewer');
-          break;
-        case 'Editor':
-          router.push('/editor');
-          break;
-        case 'Admin':
-          router.push('/admin');
-          break;
-        default:
-          router.push('/');
+      if (user.rol === 'Admin') {
+        router.push('/admin');
+      } else {
+        router.push('/select-congress');
       }
     }
   } catch (err: any) {

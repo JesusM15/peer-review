@@ -55,6 +55,13 @@ export const useAuthStore = defineStore('auth', () => {
 
     const data = await response.json();
     setAuth(data.user, data.token);
+
+    try {
+      const { useCongressStore } = await import('./congress');
+      await useCongressStore().fetchMemberships();
+    } catch (e) {
+      console.error('Error fetching congresses:', e);
+    }
   };
 
   const register = async (nombre: string, email: string, password: string, rol: string): Promise<void> => {

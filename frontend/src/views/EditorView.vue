@@ -10,6 +10,9 @@
           </svg>
           <span class="brand-name">Peer Review System</span>
         </div>
+        <div v-if="congressStore.currentCongressId" class="congress-context">
+          <span class="congress-name-text">{{ currentCongressName }}</span>
+        </div>
       </div>
 
       <nav class="sidebar-nav">
@@ -58,7 +61,13 @@
               </svg>
               Tema: {{ isDark ? 'Oscuro' : 'Claro' }}
            </button>
-           <button class="menu-item text-danger" id="btn-salir-editor" @click="logout">
+            <button class="menu-item" @click="changeCongress">
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                 <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5" stroke-linecap="round" stroke-linejoin="round"/>
+               </svg>
+               Cambiar de congreso
+            </button>
+            <button class="menu-item text-danger" id="btn-salir-editor" @click="logout">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
@@ -513,20 +522,33 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useTheme } from '../composables/useTheme'
 import { useAuthStore } from '../stores/auth'
+import { useCongressStore } from '../stores/congress'
 import CustomSelect from '../components/CustomSelect.vue'
+import CongressSelector from '../components/CongressSelector.vue'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 const router = useRouter()
 const { isDark, toggleTheme } = useTheme()
 const authStore = useAuthStore()
+const congressStore = useCongressStore()
 
 const showUserMenu = ref(false)
 const vistaActiva = ref<string>('overview')
 const goBack = () => router.push('/')
+
+const currentCongressName = computed(() => {
+  const c = congressStore.memberships.find(m => m.congreso_id === congressStore.currentCongressId)
+  return c?.congreso?.nombre || 'Sin Congreso'
+})
+
+const changeCongress = () => {
+  congressStore.setCongress('') // Limpiar selección actual
+  router.push('/select-congress')
+}
 
 const logout = () => {
   authStore.logout()
@@ -590,7 +612,12 @@ function badgeClass(estado: string) {
 async function cargarArticulos() {
   cargandoArticulos.value = true
   try {
-    const res = await fetch(`${API}/articulos?include_relations=true`)
+    const url = new URL(`${API}/articulos`);
+    url.searchParams.append('include_relations', 'true');
+    if (congressStore.currentCongressId) {
+      url.searchParams.append('congreso_id', congressStore.currentCongressId);
+    }
+    const res = await fetch(url.toString())
     articulos.value = await res.json()
   } catch (e) {
     console.error('Error cargando artículos', e)
@@ -742,6 +769,10 @@ function enviarWhatsApp(phoneNumber: string | null) {
 }
 
 // ── Init ──────────────────────────────────────────────
+watch(() => congressStore.currentCongressId, () => {
+  cargarArticulos()
+})
+
 onMounted(async () => {
   await cargarArticulos()
 })
@@ -752,7 +783,27 @@ onMounted(async () => {
 
 /* ── Sidebar ── */
 .sidebar { width: 220px; min-width: 220px; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; background: var(--bg-sidebar); position: sticky; top: 0; height: 100vh; }
-.sidebar-header { padding: 1.5rem 1.25rem 1rem; border-bottom: 1px solid var(--border-color); }
+.sidebar-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.congress-context {
+  margin-top: 0.5rem;
+}
+
+.congress-name-text {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #10b981;
+  letter-spacing: 0.02em;
+  opacity: 0.9;
+}
+
+.dark .congress-name-text {
+  color: #34d399;
+  text-shadow: 0 0 8px rgba(52, 211, 153, 0.3);
+}
 .brand { display: flex; align-items: center; gap: 0.45rem; }
 .brand-icon { width: 16px; height: 16px; color: var(--text-strong); }
 .brand-name { font-size: 0.9rem; font-weight: 700; color: var(--text-strong); letter-spacing: -0.02em; }
