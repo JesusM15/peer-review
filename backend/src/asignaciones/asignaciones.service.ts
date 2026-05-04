@@ -73,6 +73,7 @@ export class AsignacionesService {
           nombre: revisor.perfil?.nombre || revisor.nombre || revisor.email,
           carrera: revisor.perfil?.carrera || '',
           especialidades: revisor.perfil?.especialidades || [],
+          telefono: revisor.perfil?.telefono || null,
           articulos_asignados: totalAsignados,
           puede_recibir_mas: totalAsignados < 3,
           articulos: asignaciones.map((a) => ({
