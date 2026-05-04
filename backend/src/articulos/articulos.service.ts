@@ -22,17 +22,19 @@ export class ArticulosService {
     id: string;
     titulo: string;
     autor_id: string;
+    congreso_id?: string;
     pdf_url?: string;
     keywords?: string[];
   }) {
     // 1. Doble Inserción: Usar el UUID de cliente (Offline-First)
-    const { id, titulo, autor_id, pdf_url, keywords } = data;
+    const { id, titulo, autor_id, congreso_id, pdf_url, keywords } = data;
 
     // Crear modelo relacional
     const nuevoArticulo = this.articuloRepository.create({
       id,
       titulo,
       autor_id,
+      congreso_id,
       estado: EstadoArticulo.BORRADOR,
     });
 
@@ -63,7 +65,7 @@ export class ArticulosService {
     }
   }
 
-  async findAll(filters: { autor_id?: string; estado?: EstadoArticulo, include_relations?: boolean }) {
+  async findAll(filters: { autor_id?: string; congreso_id?: string; estado?: EstadoArticulo, include_relations?: boolean }) {
     const query = this.articuloRepository.createQueryBuilder('articulo');
     
     if (filters.include_relations) {
@@ -74,6 +76,10 @@ export class ArticulosService {
 
     if (filters.autor_id) {
       query.andWhere('articulo.autor_id = :autor', { autor: filters.autor_id });
+    }
+
+    if (filters.congreso_id) {
+      query.andWhere('articulo.congreso_id = :congreso', { congreso: filters.congreso_id });
     }
     
     if (filters.estado) {

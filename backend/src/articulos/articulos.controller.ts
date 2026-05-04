@@ -41,6 +41,7 @@ export class ArticulosController {
       id: createArticuloDto.id,
       titulo: createArticuloDto.titulo,
       autor_id: createArticuloDto.autor_id,
+      congreso_id: (createArticuloDto as any).congreso_id,
       pdf_url: pdfUrl,
       keywords: keywords,
     });
@@ -49,11 +50,12 @@ export class ArticulosController {
   @Get()
   findAll(
     @Query('autor_id') autor_id?: string,
+    @Query('congreso_id') congreso_id?: string,
     @Query('estado') estado?: EstadoArticulo,
     @Query('include_relations') includeRelations?: string,
   ) {
     const include = includeRelations === 'true';
-    return this.articulosService.findAll({ autor_id, estado, include_relations: include });
+    return this.articulosService.findAll({ autor_id, congreso_id, estado, include_relations: include });
   }
 
   @Get('stats')

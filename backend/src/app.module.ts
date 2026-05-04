@@ -7,6 +7,7 @@ import { UsersModule } from './users/users.module';
 import { ArticulosModule } from './articulos/articulos.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 import { AuthModule } from './auth/auth.module';
+import { CongresosModule } from './congresos/congresos.module';
 
 @Module({
   imports: [
@@ -15,7 +16,7 @@ import { AuthModule } from './auth/auth.module';
       type: 'mysql',
       url: process.env.MARIADB_URI || 'mysql://dbuser:dbpassword@localhost:3307/peer_review_db',
       autoLoadEntities: true,
-      synchronize: true,
+      synchronize: false,
     }),
     
     // MongoDB configuration
@@ -25,6 +26,7 @@ import { AuthModule } from './auth/auth.module';
     ArticulosModule,
     AsignacionesModule,
     AuthModule,
+    CongresosModule,
   ],
   controllers: [AppController],
   providers: [AppService],

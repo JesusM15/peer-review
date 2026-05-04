@@ -50,10 +50,15 @@ export class AsignacionesService {
    * Lista todos los revisores con cuántos artículos tienen asignados actualmente
    */
   async findRevisoresConConteo() {
-    const revisores = await this.userRepository.find({
-      where: { rol: Rol.REVISOR },
-      relations: ['perfil'],
-    });
+    // Nota: Ahora los revisores se definen por membresía en un congreso. 
+    // Por simplicidad, aquí buscamos todos los usuarios que tienen al menos una membresía como REVISOR
+    // o que tengan el rol global de REVISOR (para compatibilidad).
+    const revisores = await this.userRepository.createQueryBuilder('user')
+      .leftJoinAndSelect('user.perfil', 'perfil')
+      .leftJoin('user.membresias', 'membresia')
+      .where('user.rol = :rol', { rol: Rol.REVISOR })
+      .orWhere('membresia.rol = :mrol', { mrol: Rol.REVISOR })
+      .getMany();
 
     const resultados = await Promise.all(
       revisores.map(async (revisor) => {
@@ -96,12 +101,30 @@ export class AsignacionesService {
   async create(data: { articulo_id: string; revisor_id: string; fecha_limite?: string }) {
     const { articulo_id, revisor_id, fecha_limite } = data;
 
-    // Verificar que el revisor existe y tiene rol REVISOR
+    // Verificar que el revisor existe (El rol se valida por contexto o membresía si es necesario, 
+    // pero aquí validamos que sea capaz de revisar artículos en general)
     const revisor = await this.userRepository.findOne({
-      where: { id: revisor_id, rol: Rol.REVISOR },
+      where: { id: revisor_id },
     });
     if (!revisor) {
       throw new NotFoundException(`Revisor con ID ${revisor_id} no encontrado`);
+    }
+
+    // --- REGLA: No auto-revisión ---
+    const articulo = await this.articuloRepository.findOne({ where: { id: articulo_id } });
+    if (!articulo) {
+      throw new NotFoundException(`Artículo con ID ${articulo_id} no encontrado`);
+    }
+    if (articulo.autor_id === revisor_id) {
+      throw new BadRequestException('Un autor no puede revisar su propio artículo (Conflicto de interés)');
+    }
+
+    // --- REGLA: Máximo 3 revisores por artículo ---
+    const revisoresAsignados = await this.asignacionRepository.count({
+      where: { articulo_id },
+    });
+    if (revisoresAsignados >= 3) {
+      throw new BadRequestException('Este artículo ya tiene el máximo de 3 revisores asignados');
     }
 
     // Verificar límite de 3 artículos ACTIVOS (Solo los que no han sido aceptados/rechazados)
@@ -135,9 +158,8 @@ export class AsignacionesService {
       fecha_limite: fecha_limite ? new Date(fecha_limite) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     });
 
-    // Cambiar estado del artículo a EN_REVISION
-    const articulo = await this.articuloRepository.findOne({ where: { id: articulo_id } });
-    if (articulo) {
+    // Cambiar estado del artículo a EN_REVISION si estaba en BORRADOR
+    if (articulo.estado === EstadoArticulo.BORRADOR) {
       articulo.estado = EstadoArticulo.EN_REVISION;
       await this.articuloRepository.save(articulo);
     }
