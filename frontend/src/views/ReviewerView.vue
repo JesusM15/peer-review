@@ -589,9 +589,25 @@ const submitArticulo = async () => {
     isLoading.value = true
     const articuloId = generateUUID()
     const autorIdFinal = currentUser.value?.id || generateUUID()
-    const createArticuloDto = { id: articuloId, titulo: tituloArticulo.value, autor_id: autorIdFinal, pdf_url: '', keywords: [] }
-    console.log('Enviando artículo:', createArticuloDto)
-    const response = await fetch(`${API_BASE_URL}/articulos`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(createArticuloDto) })
+    const formData = new FormData()
+    formData.append('id', articuloId)
+    formData.append('titulo', tituloArticulo.value)
+    formData.append('autor_id', autorIdFinal)
+    formData.append('keywords', JSON.stringify([]))
+    
+    if (congressStore.currentCongressId) {
+      formData.append('congreso_id', congressStore.currentCongressId)
+    }
+    
+    if (archivoPdf.value) {
+      formData.append('pdf', archivoPdf.value)
+    }
+    
+    console.log('Enviando artículo:', articuloId)
+    const response = await fetch(`${API_BASE_URL}/articulos`, { 
+      method: 'POST', 
+      body: formData 
+    })
     if (!response.ok) throw new Error(`Error HTTP: ${response.status}`)
     const result = await response.json()
     console.log('Artículo registrado:', result)

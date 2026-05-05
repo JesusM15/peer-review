@@ -17,4 +17,8 @@ export class CreateArticuloDto {
   @IsOptional()
   @IsString()
   keywords?: string;
+
+  @IsOptional()
+  @IsString()
+  congreso_id?: string;
 }

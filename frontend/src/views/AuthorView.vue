@@ -506,6 +506,10 @@ const submitArticulo = async () => {
     formData.append('autor_id', autorIdFinal)
     formData.append('keywords', JSON.stringify([]))
     
+    if (congressStore.currentCongressId) {
+      formData.append('congreso_id', congressStore.currentCongressId)
+    }
+    
     if (archivoPdf.value) {
       formData.append('pdf', archivoPdf.value)
     }

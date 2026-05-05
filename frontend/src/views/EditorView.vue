@@ -529,7 +529,7 @@ import { useCongressStore } from '../stores/congress'
 import CustomSelect from '../components/CustomSelect.vue'
 import CongressSelector from '../components/CongressSelector.vue'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 
 const router = useRouter()
 const { isDark, toggleTheme } = useTheme()
