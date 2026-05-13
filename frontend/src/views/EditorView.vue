@@ -40,6 +40,12 @@
           </svg>
           Revisores
         </button>
+        <button class="nav-item" :class="{ active: vistaActiva === 'solicitudes' }" id="nav-solicitudes-editor" @click="irASolicitudes">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Solicitudes
+        </button>
       </nav>
 
       <div class="sidebar-footer relative-footer">
@@ -443,6 +449,67 @@
         </div>
       </template>
 
+      <!-- ─── SOLICITUDES DE ROL ─────────────────────── -->
+      <template v-if="vistaActiva === 'solicitudes'">
+        <header class="topbar">
+          <div>
+            <h1 class="page-title">Solicitudes de Rol</h1>
+            <p class="page-sub">Gestiona las peticiones de ascenso de los usuarios</p>
+          </div>
+        </header>
+
+        <div class="section">
+          <div v-if="cargandoSolicitudes" class="loading-state">
+            <div class="spinner"></div>
+            <span>Cargando solicitudes...</span>
+          </div>
+          <div v-else-if="solicitudesRol.length === 0" class="empty-state">
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <h3>No hay solicitudes pendientes</h3>
+            <p>Las peticiones de cambio de rol aparecerán aquí.</p>
+          </div>
+          <div v-else class="solicitudes-grid">
+            <div v-for="sol in solicitudesRol" :key="sol.id" class="sol-card" :class="sol.estado.toLowerCase()">
+              <div class="sol-card-header">
+                <div class="sol-user-info">
+                  <div class="sol-avatar">{{ sol.user?.nombre?.charAt(0).toUpperCase() }}</div>
+                  <div>
+                    <h4 class="sol-user-name">{{ sol.user?.nombre }}</h4>
+                    <span class="sol-user-email">{{ sol.user?.email }}</span>
+                  </div>
+                </div>
+                <span class="sol-badge">{{ sol.rol_solicitado }}</span>
+              </div>
+              <div class="sol-card-body">
+                <p class="sol-motivo"><strong>Motivo:</strong> {{ sol.motivo_usuario }}</p>
+                <div v-if="sol.estado === 'Pendiente'" class="sol-actions">
+                  <button class="btn-action approve" @click="responderSolicitud(sol, 'Aprobado')" title="Aceptar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Aceptar
+                  </button>
+                  <button class="btn-action reject" @click="responderSolicitud(sol, 'Rechazado')" title="Denegar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Denegar
+                  </button>
+                </div>
+                <div v-else class="sol-resolved">
+                  <span class="resolved-label">Estado: {{ sol.estado }}</span>
+                  <p v-if="sol.respuesta_admin" class="sol-feedback"><strong>Feedback:</strong> {{ sol.respuesta_admin }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
     </main>
 
     <!-- ─── MODAL REVISOR ───────────────────────────── -->
@@ -567,6 +634,12 @@ const asignando = ref(false)
 const mensajeAsignacion = ref<{ texto: string; tipo: string } | null>(null)
 const mensajeModal = ref<{ texto: string; tipo: string } | null>(null)
 
+// ── Solicitudes de Rol ────────────────────────────────
+const solicitudesRol = ref<any[]>([])
+const cargandoSolicitudes = ref(false)
+const responderSolicitudId = ref('')
+const feedbackResolucion = ref('')
+
 // ── Search & Filter (Asignaciones) ────────────────────
 const searchArticulo = ref('')
 const filtroEstadoArticulo = ref('')
@@ -659,6 +732,49 @@ async function irAAsignaciones() {
 async function irARevisores() {
   vistaActiva.value = 'revisores'
   await cargarRevisores()
+}
+
+async function irASolicitudes() {
+  vistaActiva.value = 'solicitudes'
+  await cargarSolicitudes()
+}
+
+async function cargarSolicitudes() {
+  if (!congressStore.currentCongressId) return
+  cargandoSolicitudes.value = true
+  try {
+    const res = await fetch(`${API}/solicitudes/congreso/${congressStore.currentCongressId}`)
+    solicitudesRol.value = await res.json()
+  } catch (e) {
+    console.error('Error cargando solicitudes', e)
+  } finally {
+    cargandoSolicitudes.value = false
+  }
+}
+
+async function responderSolicitud(sol: any, estado: string) {
+  const respuesta = prompt(`Escribe un breve feedback para ${sol.user?.nombre} (opcional):`)
+  // Permitimos cancelar si no hay respuesta y es rechazo, o simplemente enviar vacío
+  if (respuesta === null) return
+
+  try {
+    const res = await fetch(`${API}/solicitudes/${sol.id}/responder`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        estado, 
+        respuesta: respuesta || (estado === 'Aprobado' ? '¡Bienvenido al equipo!' : 'Lo sentimos, por ahora no cumples con el perfil.') 
+      })
+    })
+    if (res.ok) {
+      await cargarSolicitudes()
+      if (estado === 'Aprobado') {
+        await cargarRevisores() // Refrescar lista de revisores por si acaso
+      }
+    }
+  } catch (e) {
+    console.error('Error respondiendo solicitud', e)
+  }
 }
 
 // ── Artículo seleccionado ─────────────────────────────
@@ -998,6 +1114,85 @@ onMounted(async () => {
 [data-theme="dark"] .libre-chip { color: #4ade80; }
 [data-theme="dark"] .lleno-chip { color: #f87171; }
 [data-theme="dark"] .asignado-chip { color: #60a5fa; }
+
+/* ── Solicitudes ── */
+.solicitudes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1.5rem;
+}
+.sol-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.25rem;
+  transition: transform 0.2s;
+}
+.sol-card:hover { transform: translateY(-2px); }
+.sol-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+.sol-user-info { display: flex; gap: 0.75rem; align-items: center; }
+.sol-avatar {
+  width: 40px;
+  height: 40px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-hover);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+.sol-user-name { font-size: 0.95rem; font-weight: 700; color: var(--text-strong); }
+.sol-user-email { font-size: 0.75rem; color: var(--text-faint); }
+.sol-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  background: var(--bg-input);
+  color: var(--text-strong);
+  text-transform: uppercase;
+}
+.sol-card-body { font-size: 0.85rem; }
+.sol-motivo { line-height: 1.5; color: var(--text-normal); margin-bottom: 1.25rem; }
+.sol-actions { display: flex; gap: 0.75rem; }
+.btn-action {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+.btn-action svg { width: 16px; height: 16px; }
+.btn-action.approve { background: rgba(34,197,94,0.1); color: #15803d; border-color: rgba(34,197,94,0.2); }
+.btn-action.approve:hover { background: rgba(34,197,94,0.2); }
+.btn-action.reject { background: rgba(239,68,68,0.1); color: #dc2626; border-color: rgba(239,68,68,0.2); }
+.btn-action.reject:hover { background: rgba(239,68,68,0.2); }
+
+.sol-resolved {
+  padding: 0.75rem;
+  background: var(--bg-input);
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+.resolved-label { display: block; font-weight: 700; margin-bottom: 0.4rem; color: var(--text-muted); }
+.sol-feedback { color: var(--text-normal); font-style: italic; }
+
+.sol-card.aprobado { border-left: 4px solid #10b981; }
+.sol-card.rechazado { border-left: 4px solid #ef4444; }
 
 /* ── Revisores asignados chips ── */
 .asignados-section { margin-bottom: 1.5rem; }

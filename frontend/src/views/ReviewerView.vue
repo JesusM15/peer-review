@@ -34,6 +34,12 @@
           </svg>
           Nuevo artículo
         </button>
+        <button class="nav-item" id="nav-postulacion-revisor" @click="router.push('/postulacion')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Postularse
+        </button>
       </nav>
 
       <!-- Indicador de conexión -->
