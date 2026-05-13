@@ -46,7 +46,28 @@ Para aplicar estos cambios en un entorno existente, siga estos pasos:
    - Creará el "Congreso Fundacional 2026".
    - Asignará a todos los usuarios existentes su rol actual dentro de ese congreso.
    - Vinculará todos los artículos existentes al congreso fundacional.
+4. **Reparar tabla de perfiles (si es necesario):**
+   Si encuentra errores de `Unknown column 'perfil.id'`, ejecute:
+   ```bash
+   docker exec peer_review_api npx ts-node src/database/repair-perfiles.ts
+   ```
 
 ## 5. Cambios en la UI (Frontend)
 - Se ha implementado un **Selector de Contexto** para elegir el congreso activo.
-- El Dashboard ahora filtra la información y los permisos basados en el rol del usuario en el congreso seleccionado.
+## 6. Hotfixes y Estabilización (Post-Migración)
+
+Tras la implementación inicial, se detectaron y corrigieron los siguientes puntos críticos para asegurar la integridad de la arquitectura:
+
+### Vinculación Automática de Artículos
+- **Problema:** Los artículos se estaban creando sin `congreso_id`, quedando "huérfanos" y ocultos para los editores.
+- **Corrección:** Se actualizó `AuthorView.vue` y `ReviewerView.vue` para incluir el contexto del congreso activo en la subida de archivos (Multipart/FormData).
+- **Backend:** Se habilitó el campo `congreso_id` en `CreateArticuloDto` para permitir que el servidor procese y guarde esta relación.
+
+### Reparación del Esquema de Perfiles
+- **Problema:** Error SQL `Unknown column 'perfil.id'` debido a un desajuste en la tabla `perfiles` que carecía de Primary Key.
+- **Corrección:** Se creó el script `repair-perfiles.ts` que reconstruye la tabla con la estructura correcta (1:1 compartiendo ID con `users`) y migra los datos existentes.
+
+### Mejoras de UX y Consistencia
+- **Sidebar Contextual:** Se eliminó el selector intrusivo por un indicador de texto minimalista con estilo verde esmeralda que indica el congreso activo.
+- **Rutas de API:** Se corrigió la URL base en el panel de Editor para incluir el prefijo `/api`, permitiendo la carga correcta de datos desde el backend.
+- **Navegación:** Se implementó la opción "Cambiar de Congreso" en el menú de usuario para permitir el cambio de contexto sin cerrar sesión.
