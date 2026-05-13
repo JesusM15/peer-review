@@ -8,6 +8,7 @@ import { ArticulosModule } from './articulos/articulos.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 import { AuthModule } from './auth/auth.module';
 import { CongresosModule } from './congresos/congresos.module';
+import { SolicitudesModule } from './solicitudes/solicitudes.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { CongresosModule } from './congresos/congresos.module';
     AsignacionesModule,
     AuthModule,
     CongresosModule,
+    SolicitudesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
