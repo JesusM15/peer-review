@@ -9,6 +9,7 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
 import { AuthModule } from './auth/auth.module';
 import { CongresosModule } from './congresos/congresos.module';
 import { SolicitudesModule } from './solicitudes/solicitudes.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { SolicitudesModule } from './solicitudes/solicitudes.module';
     AuthModule,
     CongresosModule,
     SolicitudesModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

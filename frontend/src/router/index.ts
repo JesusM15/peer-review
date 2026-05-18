@@ -6,6 +6,7 @@ import EditorView from '../views/EditorView.vue'
 import ReviewerView from '../views/ReviewerView.vue'
 import AuthorView from '../views/AuthorView.vue'
 import AdminView from '../views/AdminView.vue'
+import DashboardView from '../views/DashboardView.vue'
 import RevisionForm from '../views/RevisionForm.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
@@ -64,6 +65,12 @@ const routes = [
     meta: { requiresAuth: true, role: 'Admin' }
   },
   {
+    path: '/dashboard',
+    name: 'Dashboard',
+    component: DashboardView,
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/postulacion',
     name: 'Postulacion',
     component: () => import('../views/PostulacionView.vue'),
@@ -87,6 +94,7 @@ router.beforeEach((to, from, next) => {
       const user = authStore.user
       if (user) {
         if (user.rol === 'Admin') return next('/admin')
+        if (user.rol === 'EditorJefe' || user.rol === 'SubEditor') return next('/dashboard')
         return next('/select-congress')
       }
     }
