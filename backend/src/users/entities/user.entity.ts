@@ -1,5 +1,6 @@
-import { Entity, PrimaryColumn, Column, BeforeInsert, BeforeUpdate, OneToMany } from 'typeorm';
+import { Entity, PrimaryColumn, Column, BeforeInsert, BeforeUpdate, OneToMany, OneToOne, JoinColumn } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
+import { Perfil } from './perfil.entity';
 
 export enum Rol {
   AUTOR = 'Autor',
@@ -26,6 +27,10 @@ export class User {
 
   @Column({ type: 'varchar', length: 50, default: Rol.AUTOR })
   rol: Rol;
+
+  @OneToOne(() => Perfil, { nullable: true })
+  @JoinColumn({ name: 'id' })
+  perfil: Perfil;
 
   @BeforeInsert()
   @BeforeUpdate()
