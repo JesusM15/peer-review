@@ -90,11 +90,21 @@ const currentUser = computed(() => {
   return raw ? JSON.parse(raw) : null
 })
 
+function authHeaders(extra: Record<string, string> = {}) {
+  const token = localStorage.getItem('token')
+  return {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...extra,
+  }
+}
+
 const fetchSolicitudes = async () => {
   if (!currentUser.value) return
   loading.value = true
   try {
-    const res = await fetch(`${API_BASE_URL}/solicitudes/usuario/${currentUser.value.id}`)
+    const res = await fetch(`${API_BASE_URL}/solicitudes/usuario/${currentUser.value.id}`, {
+      headers: authHeaders(),
+    })
     if (res.ok) {
       solicitudes.value = await res.json()
       checkCooldown()
@@ -129,7 +139,7 @@ const enviarPostulacion = async () => {
   try {
     const res = await fetch(`${API_BASE_URL}/solicitudes`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         user_id: currentUser.value.id,
         congreso_id: congressStore.currentCongressId,
