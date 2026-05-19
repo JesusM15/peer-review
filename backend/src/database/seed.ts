@@ -1,6 +1,5 @@
 import { DataSource } from 'typeorm';
 import { User, Rol } from '../users/entities/user.entity';
-import { Perfil } from '../users/entities/perfil.entity';
 import { Articulo, EstadoArticulo } from '../articulos/entities/articulo.entity';
 import { Asignacion } from '../asignaciones/entities/asignacion.entity';
 
@@ -15,7 +14,7 @@ import { Asignacion } from '../asignaciones/entities/asignacion.entity';
 const AppDataSource = new DataSource({
   type: 'mariadb',
   url: process.env.MARIADB_URI || 'mysql://dbuser:dbpassword@mariadb:3306/peer_review_db',
-  entities: [User, Perfil, Articulo, Asignacion],
+  entities: [User, Articulo, Asignacion],
   synchronize: false,
 });
 
@@ -40,6 +39,27 @@ const SEED_USERS = [
     password: 'password123',
     rol: Rol.EDITOR,
     nombre: 'Laura Torres',
+  },
+  {
+    id: '55555555-5555-4555-a555-555555555555',
+    email: 'editor-jefe@diego.edu',
+    password: 'password123',
+    rol: Rol.EDITOR_JEFE,
+    nombre: 'Roberto Sánchez',
+  },
+  {
+    id: '66666666-6666-4666-a666-666666666666',
+    email: 'sub-editor1@diego.edu',
+    password: 'password123',
+    rol: Rol.SUB_EDITOR,
+    nombre: 'María López',
+  },
+  {
+    id: '77777777-7777-4777-a777-777777777777',
+    email: 'sub-editor2@diego.edu',
+    password: 'password123',
+    rol: Rol.SUB_EDITOR,
+    nombre: 'Pedro Ramírez',
   },
   {
     id: '44444444-4444-4444-a444-444444444444',

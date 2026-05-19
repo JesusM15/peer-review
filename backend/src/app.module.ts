@@ -11,6 +11,7 @@ import { CongresosModule } from './congresos/congresos.module';
 import { SolicitudesModule } from './solicitudes/solicitudes.module';
 import { SolicitudesCongresoModule } from './solicitudes-congreso/solicitudes-congreso.module';
 import { NotificacionesModule } from './notificaciones/notificaciones.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { NotificacionesModule } from './notificaciones/notificaciones.module';
     SolicitudesModule,
     SolicitudesCongresoModule,
     NotificacionesModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],
