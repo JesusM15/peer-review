@@ -2,6 +2,7 @@ import { Entity, PrimaryColumn, Column, ManyToOne, JoinColumn, OneToMany } from 
 import { User } from '../../users/entities/user.entity';
 import { Asignacion } from '../../asignaciones/entities/asignacion.entity';
 import { Congreso } from '../../congresos/entities/congreso.entity';
+import { ArticuloTag } from './articulo-tag.entity';
 
 export enum EstadoArticulo {
   BORRADOR = 'Borrador',
@@ -37,4 +38,7 @@ export class Articulo {
 
   @OneToMany(() => Asignacion, asignacion => asignacion.articulo)
   asignaciones: Asignacion[];
+
+  @OneToMany(() => ArticuloTag, articuloTag => articuloTag.articulo)
+  tags: ArticuloTag[];
 }

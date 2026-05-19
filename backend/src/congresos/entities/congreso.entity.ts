@@ -20,6 +20,9 @@ export class Congreso {
   @OneToMany('Tag', 'congreso')
   tags: any[];
 
+  @OneToMany('CongresoTag', 'congreso')
+  congresoTags: any[];
+
   @OneToMany('UsuarioCongresoRol', 'congreso')
   membresias: any[];
 }

@@ -4,14 +4,18 @@ import { Repository } from 'typeorm';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Articulo, EstadoArticulo } from './entities/articulo.entity';
+import { ArticuloTag } from './entities/articulo-tag.entity';
 import { ArticuloDetalle, ArticuloDetalleDocument } from './schemas/articulo-detalle.schema';
 import { Revision, RevisionDocument } from '../asignaciones/schemas/revision.schema';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class ArticulosService {
   constructor(
     @InjectRepository(Articulo)
     private readonly articuloRepository: Repository<Articulo>,
+    @InjectRepository(ArticuloTag)
+    private readonly articuloTagRepository: Repository<ArticuloTag>,
     @InjectModel(ArticuloDetalle.name)
     private readonly articuloDetalleModel: Model<ArticuloDetalleDocument>,
     @InjectModel(Revision.name)
@@ -273,5 +277,55 @@ export class ArticulosService {
       acceptanceRate,
       activityByDay,
     };
+  }
+
+  /**
+   * Asigna una etiqueta a un artículo
+   */
+  async addTagToArticle(articuloId: string, tagId: string): Promise<ArticuloTag> {
+    // Verificar que el artículo existe
+    const articulo = await this.articuloRepository.findOne({ where: { id: articuloId } });
+    if (!articulo) {
+      throw new NotFoundException(`Artículo con ID ${articuloId} no encontrado`);
+    }
+
+    // Verificar que la etiqueta no esté ya asignada
+    const existing = await this.articuloTagRepository.findOne({
+      where: { articulo_id: articuloId, tag_id: tagId }
+    });
+    if (existing) {
+      throw new Error('La etiqueta ya está asignada a este artículo');
+    }
+
+    const articuloTag = this.articuloTagRepository.create({
+      id: uuidv4(),
+      articulo_id: articuloId,
+      tag_id: tagId,
+    });
+
+    return this.articuloTagRepository.save(articuloTag);
+  }
+
+  /**
+   * Obtiene todas las etiquetas de un artículo
+   */
+  async getArticleTags(articuloId: string): Promise<ArticuloTag[]> {
+    return this.articuloTagRepository.find({
+      where: { articulo_id: articuloId },
+      relations: ['tag']
+    });
+  }
+
+  /**
+   * Remueve una etiqueta de un artículo
+   */
+  async removeTagFromArticle(articuloTagId: string): Promise<void> {
+    const articuloTag = await this.articuloTagRepository.findOne({
+      where: { id: articuloTagId }
+    });
+    if (!articuloTag) {
+      throw new NotFoundException('Asignación de etiqueta a artículo no encontrada');
+    }
+    await this.articuloTagRepository.remove(articuloTag);
   }
 }
