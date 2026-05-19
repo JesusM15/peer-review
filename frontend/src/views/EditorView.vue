@@ -8,7 +8,10 @@
           <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          <span class="brand-name">Diego</span>
+          <span class="brand-name">Peer Review System</span>
+        </div>
+        <div v-if="congressStore.currentCongressId" class="congress-context">
+          <span class="congress-name-text">{{ currentCongressName }}</span>
         </div>
       </div>
 
@@ -37,6 +40,12 @@
           </svg>
           Revisores
         </button>
+        <button class="nav-item" :class="{ active: vistaActiva === 'solicitudes' }" id="nav-solicitudes-editor" @click="irASolicitudes">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Solicitudes
+        </button>
       </nav>
 
       <div class="sidebar-footer relative-footer">
@@ -58,7 +67,13 @@
               </svg>
               Tema: {{ isDark ? 'Oscuro' : 'Claro' }}
            </button>
-           <button class="menu-item text-danger" id="btn-salir-editor" @click="logout">
+            <button class="menu-item" @click="changeCongress">
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                 <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5" stroke-linecap="round" stroke-linejoin="round"/>
+               </svg>
+               Cambiar de congreso
+            </button>
+            <button class="menu-item text-danger" id="btn-salir-editor" @click="logout">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
@@ -213,14 +228,66 @@
         </header>
         <div class="section">
           <!-- Selector de artículo -->
-          <div class="form-group">
-            <label class="form-label">Seleccionar artículo</label>
-            <select class="form-select" v-model="articuloSeleccionadoId" @change="onArticuloChange">
-              <option value="">-- Selecciona un artículo --</option>
-              <option v-for="art in articulos" :key="art.id" :value="art.id">
-                {{ art.titulo }} ({{ art.estado }})
-              </option>
-            </select>
+          <!-- Article Picker (Mejorado) -->
+          <div class="article-picker-container">
+            <div class="picker-controls">
+              <div class="search-input-group">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input 
+                  type="text" 
+                  v-model="searchArticulo" 
+                  placeholder="Buscar artículo por título..." 
+                  class="form-input search-bar"
+                >
+              </div>
+              <CustomSelect 
+                v-model="filtroEstadoArticulo" 
+                :options="OPCIONES_ESTADO"
+                class="filter-select"
+              />
+            </div>
+
+            <div v-if="articulosFiltrados.length === 0" class="empty-state-sm">
+              No se encontraron artículos con esos filtros.
+            </div>
+            <div v-else class="articulos-picker-grid">
+              <div 
+                v-for="art in articulosFiltrados" 
+                :key="art.id" 
+                class="art-picker-card"
+                :class="{ active: articuloSeleccionadoId === art.id }"
+                @click="seleccionarArticulo(art)"
+              >
+                <div class="art-card-main">
+                  <div class="art-card-id-row">
+                    <span class="badge" :class="badgeClass(art.estado)">{{ art.estado }}</span>
+                    <span class="art-time">ID: {{ art.id.split('-')[0] }}</span>
+                  </div>
+                  <h4 class="art-card-title">{{ art.titulo }}</h4>
+                  <div class="art-card-meta">
+                    <div class="meta-item" title="Autor del artículo">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                      </svg>
+                      <span>Anónimo</span>
+                    </div>
+                    <div class="meta-item" title="Revisores asignados actualmente">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 00-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 010 7.75"></path>
+                      </svg>
+                      <span class="rev-pill">{{ (art.asignaciones || []).length }} revisores</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Revisores ya asignados al artículo seleccionado -->
@@ -262,6 +329,22 @@
                     <span class="rev-count" :class="{ 'count-full': rev.articulos_asignados >= 3 }">
                       {{ rev.articulos_asignados }}/3
                     </span>
+                    <button class="gmail-btn gmail-btn-sm" @click.stop="enviarCorreoGmail(rev.email)" title="Enviar correo por Gmail">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
+                    <button 
+                      class="whatsapp-btn whatsapp-btn-sm" 
+                      @click.stop="enviarWhatsApp(rev.telefono)" 
+                      title="Enviar mensaje por WhatsApp"
+                      :disabled="!rev.telefono"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M3 21l1.65-5.67A8.94 8.94 0 0121 12a9 9 0 10-9 9 8.94 8.94 0 01-3.35-.67L3 21z" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M9 10a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v2a.5.5 0 01-.5.5h-2a.5.5 0 01-.5-.5v-2zM12.5 10a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v2a.5.5 0 01-.5.5h-2a.5.5 0 01-.5-.5v-2z" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
                   </div>
                 </div>
                 <div class="rev-tags">
@@ -335,6 +418,22 @@
                       {{ rev.articulos_asignados }}/3
                     </span>
                     <span class="rev-count-label">artículos</span>
+                    <button class="gmail-btn" @click.stop="enviarCorreoGmail(rev.email)" title="Enviar correo por Gmail">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
+                    <button 
+                      class="whatsapp-btn" 
+                      @click.stop="enviarWhatsApp(rev.telefono)" 
+                      title="Enviar mensaje por WhatsApp"
+                      :disabled="!rev.telefono"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M3 21l1.65-5.67A8.94 8.94 0 0121 12a9 9 0 10-9 9 8.94 8.94 0 01-3.35-.67L3 21z" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M9 10a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v2a.5.5 0 01-.5.5h-2a.5.5 0 01-.5-.5v-2zM12.5 10a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v2a.5.5 0 01-.5.5h-2a.5.5 0 01-.5-.5v-2z" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
                   </div>
                 </div>
                 <div class="rev-tags">
@@ -343,6 +442,67 @@
                 <div class="rev-footer">
                   <span v-if="!rev.puede_recibir_mas" class="status-chip lleno-chip">Límite alcanzado (3/3)</span>
                   <span v-else class="status-chip libre-chip">{{ 3 - rev.articulos_asignados }} espacio(s) disponible(s)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- ─── SOLICITUDES DE ROL ─────────────────────── -->
+      <template v-if="vistaActiva === 'solicitudes'">
+        <header class="topbar">
+          <div>
+            <h1 class="page-title">Solicitudes de Rol</h1>
+            <p class="page-sub">Gestiona las peticiones de ascenso de los usuarios</p>
+          </div>
+        </header>
+
+        <div class="section">
+          <div v-if="cargandoSolicitudes" class="loading-state">
+            <div class="spinner"></div>
+            <span>Cargando solicitudes...</span>
+          </div>
+          <div v-else-if="solicitudesRol.length === 0" class="empty-state">
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <h3>No hay solicitudes pendientes</h3>
+            <p>Las peticiones de cambio de rol aparecerán aquí.</p>
+          </div>
+          <div v-else class="solicitudes-grid">
+            <div v-for="sol in solicitudesRol" :key="sol.id" class="sol-card" :class="sol.estado.toLowerCase()">
+              <div class="sol-card-header">
+                <div class="sol-user-info">
+                  <div class="sol-avatar">{{ sol.user?.nombre?.charAt(0).toUpperCase() }}</div>
+                  <div>
+                    <h4 class="sol-user-name">{{ sol.user?.nombre }}</h4>
+                    <span class="sol-user-email">{{ sol.user?.email }}</span>
+                  </div>
+                </div>
+                <span class="sol-badge">{{ sol.rol_solicitado }}</span>
+              </div>
+              <div class="sol-card-body">
+                <p class="sol-motivo"><strong>Motivo:</strong> {{ sol.motivo_usuario }}</p>
+                <div v-if="sol.estado === 'Pendiente'" class="sol-actions">
+                  <button class="btn-action approve" @click="responderSolicitud(sol, 'Aprobado')" title="Aceptar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Aceptar
+                  </button>
+                  <button class="btn-action reject" @click="responderSolicitud(sol, 'Rechazado')" title="Denegar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Denegar
+                  </button>
+                </div>
+                <div v-else class="sol-resolved">
+                  <span class="resolved-label">Estado: {{ sol.estado }}</span>
+                  <p v-if="sol.respuesta_admin" class="sol-feedback"><strong>Feedback:</strong> {{ sol.respuesta_admin }}</p>
                 </div>
               </div>
             </div>
@@ -368,6 +528,10 @@
           <div class="modal-field">
             <span class="modal-field-label">Carrera</span>
             <span class="modal-field-value">{{ modalRevisor.carrera || '—' }}</span>
+          </div>
+          <div class="modal-field">
+            <span class="modal-field-label">Teléfono</span>
+            <span class="modal-field-value">{{ modalRevisor.telefono || 'No proporcionado' }}</span>
           </div>
           <div class="modal-field">
             <span class="modal-field-label">Especialidades</span>
@@ -406,6 +570,15 @@
           </div>
           <div v-else>
             <button class="btn-primary w-full" @click="irAAsignarEsteRevisor">Asignar</button>
+            <div class="modal-contact-buttons" v-if="modalRevisor.telefono">
+              <button class="btn-secondary w-full" @click="enviarWhatsApp(modalRevisor.telefono)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 16px; height: 16px; margin-right: 8px;">
+                  <path d="M3 21l1.65-5.67A8.94 8.94 0 0121 12a9 9 0 10-9 9 8.94 8.94 0 01-3.35-.67L3 21z" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M9 10a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v2a.5.5 0 01-.5.5h-2a.5.5 0 01-.5-.5v-2zM12.5 10a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v2a.5.5 0 01-.5.5h-2a.5.5 0 01-.5-.5v-2z" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Enviar mensaje por WhatsApp
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -416,19 +589,33 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useTheme } from '../composables/useTheme'
 import { useAuthStore } from '../stores/auth'
+import { useCongressStore } from '../stores/congress'
+import CustomSelect from '../components/CustomSelect.vue'
+import CongressSelector from '../components/CongressSelector.vue'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 
 const router = useRouter()
 const { isDark, toggleTheme } = useTheme()
 const authStore = useAuthStore()
+const congressStore = useCongressStore()
 
 const showUserMenu = ref(false)
 const vistaActiva = ref<string>('overview')
 const goBack = () => router.push('/')
+
+const currentCongressName = computed(() => {
+  const c = congressStore.memberships.find(m => m.congreso_id === congressStore.currentCongressId)
+  return c?.congreso?.nombre || 'Sin Congreso'
+})
+
+const changeCongress = () => {
+  congressStore.setCongress('') // Limpiar selección actual
+  router.push('/select-congress')
+}
 
 const logout = () => {
   authStore.logout()
@@ -446,6 +633,33 @@ const modalRevisor = ref<any>(null)
 const asignando = ref(false)
 const mensajeAsignacion = ref<{ texto: string; tipo: string } | null>(null)
 const mensajeModal = ref<{ texto: string; tipo: string } | null>(null)
+
+// ── Solicitudes de Rol ────────────────────────────────
+const solicitudesRol = ref<any[]>([])
+const cargandoSolicitudes = ref(false)
+const responderSolicitudId = ref('')
+const feedbackResolucion = ref('')
+
+// ── Search & Filter (Asignaciones) ────────────────────
+const searchArticulo = ref('')
+const filtroEstadoArticulo = ref('')
+
+const OPCIONES_ESTADO = [
+  { label: 'Cualquier estado', value: '' },
+  { label: 'Recibidos (Borrador)', value: 'Borrador' },
+  { label: 'En proceso', value: 'En Revisión' },
+  { label: 'Aceptados', value: 'Aceptado' },
+  { label: 'Rechazados', value: 'Rechazado' },
+]
+
+const articulosFiltrados = computed(() => {
+  return articulos.value.filter(art => {
+    const textMatch = art.titulo.toLowerCase().includes(searchArticulo.value.toLowerCase()) ||
+                     (art.autor?.perfil?.nombre || '').toLowerCase().includes(searchArticulo.value.toLowerCase())
+    const statusMatch = !filtroEstadoArticulo.value || art.estado === filtroEstadoArticulo.value
+    return textMatch && statusMatch
+  })
+})
 
 // ── Stats computed ────────────────────────────────────
 const articulosRecientes = computed(() => articulos.value)
@@ -471,7 +685,12 @@ function badgeClass(estado: string) {
 async function cargarArticulos() {
   cargandoArticulos.value = true
   try {
-    const res = await fetch(`${API}/articulos?include_relations=true`)
+    const url = new URL(`${API}/articulos`);
+    url.searchParams.append('include_relations', 'true');
+    if (congressStore.currentCongressId) {
+      url.searchParams.append('congreso_id', congressStore.currentCongressId);
+    }
+    const res = await fetch(url.toString())
     articulos.value = await res.json()
   } catch (e) {
     console.error('Error cargando artículos', e)
@@ -515,6 +734,49 @@ async function irARevisores() {
   await cargarRevisores()
 }
 
+async function irASolicitudes() {
+  vistaActiva.value = 'solicitudes'
+  await cargarSolicitudes()
+}
+
+async function cargarSolicitudes() {
+  if (!congressStore.currentCongressId) return
+  cargandoSolicitudes.value = true
+  try {
+    const res = await fetch(`${API}/solicitudes/congreso/${congressStore.currentCongressId}`)
+    solicitudesRol.value = await res.json()
+  } catch (e) {
+    console.error('Error cargando solicitudes', e)
+  } finally {
+    cargandoSolicitudes.value = false
+  }
+}
+
+async function responderSolicitud(sol: any, estado: string) {
+  const respuesta = prompt(`Escribe un breve feedback para ${sol.user?.nombre} (opcional):`)
+  // Permitimos cancelar si no hay respuesta y es rechazo, o simplemente enviar vacío
+  if (respuesta === null) return
+
+  try {
+    const res = await fetch(`${API}/solicitudes/${sol.id}/responder`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        estado, 
+        respuesta: respuesta || (estado === 'Aprobado' ? '¡Bienvenido al equipo!' : 'Lo sentimos, por ahora no cumples con el perfil.') 
+      })
+    })
+    if (res.ok) {
+      await cargarSolicitudes()
+      if (estado === 'Aprobado') {
+        await cargarRevisores() // Refrescar lista de revisores por si acaso
+      }
+    }
+  } catch (e) {
+    console.error('Error respondiendo solicitud', e)
+  }
+}
+
 // ── Artículo seleccionado ─────────────────────────────
 async function onArticuloChange() {
   if (articuloSeleccionadoId.value) {
@@ -528,6 +790,11 @@ async function onArticuloChange() {
 function abrirAsignacionDesdeArticulo(art: any) {
   articuloSeleccionadoId.value = art.id
   irAAsignaciones().then(() => onArticuloChange())
+}
+
+function seleccionarArticulo(art: any) {
+  articuloSeleccionadoId.value = art.id
+  onArticuloChange()
 }
 
 // ── Revisor ya asignado al artículo actual ────────────
@@ -594,7 +861,34 @@ async function eliminarAsignacion(asignacionId: string) {
   }
 }
 
+// ── Gmail button ───────────────────────────────────────
+function enviarCorreoGmail(reviewerEmail: string) {
+  const editorEmail = 'editor@uni.edu'
+  const subject = encodeURIComponent('Comunicación sobre revisión de artículo')
+  const body = encodeURIComponent(`Estimado/a revisor/a,\n\nLe escribo en relación con la revisión de artículos en el sistema.\n\nAtentamente,\nEditor`)
+  const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${reviewerEmail}&cc=${editorEmail}&su=${subject}&body=${body}`
+  window.open(gmailUrl, '_blank')
+}
+
+// ── WhatsApp button ─────────────────────────────────────
+function enviarWhatsApp(phoneNumber: string | null) {
+  if (!phoneNumber) return
+  
+  // Remove any non-digit characters and ensure it starts with country code
+  const cleanPhone = phoneNumber.replace(/\D/g, '')
+  const formattedPhone = cleanPhone.startsWith('52') ? cleanPhone : `52${cleanPhone}` // Default to Mexico country code
+  
+  const message = encodeURIComponent('Estimado/a revisor/a,\n\nLe escribo en relación con la revisión de artículos en el sistema.\n\nAtentamente,\nEditor')
+  const whatsappUrl = `https://wa.me/${formattedPhone}?text=${message}`
+  
+  window.open(whatsappUrl, '_blank')
+}
+
 // ── Init ──────────────────────────────────────────────
+watch(() => congressStore.currentCongressId, () => {
+  cargarArticulos()
+})
+
 onMounted(async () => {
   await cargarArticulos()
 })
@@ -605,7 +899,27 @@ onMounted(async () => {
 
 /* ── Sidebar ── */
 .sidebar { width: 220px; min-width: 220px; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; background: var(--bg-sidebar); position: sticky; top: 0; height: 100vh; }
-.sidebar-header { padding: 1.5rem 1.25rem 1rem; border-bottom: 1px solid var(--border-color); }
+.sidebar-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.congress-context {
+  margin-top: 0.5rem;
+}
+
+.congress-name-text {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #10b981;
+  letter-spacing: 0.02em;
+  opacity: 0.9;
+}
+
+.dark .congress-name-text {
+  color: #34d399;
+  text-shadow: 0 0 8px rgba(52, 211, 153, 0.3);
+}
 .brand { display: flex; align-items: center; gap: 0.45rem; }
 .brand-icon { width: 16px; height: 16px; color: var(--text-strong); }
 .brand-name { font-size: 0.9rem; font-weight: 700; color: var(--text-strong); letter-spacing: -0.02em; }
@@ -672,6 +986,10 @@ onMounted(async () => {
 .btn-primary:hover:not(:disabled) { opacity: 0.88; }
 .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
 .btn-primary.w-full { width: 100%; text-align: center; padding: 0.75rem; font-size: 0.9rem; }
+.btn-secondary { background: var(--bg-input); color: var(--text-strong); font-size: 0.825rem; font-weight: 600; padding: 0.6rem 1.2rem; border-radius: 6px; border: 1px solid var(--border-color); cursor: pointer; transition: all 0.15s; white-space: nowrap; display: flex; align-items: center; justify-content: center; }
+.btn-secondary:hover { background: var(--bg-card-hover); border-color: var(--border-hover); }
+.btn-secondary.w-full { width: 100%; margin-top: 0.75rem; }
+.modal-contact-buttons { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.75rem; }
 .btn-sm { background: var(--bg-input); color: var(--text-strong); font-size: 0.75rem; font-weight: 600; padding: 0.35rem 0.85rem; border-radius: 5px; border: 1px solid var(--border-color); cursor: pointer; transition: background 0.15s; }
 .btn-sm:hover { background: var(--bg-card-hover); }
 
@@ -706,8 +1024,56 @@ onMounted(async () => {
 .form-label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem; }
 .form-select { width: 100%; max-width: 480px; padding: 0.6rem 0.9rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-input); color: var(--text-strong); font-size: 0.85rem; cursor: pointer; }
 .form-select:focus { outline: none; border-color: var(--border-hover); }
+.form-input { width: 100%; padding: 0.6rem 0.9rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-input); color: var(--text-strong); font-size: 0.85rem; }
+.form-input:focus { outline: none; border-color: var(--border-hover); }
 
-/* ── Revisores grid ── */
+/* ── Article Picker ── */
+.article-picker-container { margin-bottom: 2rem; }
+.picker-controls { display: flex; gap: 1rem; margin-bottom: 1.25rem; }
+.search-input-group { flex: 1; position: relative; }
+.search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--text-faint); pointer-events: none; }
+.search-bar { padding-left: 2.5rem; }
+.filter-select { width: 180px; }
+
+.articulos-picker-grid { 
+  display: grid; 
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); 
+  gap: 1rem; 
+  max-height: 280px; 
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+.articulos-picker-grid::-webkit-scrollbar { width: 6px; }
+.articulos-picker-grid::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+
+.art-picker-card { 
+  background: var(--bg-card); 
+  border: 1px solid var(--border-color); 
+  border-radius: 10px; 
+  padding: 1rem; 
+  cursor: pointer; 
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+.art-picker-card:hover { border-color: var(--border-hover); background: var(--bg-card-hover); }
+.art-picker-card.active { border-color: var(--btn-primary-bg); background: var(--bg-input); box-shadow: 0 0 0 2px var(--btn-primary-bg); }
+
+.art-card-id-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem; }
+.art-time { font-size: 0.65rem; color: var(--text-faint); font-weight: 600; text-transform: uppercase; }
+.art-card-title { font-size: 0.9rem; font-weight: 700; color: var(--text-strong); margin-bottom: 0.75rem; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; height: 2.8em; }
+.art-card-meta { display: flex; align-items: center; gap: 1rem; }
+.meta-item { display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--text-muted); font-weight: 500; }
+.meta-item svg { width: 14px; height: 14px; color: var(--text-faint); }
+.rev-pill { 
+  background: var(--bg-input); 
+  padding: 0.2rem 0.6rem; 
+  border-radius: 99px; 
+  border: 1px solid var(--border-color);
+  font-weight: 600;
+  font-size: 0.68rem;
+  color: var(--text-strong);
+}
 .revisores-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; margin-top: 0.5rem; }
 .revisores-grid-full { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; }
 .revisor-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; }
@@ -727,6 +1093,17 @@ onMounted(async () => {
 .rev-count.count-full { background: rgba(248,113,113,0.12); color: #dc2626; border-color: rgba(248,113,113,0.3); }
 [data-theme="dark"] .rev-count.count-full { color: #f87171; }
 .rev-count-label { font-size: 0.65rem; color: var(--text-faint); }
+.gmail-btn { background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 0.3rem; border-radius: 4px; transition: all 0.15s; margin-top: 0.2rem; }
+.gmail-btn:hover { background: var(--bg-card-hover); color: #ea4335; }
+.gmail-btn svg { width: 16px; height: 16px; }
+.gmail-btn-sm { padding: 0.2rem; }
+.gmail-btn-sm svg { width: 14px; height: 14px; }
+.whatsapp-btn { background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 0.3rem; border-radius: 4px; transition: all 0.15s; margin-top: 0.2rem; }
+.whatsapp-btn:hover:not(:disabled) { background: var(--bg-card-hover); color: #25D366; }
+.whatsapp-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.whatsapp-btn svg { width: 16px; height: 16px; }
+.whatsapp-btn-sm { padding: 0.2rem; }
+.whatsapp-btn-sm svg { width: 14px; height: 14px; }
 .rev-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; }
 .tag { font-size: 0.68rem; font-weight: 500; padding: 0.2rem 0.5rem; border-radius: 99px; background: var(--bg-input); color: var(--text-muted); border: 1px solid var(--border-color); }
 .rev-footer { margin-top: 0.75rem; }
@@ -737,6 +1114,85 @@ onMounted(async () => {
 [data-theme="dark"] .libre-chip { color: #4ade80; }
 [data-theme="dark"] .lleno-chip { color: #f87171; }
 [data-theme="dark"] .asignado-chip { color: #60a5fa; }
+
+/* ── Solicitudes ── */
+.solicitudes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1.5rem;
+}
+.sol-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.25rem;
+  transition: transform 0.2s;
+}
+.sol-card:hover { transform: translateY(-2px); }
+.sol-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+.sol-user-info { display: flex; gap: 0.75rem; align-items: center; }
+.sol-avatar {
+  width: 40px;
+  height: 40px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-hover);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+.sol-user-name { font-size: 0.95rem; font-weight: 700; color: var(--text-strong); }
+.sol-user-email { font-size: 0.75rem; color: var(--text-faint); }
+.sol-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  background: var(--bg-input);
+  color: var(--text-strong);
+  text-transform: uppercase;
+}
+.sol-card-body { font-size: 0.85rem; }
+.sol-motivo { line-height: 1.5; color: var(--text-normal); margin-bottom: 1.25rem; }
+.sol-actions { display: flex; gap: 0.75rem; }
+.btn-action {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+.btn-action svg { width: 16px; height: 16px; }
+.btn-action.approve { background: rgba(34,197,94,0.1); color: #15803d; border-color: rgba(34,197,94,0.2); }
+.btn-action.approve:hover { background: rgba(34,197,94,0.2); }
+.btn-action.reject { background: rgba(239,68,68,0.1); color: #dc2626; border-color: rgba(239,68,68,0.2); }
+.btn-action.reject:hover { background: rgba(239,68,68,0.2); }
+
+.sol-resolved {
+  padding: 0.75rem;
+  background: var(--bg-input);
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+.resolved-label { display: block; font-weight: 700; margin-bottom: 0.4rem; color: var(--text-muted); }
+.sol-feedback { color: var(--text-normal); font-style: italic; }
+
+.sol-card.aprobado { border-left: 4px solid #10b981; }
+.sol-card.rechazado { border-left: 4px solid #ef4444; }
 
 /* ── Revisores asignados chips ── */
 .asignados-section { margin-bottom: 1.5rem; }

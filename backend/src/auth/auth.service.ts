@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { User, Rol } from '../users/entities/user.entity';
+import { Perfil } from '../users/entities/perfil.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { v4 as uuidv4 } from 'uuid';
@@ -12,6 +13,8 @@ export class AuthService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Perfil)
+    private readonly perfilRepository: Repository<Perfil>,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -42,6 +45,14 @@ export class AuthService {
     });
 
     await this.userRepository.save(user);
+
+    const perfil = this.perfilRepository.create({
+      id: user.id,
+      nombre: user.nombre,
+      carrera: '',
+      especialidades: [],
+    });
+    await this.perfilRepository.save(perfil);
 
     // Generar JWT
     const token = this.generateToken(user);

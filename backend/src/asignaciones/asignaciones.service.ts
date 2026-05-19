@@ -3,6 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Asignacion } from './entities/asignacion.entity';
 import { User, Rol } from '../users/entities/user.entity';
+import { Articulo, EstadoArticulo } from '../articulos/entities/articulo.entity';
+import { Revision, RevisionDocument } from './schemas/revision.schema';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -12,15 +16,19 @@ export class AsignacionesService {
     private readonly asignacionRepository: Repository<Asignacion>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-  ) {}
+    @InjectRepository(Articulo)
+    private readonly articuloRepository: Repository<Articulo>,
+    @InjectModel(Revision.name)
+    private readonly revisionModel: Model<RevisionDocument>,
+  ) { }
 
   async findAll(includeRelations: boolean = false) {
-    const relations = includeRelations ? ['articulo', 'revisor', 'articulo.autor'] : [];
+    const relations = includeRelations ? ['articulo', 'revisor', 'revisor.perfil', 'articulo.autor', 'articulo.autor.perfil'] : [];
     return this.asignacionRepository.find({ relations });
   }
 
   async findByRevisor(revisorId: string, includeRelations: boolean = false) {
-    const relations = includeRelations ? ['articulo', 'revisor', 'articulo.autor'] : [];
+    const relations = includeRelations ? ['articulo', 'revisor', 'revisor.perfil', 'articulo.autor', 'articulo.autor.perfil'] : [];
     return this.asignacionRepository.find({
       where: { revisor_id: revisorId },
       relations
@@ -28,7 +36,7 @@ export class AsignacionesService {
   }
 
   async findOne(id: string, includeRelations: boolean = false) {
-    const relations = includeRelations ? ['articulo', 'revisor', 'articulo.autor'] : [];
+    const relations = includeRelations ? ['articulo', 'revisor', 'revisor.perfil', 'articulo.autor', 'articulo.autor.perfil'] : [];
     const asignacion = await this.asignacionRepository.findOne({ where: { id }, relations });
 
     if (!asignacion) {
@@ -46,6 +54,7 @@ export class AsignacionesService {
     // Por simplicidad, aquí buscamos todos los usuarios que tienen al menos una membresía como REVISOR
     // o que tengan el rol global de REVISOR (para compatibilidad).
     const revisores = await this.userRepository.createQueryBuilder('user')
+      .leftJoinAndSelect('user.perfil', 'perfil')
       .leftJoin('user.membresias', 'membresia')
       .where('user.rol = :rol', { rol: Rol.REVISOR })
       .orWhere('membresia.rol = :mrol', { mrol: Rol.REVISOR })
@@ -53,23 +62,23 @@ export class AsignacionesService {
 
     const resultados = await Promise.all(
       revisores.map(async (revisor) => {
-        const totalAsignados = await this.asignacionRepository.count({
-          where: { revisor_id: revisor.id },
-        });
-
         const asignaciones = await this.asignacionRepository.find({
           where: { revisor_id: revisor.id },
           relations: ['articulo'],
         });
 
+        const totalAsignados = asignaciones.filter(a =>
+          a.articulo && a.articulo.estado !== EstadoArticulo.ACEPTADO && a.articulo.estado !== EstadoArticulo.RECHAZADO
+        ).length;
+
         return {
           id: revisor.id,
           email: revisor.email,
           rol: revisor.rol,
-          nombre: revisor.nombre || revisor.email,
-          carrera: '',
-          especialidades: [],
-          telefono: null,
+          nombre: revisor.perfil?.nombre || revisor.nombre || revisor.email,
+          carrera: revisor.perfil?.carrera || '',
+          especialidades: revisor.perfil?.especialidades || [],
+          telefono: revisor.perfil?.telefono || null,
           articulos_asignados: totalAsignados,
           puede_recibir_mas: totalAsignados < 3,
           articulos: asignaciones.map((a) => ({
@@ -92,21 +101,45 @@ export class AsignacionesService {
   async create(data: { articulo_id: string; revisor_id: string; fecha_limite?: string }) {
     const { articulo_id, revisor_id, fecha_limite } = data;
 
-    // Verificar que el revisor existe y tiene rol REVISOR
+    // Verificar que el revisor existe (El rol se valida por contexto o membresía si es necesario, 
+    // pero aquí validamos que sea capaz de revisar artículos en general)
     const revisor = await this.userRepository.findOne({
-      where: { id: revisor_id, rol: Rol.REVISOR },
+      where: { id: revisor_id },
     });
     if (!revisor) {
       throw new NotFoundException(`Revisor con ID ${revisor_id} no encontrado`);
     }
 
-    // Verificar límite de 3 artículos
-    const totalActual = await this.asignacionRepository.count({
-      where: { revisor_id },
+    // --- REGLA: No auto-revisión ---
+    const articulo = await this.articuloRepository.findOne({ where: { id: articulo_id } });
+    if (!articulo) {
+      throw new NotFoundException(`Artículo con ID ${articulo_id} no encontrado`);
+    }
+    if (articulo.autor_id === revisor_id) {
+      throw new BadRequestException('Un autor no puede revisar su propio artículo (Conflicto de interés)');
+    }
+
+    // --- REGLA: Máximo 3 revisores por artículo ---
+    const revisoresAsignados = await this.asignacionRepository.count({
+      where: { articulo_id },
     });
-    if (totalActual >= 3) {
+    if (revisoresAsignados >= 3) {
+      throw new BadRequestException('Este artículo ya tiene el máximo de 3 revisores asignados');
+    }
+
+    // Verificar límite de 3 artículos ACTIVOS (Solo los que no han sido aceptados/rechazados)
+    const asignacionesActuales = await this.asignacionRepository.find({
+      where: { revisor_id },
+      relations: ['articulo']
+    });
+
+    const activos = asignacionesActuales.filter(a =>
+      a.articulo && a.articulo.estado !== EstadoArticulo.ACEPTADO && a.articulo.estado !== EstadoArticulo.RECHAZADO
+    );
+
+    if (activos.length >= 3) {
       throw new BadRequestException(
-        `El revisor ya tiene ${totalActual} artículos asignados. No se pueden asignar más de 3.`,
+        `El revisor ya tiene ${activos.length} artículos en revisión activa. No se pueden asignar más de 3.`,
       );
     }
 
@@ -125,6 +158,12 @@ export class AsignacionesService {
       fecha_limite: fecha_limite ? new Date(fecha_limite) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     });
 
+    // Cambiar estado del artículo a EN_REVISION si estaba en BORRADOR
+    if (articulo.estado === EstadoArticulo.BORRADOR) {
+      articulo.estado = EstadoArticulo.EN_REVISION;
+      await this.articuloRepository.save(articulo);
+    }
+
     return this.asignacionRepository.save(nuevaAsignacion);
   }
 
@@ -135,5 +174,59 @@ export class AsignacionesService {
     }
     await this.asignacionRepository.delete(id);
     return { message: `Asignación eliminada correctamente` };
+  }
+
+  /**
+   * Procesa la entrega de una revisión
+   * 1. Guarda los comentarios detallados en MongoDB
+   * 2. Actualiza el estado del artículo en MariaDB
+   * 3. Remueve o marca la asignación como completada (en este diseño, se elimina al terminar)
+   */
+  async submitRevision(data: {
+    articulo_id: string;
+    revisor_id: string;
+    decision: string;
+    comentarios: any;
+    fecha_revision: string;
+  }) {
+    const { articulo_id, revisor_id, decision, comentarios, fecha_revision } = data;
+
+    // 1. Guardar en MongoDB (Mongoose)
+    const nuevaRevision = new this.revisionModel({
+      _id: uuidv4(),
+      articulo_id,
+      revisor_id,
+      decision,
+      secciones: comentarios, // <--- Mapeamos los comentarios al campo secciones del esquema
+      fecha_revision: new Date(fecha_revision),
+    });
+    await nuevaRevision.save();
+
+    // 2. Actualizar estado del artículo en MariaDB (TypeORM)
+    const articulo = await this.articuloRepository.findOne({ where: { id: articulo_id } });
+    if (articulo) {
+      // Mapear decisión a estado
+      if (decision === 'aceptado') {
+        articulo.estado = EstadoArticulo.ACEPTADO;
+      } else if (decision === 'revision') {
+        articulo.estado = EstadoArticulo.EN_REVISION;
+      } else {
+        articulo.estado = EstadoArticulo.RECHAZADO;
+      }
+      await this.articuloRepository.save(articulo);
+    }
+
+    // 3. Ya NO eliminamos la asignación para que el revisor pueda ver su historial y las estadísticas en el dashboard
+    // Pero el artículo ahora está en estado ACEPTADO/RECHAZADO, por lo que no contará para el límite de 3.
+
+    return {
+      message: 'Revisión procesada exitosamente',
+      revision_id: nuevaRevision.id,
+      nuevo_estado: articulo?.estado
+    };
+  }
+
+  async findRevision(articulo_id: string, revisor_id: string) {
+    return this.revisionModel.findOne({ articulo_id, revisor_id }).exec();
   }
 }

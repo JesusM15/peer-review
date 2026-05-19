@@ -45,6 +45,27 @@ const SEED_USERS = [
     nombre: 'Laura Torres',
   },
   {
+    id: '55555555-5555-4555-a555-555555555555',
+    email: 'editor-jefe@diego.edu',
+    password: 'password123',
+    rol: Rol.EDITOR_JEFE,
+    nombre: 'Roberto Sánchez',
+  },
+  {
+    id: '66666666-6666-4666-a666-666666666666',
+    email: 'sub-editor1@diego.edu',
+    password: 'password123',
+    rol: Rol.SUB_EDITOR,
+    nombre: 'María López',
+  },
+  {
+    id: '77777777-7777-4777-a777-777777777777',
+    email: 'sub-editor2@diego.edu',
+    password: 'password123',
+    rol: Rol.SUB_EDITOR,
+    nombre: 'Pedro Ramírez',
+  },
+  {
     id: '44444444-4444-4444-a444-444444444444',
     email: 'admin@diego.edu',
     password: 'admin123',
@@ -63,13 +84,23 @@ async function runSeed() {
   const asignacionRepo = AppDataSource.getRepository(Asignacion);
 
   for (const seed of SEED_USERS) {
-    const existingUser = await userRepo.findOne({ where: { id: seed.id } });
-
-    if (existingUser) {
-      console.log(`⚠️  Usuario "${seed.email}" ya existe. Saltando...`);
-      continue;
+    // Buscar usuario por email (para detectar si existe aunque el ID cambie)
+    const existingUserByEmail = await userRepo.findOne({ where: { email: seed.email } });
+    
+    if (existingUserByEmail) {
+      // Eliminar usuario existente para recrearlo con contraseña hasheada
+      await userRepo.remove(existingUserByEmail);
+      console.log(`🗑️  Usuario existente eliminado: ${seed.email} (será recreado con hash)`);
     }
 
+    // También verificar por ID por si cambió el email
+    const existingUserById = await userRepo.findOne({ where: { id: seed.id } });
+    if (existingUserById && existingUserById.email !== seed.email) {
+      await userRepo.remove(existingUserById);
+      console.log(`🗑️  Usuario con ID existente eliminado: ${existingUserById.email}`);
+    }
+
+    // Crear usuario nuevo (la contraseña se hashea automáticamente por @BeforeInsert)
     const user = userRepo.create({
       id: seed.id,
       nombre: seed.nombre,

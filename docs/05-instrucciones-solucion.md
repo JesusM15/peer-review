@@ -22,6 +22,7 @@ docker compose up -d --build
 # 4. (Solo la primera vez o si alguien agregó paquetes nuevos)
 docker exec -it peer_review_api npm install
 
+
 # 5. (Opcional) Cargar datos de prueba
 docker exec peer_review_api npx ts-node src/database/seed.ts
 ```
