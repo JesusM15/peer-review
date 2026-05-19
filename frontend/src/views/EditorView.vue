@@ -473,7 +473,7 @@
             <p>Las peticiones de cambio de rol aparecerán aquí.</p>
           </div>
           <div v-else class="solicitudes-grid">
-            <div v-for="sol in solicitudesRol" :key="sol.id" class="sol-card" :class="sol.estado.toLowerCase()">
+            <div v-for="sol in solicitudesRol" :key="sol.id" class="sol-card" :class="sol?.estado?.toLowerCase()">
               <div class="sol-card-header">
                 <div class="sol-user-info">
                   <div class="sol-avatar">{{ sol.user?.nombre?.charAt(0).toUpperCase() }}</div>
@@ -603,6 +603,14 @@ const { isDark, toggleTheme } = useTheme()
 const authStore = useAuthStore()
 const congressStore = useCongressStore()
 
+const authHeaders = (extra: Record<string, string> = {}) => {
+  const headers: Record<string, string> = {}
+  if (authStore.token) {
+    headers.Authorization = `Bearer ${authStore.token}`
+  }
+  return { ...headers, ...extra }
+}
+
 const showUserMenu = ref(false)
 const vistaActiva = ref<string>('overview')
 const goBack = () => router.push('/')
@@ -702,7 +710,9 @@ async function cargarArticulos() {
 async function cargarRevisores() {
   cargandoRevisores.value = true
   try {
-    const res = await fetch(`${API}/asignaciones/revisores`)
+    const res = await fetch(`${API}/asignaciones/revisores`, {
+      headers: authHeaders(),
+    })
     revisores.value = await res.json()
   } catch (e) {
     console.error('Error cargando revisores', e)
@@ -713,7 +723,9 @@ async function cargarRevisores() {
 
 async function cargarAsignacionesDeArticulo(articuloId: string) {
   try {
-    const res = await fetch(`${API}/asignaciones?revisor_id=&include_relations=true`)
+    const res = await fetch(`${API}/asignaciones?revisor_id=&include_relations=true`, {
+      headers: authHeaders(),
+    })
     // Filtrar las del artículo actual
     const todas = await res.json()
     revisoresDelArticulo.value = todas.filter((a: any) => a.articulo_id === articuloId)
@@ -743,7 +755,9 @@ async function cargarSolicitudes() {
   if (!congressStore.currentCongressId) return
   cargandoSolicitudes.value = true
   try {
-    const res = await fetch(`${API}/solicitudes/congreso/${congressStore.currentCongressId}`)
+    const res = await fetch(`${API}/solicitudes/congreso/${congressStore.currentCongressId}`, {
+      headers: authHeaders(),
+    })
     solicitudesRol.value = await res.json()
   } catch (e) {
     console.error('Error cargando solicitudes', e)
@@ -760,7 +774,7 @@ async function responderSolicitud(sol: any, estado: string) {
   try {
     const res = await fetch(`${API}/solicitudes/${sol.id}/responder`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ 
         estado, 
         respuesta: respuesta || (estado === 'Aprobado' ? '¡Bienvenido al equipo!' : 'Lo sentimos, por ahora no cumples con el perfil.') 
@@ -825,7 +839,7 @@ async function asignarRevisorDesdeModal() {
   try {
     const res = await fetch(`${API}/asignaciones`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         articulo_id: articuloSeleccionadoId.value,
         revisor_id: modalRevisor.value.id,
@@ -853,7 +867,10 @@ async function asignarRevisorDesdeModal() {
 // ── Eliminar asignación ───────────────────────────────
 async function eliminarAsignacion(asignacionId: string) {
   try {
-    await fetch(`${API}/asignaciones/${asignacionId}`, { method: 'DELETE' })
+    await fetch(`${API}/asignaciones/${asignacionId}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    })
     await cargarAsignacionesDeArticulo(articuloSeleccionadoId.value)
     await cargarRevisores()
   } catch (e) {
