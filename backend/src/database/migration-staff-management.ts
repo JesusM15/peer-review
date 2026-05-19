@@ -1,5 +1,17 @@
-import { AppDataSource } from '../data-source';
-import { v4 as uuidv4 } from 'uuid';
+import { DataSource } from 'typeorm';
+import * as dotenv from 'dotenv';
+import { join } from 'path';
+
+dotenv.config({ path: join(__dirname, '../../.env') });
+
+const AppDataSource = new DataSource({
+  type: 'mysql',
+  url:
+    process.env.MARIADB_URI ||
+    'mysql://dbuser:dbpassword@localhost:3307/peer_review_db',
+  synchronize: false,
+  logging: true,
+});
 
 /**
  * Migration: Add Staff Management System with Tags

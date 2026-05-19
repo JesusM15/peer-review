@@ -28,6 +28,10 @@ export class CongresosService {
   ) {}
 
   async createCongreso(nombre: string, descripcion?: string, tags?: string[]): Promise<Congreso> {
+    if (!tags || tags.map(tag => tag.trim()).filter(Boolean).length === 0) {
+      throw new BadRequestException('Cada congreso debe tener al menos una etiqueta');
+    }
+
     const congreso = this.congresoRepo.create({
       id: uuidv4(),
       nombre,
@@ -37,7 +41,7 @@ export class CongresosService {
 
     // Create tags if provided
     if (tags && tags.length > 0) {
-      for (const tagName of tags) {
+      for (const tagName of [...new Set(tags.map(tag => tag.trim()).filter(Boolean))]) {
         const tag = this.tagRepo.create({
           id: uuidv4(),
           nombre: tagName,
@@ -117,9 +121,18 @@ export class CongresosService {
   }
 
   async assignEditorToTag(userId: string, tagId: string, congresoId: string): Promise<EditorTag> {
-    // Verificar que el usuario tiene rol EDITOR en ese congreso
-    const membership = await this.ucrRepo.findOne({ where: { user_id: userId, congreso_id: congresoId, rol: Rol.EDITOR } });
-    if (!membership) throw new BadRequestException('El usuario no es Editor en este congreso');
+    const membership = await this.ucrRepo.findOne({ where: { user_id: userId, congreso_id: congresoId } });
+    if (!membership || (membership.rol !== Rol.EDITOR && membership.rol !== Rol.EDITOR_JEFE)) {
+      throw new BadRequestException('El usuario no es Editor en este congreso');
+    }
+
+    const tag = await this.tagRepo.findOne({ where: { id: tagId, congreso_id: congresoId } });
+    if (!tag) throw new BadRequestException('La etiqueta no existe en este congreso');
+
+    const existing = await this.editorTagRepo.findOne({
+      where: { user_id: userId, tag_id: tagId, congreso_id: congresoId }
+    });
+    if (existing) throw new BadRequestException('El editor ya tiene esta etiqueta asignada');
 
     const et = this.editorTagRepo.create({
       id: uuidv4(),
@@ -128,6 +141,19 @@ export class CongresosService {
       congreso_id: congresoId,
     });
     return this.editorTagRepo.save(et);
+  }
+
+  async getEditorTags(userId: string, congresoId: string): Promise<EditorTag[]> {
+    return this.editorTagRepo.find({
+      where: { user_id: userId, congreso_id: congresoId },
+      relations: ['tag']
+    });
+  }
+
+  async removeEditorTag(editorTagId: string): Promise<void> {
+    const editorTag = await this.editorTagRepo.findOne({ where: { id: editorTagId } });
+    if (!editorTag) throw new NotFoundException('Asignación de etiqueta a editor no encontrada');
+    await this.editorTagRepo.remove(editorTag);
   }
 
   async getMemberships(userId: string): Promise<UsuarioCongresoRol[]> {

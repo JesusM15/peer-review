@@ -38,6 +38,12 @@
           Solicitudes de Congreso
           <span v-if="solicitudesPendientesCount > 0" class="nav-badge">{{ solicitudesPendientesCount }}</span>
         </button>
+        <button class="nav-item" id="nav-perfil-admin" @click="router.push('/perfil')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Perfil
+        </button>
       </nav>
 
       <div class="sidebar-footer relative-footer">
@@ -371,6 +377,9 @@
                 <span v-if="sol.fecha_fin_propuesta"><strong>Fin:</strong> {{ formatDateOnly(sol.fecha_fin_propuesta) }}</span>
               </div>
               <p v-if="sol.motivo" class="sc-motivo"><strong>Motivo:</strong> {{ sol.motivo }}</p>
+              <div v-if="sol.tags?.length" class="article-tags">
+                <span v-for="tag in sol.tags" :key="tag" class="tag">{{ tag }}</span>
+              </div>
               <p v-if="sol.respuesta_admin" class="sc-resp"><strong>Tu respuesta:</strong> {{ sol.respuesta_admin }}</p>
               <div class="sc-meta">Enviada: {{ formatDateNotif(sol.fecha_creacion) }}</div>
             </div>
@@ -806,6 +815,7 @@ interface SolicitudCongreso {
   fecha_inicio_propuesta?: string;
   fecha_fin_propuesta?: string;
   motivo?: string;
+  tags?: string[];
   estado: 'Pendiente' | 'Aprobado' | 'Rechazado';
   respuesta_admin?: string;
   congreso_creado_id?: string;
@@ -1023,6 +1033,8 @@ onMounted(() => {
   .menu-item.text-danger { color: var(--stat-rechazado); }
   .menu-item.text-danger svg { color: var(--stat-rechazado); }
   .menu-item.text-danger:hover { background: rgba(248, 113, 113, 0.1); }
+  .article-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.55rem; }
+  .tag { font-size: 0.72rem; color: var(--text-muted); background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 999px; padding: 0.2rem 0.5rem; }
 
   /* ─── MAIN ────────────────────────────────────────── */
   .main { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 1.5rem; }

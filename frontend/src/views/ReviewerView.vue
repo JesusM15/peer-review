@@ -40,6 +40,12 @@
           </svg>
           Postularse
         </button>
+        <button class="nav-item" id="nav-perfil-revisor" @click="router.push('/perfil')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Perfil
+        </button>
       </nav>
 
       <!-- Indicador de conexión -->
@@ -288,6 +294,15 @@
                   </div>
                 </div>
               </div>
+              <div class="form-group" v-if="availableTags.length">
+                <label>Etiquetas del artículo</label>
+                <div class="tag-options">
+                  <label v-for="tag in availableTags" :key="tag.id" class="tag-option">
+                    <input type="checkbox" :value="tag.id" v-model="selectedArticleTagIds" />
+                    <span>{{ tag.nombre }}</span>
+                  </label>
+                </div>
+              </div>
               <div class="form-actions">
                 <button type="button" class="btn-ghost" id="btn-cancelar-revisor" @click="cancelarFormulario">Cancelar</button>
                 <button type="submit" class="btn-primary" id="btn-submit-articulo-revisor" :disabled="isLoading">
@@ -343,6 +358,8 @@ const tituloArticulo = ref<string>('')
 const archivoPdf = ref<File | null>(null)
 const isLoading = ref<boolean>(false)
 const isOffline = ref(false)
+const availableTags = ref<{ id: string; nombre: string }[]>([])
+const selectedArticleTagIds = ref<string[]>([])
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 
@@ -387,7 +404,20 @@ onMounted(() => {
   isOffline.value = !offlineStorage.isOnline()
   window.addEventListener('online', () => isOffline.value = false)
   window.addEventListener('offline', () => isOffline.value = true)
+  cargarTagsCongreso()
 })
+
+const cargarTagsCongreso = async () => {
+  if (!congressStore.currentCongressId) return
+  try {
+    const response = await fetch(`${API_BASE_URL}/congresos/${congressStore.currentCongressId}`)
+    if (!response.ok) return
+    const data = await response.json()
+    availableTags.value = data.tags || []
+  } catch (error) {
+    console.error('Error al cargar tags del congreso:', error)
+  }
+}
 
 const cargarAsignaciones = async () => {
   if (!currentUser.value?.id) return
@@ -616,6 +646,13 @@ const submitArticulo = async () => {
     })
     if (!response.ok) throw new Error(`Error HTTP: ${response.status}`)
     const result = await response.json()
+    await Promise.all(selectedArticleTagIds.value.map((tagId) =>
+      fetch(`${API_BASE_URL}/articulos/${articuloId}/tags`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tagId })
+      }).catch((error) => console.error('Error asignando tag al artículo:', error))
+    ))
     console.log('Artículo registrado:', result)
     showToast(`Artículo "${tituloArticulo.value}" registrado con éxito (ID: ${articuloId})`, 'success')
     cancelarFormulario()
@@ -648,7 +685,7 @@ const formatFileSize = (bytes: number): string => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
-const cancelarFormulario = () => { tituloArticulo.value = ''; archivoPdf.value = null }
+const cancelarFormulario = () => { tituloArticulo.value = ''; archivoPdf.value = null; selectedArticleTagIds.value = [] }
 const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString()
 </script>
 
@@ -705,6 +742,9 @@ const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString()
 .menu-item.text-danger { color: var(--stat-rechazado); }
 .menu-item.text-danger svg { color: var(--stat-rechazado); }
 .menu-item.text-danger:hover { background: rgba(248, 113, 113, 0.1); }
+.tag-options { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.55rem; }
+.tag-option { display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer; }
+.tag-option span { font-size: 0.72rem; color: var(--text-muted); background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 999px; padding: 0.2rem 0.5rem; }
 
 .main { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
 .topbar { display: flex; align-items: flex-start; justify-content: space-between; padding: 2rem 2.5rem 1.5rem; border-bottom: 1px solid var(--border-color); }

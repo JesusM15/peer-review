@@ -15,7 +15,7 @@
 
           <div class="form-group">
             <label for="profile-email">Correo electrónico</label>
-            <input id="profile-email" v-model="profile?.email" type="email" class="form-input" disabled />
+            <input id="profile-email" :value="profile?.email || ''" type="email" class="form-input" disabled />
           </div>
 
           <div class="form-group">
@@ -47,18 +47,39 @@
           </button>
         </form>
       </section>
+
+      <section v-if="canManageCongressTags" class="card profile-card">
+        <div class="section-heading">
+          <h2>Etiquetas en {{ currentCongressName }}</h2>
+          <p class="hint">Selecciona las áreas que te corresponden en este congreso.</p>
+        </div>
+        <div v-if="loadingTags" class="hint">Cargando etiquetas...</div>
+        <div v-else-if="availableTags.length === 0" class="hint">Este congreso todavía no tiene tags.</div>
+        <div v-else class="tag-options">
+          <label v-for="tag in availableTags" :key="tag.id" class="tag-option">
+            <input type="checkbox" :value="tag.id" v-model="selectedCongressTagIds" />
+            <span>{{ tag.nombre }}</span>
+          </label>
+        </div>
+        <div v-if="tagErrorMessage" class="alert alert-error">{{ tagErrorMessage }}</div>
+        <button class="btn btn-primary" :disabled="savingTags || loadingTags" @click="saveCongressTags">
+          {{ savingTags ? 'Guardando...' : 'Guardar etiquetas del congreso' }}
+        </button>
+      </section>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '../stores/auth'
+import { useCongressStore } from '../stores/congress'
 import { useTheme } from '../composables/useTheme'
 import { useToast } from '../composables/useToast'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 const authStore = useAuthStore()
+const congressStore = useCongressStore()
 const { isDark } = useTheme()
 const { showToast } = useToast()
 
@@ -79,6 +100,23 @@ const profile = ref<UserProfile | null>(null)
 const form = ref({ nombre: '', carrera: '', telefono: '', especialidades: '' })
 const saving = ref(false)
 const errorMessage = ref('')
+const loadingTags = ref(false)
+const savingTags = ref(false)
+const tagErrorMessage = ref('')
+const availableTags = ref<{ id: string; nombre: string }[]>([])
+const selectedCongressTagIds = ref<string[]>([])
+const originalCongressTagAssignments = ref<{ id: string; tag_id: string }[]>([])
+
+const currentMembership = computed(() =>
+  congressStore.memberships.find(m => m.congreso_id === congressStore.currentCongressId)
+)
+const currentCongressName = computed(() => currentMembership.value?.congreso?.nombre || 'el congreso actual')
+const tagEndpointRole = computed(() => {
+  if (currentMembership.value?.rol === 'Revisor') return 'revisor'
+  if (currentMembership.value?.rol === 'Editor' || currentMembership.value?.rol === 'Editor Jefe') return 'editor'
+  return ''
+})
+const canManageCongressTags = computed(() => Boolean(congressStore.currentCongressId && tagEndpointRole.value && authStore.user?.id))
 
 function authHeaders(extra: Record<string, string> = {}) {
   const headers: Record<string, string> = {
@@ -115,6 +153,65 @@ async function loadProfile() {
   } catch (e) {
     console.error('Error loading profile', e)
     errorMessage.value = 'Error de conexión al cargar el perfil.'
+  }
+}
+
+async function loadCongressTags() {
+  if (!canManageCongressTags.value || !authStore.user?.id || !congressStore.currentCongressId) return
+  loadingTags.value = true
+  tagErrorMessage.value = ''
+  try {
+    const [congresoRes, assignedRes] = await Promise.all([
+      fetch(`${API}/congresos/${congressStore.currentCongressId}`, { headers: authHeaders() }),
+      fetch(`${API}/congresos/${congressStore.currentCongressId}/${tagEndpointRole.value}/${authStore.user.id}/tags`, { headers: authHeaders() }),
+    ])
+    if (congresoRes.ok) {
+      const congreso = await congresoRes.json()
+      availableTags.value = congreso.tags || []
+    }
+    if (assignedRes.ok) {
+      const assigned = await assignedRes.json()
+      originalCongressTagAssignments.value = assigned
+      selectedCongressTagIds.value = assigned.map((item: any) => item.tag_id)
+    }
+  } catch (e) {
+    console.error('Error loading congress tags', e)
+    tagErrorMessage.value = 'No se pudieron cargar las etiquetas del congreso.'
+  } finally {
+    loadingTags.value = false
+  }
+}
+
+async function saveCongressTags() {
+  if (!canManageCongressTags.value || !authStore.user?.id || !congressStore.currentCongressId) return
+  savingTags.value = true
+  tagErrorMessage.value = ''
+  const selected = new Set(selectedCongressTagIds.value)
+  const original = new Set(originalCongressTagAssignments.value.map(item => item.tag_id))
+  const toAdd = selectedCongressTagIds.value.filter(tagId => !original.has(tagId))
+  const toRemove = originalCongressTagAssignments.value.filter(item => !selected.has(item.tag_id))
+  try {
+    for (const tagId of toAdd) {
+      await fetch(`${API}/congresos/${congressStore.currentCongressId}/assign-${tagEndpointRole.value}`, {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ userId: authStore.user.id, tagId }),
+      })
+    }
+    for (const item of toRemove) {
+      await fetch(`${API}/congresos/${tagEndpointRole.value}-tag/${item.id}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      })
+    }
+    await loadCongressTags()
+    showToast('Etiquetas del congreso actualizadas.', 'success')
+  } catch (e) {
+    console.error(e)
+    tagErrorMessage.value = 'No se pudieron guardar las etiquetas del congreso.'
+    showToast(tagErrorMessage.value, 'error')
+  } finally {
+    savingTags.value = false
   }
 }
 
@@ -155,7 +252,10 @@ async function saveProfile() {
   }
 }
 
-onMounted(loadProfile)
+onMounted(async () => {
+  await loadProfile()
+  await loadCongressTags()
+})
 </script>
 
 <style scoped>
@@ -188,6 +288,12 @@ onMounted(loadProfile)
 
 .profile-card {
   padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.section-heading h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.05rem;
 }
 
 .form-group {
@@ -206,5 +312,28 @@ onMounted(loadProfile)
 
 .alert-error {
   margin: 0.75rem 0;
+}
+
+.tag-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.tag-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
+.tag-option span {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  padding: 0.25rem 0.6rem;
 }
 </style>

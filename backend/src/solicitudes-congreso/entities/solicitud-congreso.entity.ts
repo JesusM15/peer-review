@@ -37,6 +37,9 @@ export class SolicitudCongreso {
   @Column({ type: 'text', nullable: true })
   motivo?: string;
 
+  @Column({ type: 'simple-array', nullable: true })
+  tags?: string[];
+
   @Column({
     type: 'enum',
     enum: EstadoSolicitudCongreso,

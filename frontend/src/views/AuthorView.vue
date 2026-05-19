@@ -40,6 +40,12 @@
           </svg>
           Postularse
         </button>
+        <button class="nav-item" id="nav-perfil-autor" @click="router.push('/perfil')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Perfil
+        </button>
       </nav>
 
       <div class="sidebar-footer relative-footer">
@@ -164,6 +170,9 @@
                   <span class="estado-badge" :class="articulo.estado.toLowerCase().replace(' ', '-')">{{ articulo.estado }}</span>
                   <span class="fecha-creacion">{{ formatDate(articulo.createdAt) }}</span>
                 </div>
+                <div v-if="articleTagNames(articulo).length" class="article-tags">
+                  <span v-for="tag in articleTagNames(articulo)" :key="tag" class="tag">{{ tag }}</span>
+                </div>
               </div>
               <div class="articulo-actions">
                 <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -211,6 +220,9 @@
                 <div class="articulo-meta">
                   <span class="estado-badge borrador">{{ articulo.estado }}</span>
                   <span class="fecha-creacion">{{ formatDate(articulo.createdAt) }}</span>
+                </div>
+                <div v-if="articleTagNames(articulo).length" class="article-tags">
+                  <span v-for="tag in articleTagNames(articulo)" :key="tag" class="tag">{{ tag }}</span>
                 </div>
               </div>
               <div class="articulo-actions">
@@ -261,8 +273,11 @@
           </div>
           <div class="revision-panel">
             <div class="panel-placeholder">
-              <h3>Formulario de revisión</h3>
-              <p>Esta sección estará disponible en futuras versiones para agregar formularios de revisión.</p>
+              <h3>Tags del artículo</h3>
+              <div v-if="articuloActual && articleTagNames(articuloActual).length" class="article-tags center">
+                <span v-for="tag in articleTagNames(articuloActual)" :key="tag" class="tag">{{ tag }}</span>
+              </div>
+              <p v-else>Este artículo no tiene tags asignados.</p>
             </div>
           </div>
         </div>
@@ -301,6 +316,16 @@
                     <span v-if="!archivoPdf" class="file-placeholder">Haz clic para seleccionar un PDF o arrástralo aquí</span>
                     <span v-else class="file-selected">{{ archivoPdf.name }} · {{ formatFileSize(archivoPdf.size) }}</span>
                   </div>
+                </div>
+              </div>
+
+              <div class="form-group" v-if="availableTags.length">
+                <label>Etiquetas del artículo</label>
+                <div class="tag-options">
+                  <label v-for="tag in availableTags" :key="tag.id" class="tag-option">
+                    <input type="checkbox" :value="tag.id" v-model="selectedArticleTagIds" />
+                    <span>{{ tag.nombre }}</span>
+                  </label>
                 </div>
               </div>
 
@@ -353,6 +378,7 @@ interface Articulo {
   autor_id: string
   pdf_url: string
   keywords: string[]
+  tags?: { id: string; tag?: { id: string; nombre: string } }[]
   createdAt?: string
   updatedAt?: string
 }
@@ -393,6 +419,7 @@ onMounted(async () => {
   }
   
   // Cargar artículos del usuario
+  await cargarTagsCongreso()
   await cargarArticulos()
 })
 
@@ -423,8 +450,25 @@ const mostrarFormulario = ref<boolean>(true)
 const tituloArticulo = ref<string>('')
 const archivoPdf = ref<File | null>(null)
 const isLoading = ref<boolean>(false)
+const availableTags = ref<{ id: string; nombre: string }[]>([])
+const selectedArticleTagIds = ref<string[]>([])
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+
+const cargarTagsCongreso = async () => {
+  if (!congressStore.currentCongressId) return
+  try {
+    const response = await fetch(`${API_BASE_URL}/congresos/${congressStore.currentCongressId}`)
+    if (!response.ok) return
+    const data = await response.json()
+    availableTags.value = data.tags || []
+  } catch (error) {
+    console.error('Error al cargar tags del congreso:', error)
+  }
+}
+
+const articleTagNames = (articulo: Articulo) =>
+  (articulo.tags || []).map((item) => item.tag?.nombre).filter(Boolean) as string[]
 
 // ─── Funciones para manejo de artículos ─────────────────────────────────────
 const cargarArticulos = async () => {
@@ -528,10 +572,18 @@ const submitArticulo = async () => {
     
     if (!response.ok) throw new Error(`Error HTTP: ${response.status}`)
     const result = await response.json()
+    await Promise.all(selectedArticleTagIds.value.map((tagId) =>
+      fetch(`${API_BASE_URL}/articulos/${articuloId}/tags`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tagId })
+      }).catch((error) => console.error('Error asignando tag al artículo:', error))
+    ))
     console.log('Artículo registrado:', result)
     showToast(`Artículo "${tituloArticulo.value}" registrado con éxito`, 'success')
     tituloArticulo.value = ''
     archivoPdf.value = null
+    selectedArticleTagIds.value = []
     
     // Recargar artículos y volver a borradores
     await cargarArticulos()
@@ -571,6 +623,7 @@ const formatFileSize = (bytes: number): string => {
 const cancelarFormulario = () => {
   tituloArticulo.value = ''
   archivoPdf.value = null
+  selectedArticleTagIds.value = []
 }
 </script>
 
@@ -701,6 +754,11 @@ const cancelarFormulario = () => {
 .estado-badge.aceptado { background: rgba(74, 222, 128, 0.15); color: var(--stat-aceptado); }
 .estado-badge.rechazado { background: rgba(248, 113, 113, 0.15); color: var(--stat-rechazado); }
 .fecha-creacion { font-size: 0.75rem; color: var(--text-muted); }
+.article-tags, .tag-options { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.55rem; }
+.article-tags.center { justify-content: center; }
+.tag, .tag-option span { font-size: 0.72rem; color: var(--text-muted); background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 999px; padding: 0.2rem 0.5rem; }
+.tag-option { display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer; }
+.tag-option input { accent-color: var(--border-focus); }
 .articulo-actions { display: flex; align-items: center; }
 .arrow-icon { width: 16px; height: 16px; color: var(--text-faint); transition: color 0.15s; }
 .articulo-item:hover .arrow-icon { color: var(--text-muted); }

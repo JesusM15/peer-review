@@ -4,6 +4,7 @@ import { SolicitudCongreso } from './entities/solicitud-congreso.entity';
 import { Congreso } from '../congresos/entities/congreso.entity';
 import { UsuarioCongresoRol } from '../congresos/entities/usuario-congreso-rol.entity';
 import { User } from '../users/entities/user.entity';
+import { Tag } from '../congresos/entities/tag.entity';
 import { SolicitudesCongresoService } from './solicitudes-congreso.service';
 import { SolicitudesCongresoController } from './solicitudes-congreso.controller';
 import { NotificacionesModule } from '../notificaciones/notificaciones.module';
@@ -15,6 +16,7 @@ import { NotificacionesModule } from '../notificaciones/notificaciones.module';
       Congreso,
       UsuarioCongresoRol,
       User,
+      Tag,
     ]),
     NotificacionesModule,
   ],

@@ -13,6 +13,7 @@ import {
   EstadoSolicitudCongreso,
 } from './entities/solicitud-congreso.entity';
 import { Congreso } from '../congresos/entities/congreso.entity';
+import { Tag } from '../congresos/entities/tag.entity';
 import { UsuarioCongresoRol } from '../congresos/entities/usuario-congreso-rol.entity';
 import { User, Rol } from '../users/entities/user.entity';
 import { CreateSolicitudCongresoDto } from './dto/create-solicitud-congreso.dto';
@@ -31,6 +32,8 @@ export class SolicitudesCongresoService {
     private readonly ucrRepo: Repository<UsuarioCongresoRol>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    @InjectRepository(Tag)
+    private readonly tagRepo: Repository<Tag>,
     private readonly notificacionesService: NotificacionesService,
   ) {}
 
@@ -68,6 +71,9 @@ export class SolicitudesCongresoService {
         );
       }
     }
+    if (this.normalizeTags(data.tags).length === 0) {
+      throw new BadRequestException('Cada congreso debe tener al menos una etiqueta.');
+    }
 
     const solicitud = this.solicitudRepo.create({
       id: uuidv4(),
@@ -81,6 +87,7 @@ export class SolicitudesCongresoService {
         ? new Date(data.fecha_fin_propuesta)
         : undefined,
       motivo: data.motivo?.trim(),
+      tags: this.normalizeTags(data.tags),
       estado: EstadoSolicitudCongreso.PENDIENTE,
     });
 
@@ -185,6 +192,14 @@ export class SolicitudesCongresoService {
       });
       const congresoCreado = await this.congresoRepo.save(congreso);
 
+      for (const tagName of this.normalizeTags(solicitud.tags)) {
+        await this.tagRepo.save(this.tagRepo.create({
+          id: uuidv4(),
+          nombre: tagName,
+          congreso_id: congresoCreado.id,
+        }));
+      }
+
       const membresia = this.ucrRepo.create({
         id: uuidv4(),
         user_id: solicitud.solicitante_id,
@@ -221,5 +236,9 @@ export class SolicitudesCongresoService {
     }
 
     return guardada;
+  }
+
+  private normalizeTags(tags?: string[]): string[] {
+    return [...new Set((tags || []).map((tag) => tag.trim()).filter(Boolean))];
   }
 }

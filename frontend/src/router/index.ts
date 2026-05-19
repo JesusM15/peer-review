@@ -9,6 +9,7 @@ import AdminView from '../views/AdminView.vue'
 import RevisionForm from '../views/RevisionForm.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
+import ProfileView from '../views/ProfileView.vue'
 
 const routes = [
   {
@@ -70,6 +71,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/perfil',
+    name: 'Perfil',
+    component: ProfileView,
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/solicitar-congreso',
     name: 'SolicitarCongreso',
     component: () => import('../views/SolicitarCongresoView.vue'),
@@ -111,6 +118,7 @@ router.beforeEach((to, from, next) => {
       authStore.user?.rol !== 'Admin' &&
       to.name !== 'CongressSelection' &&
       to.name !== 'SolicitarCongreso' &&
+      to.name !== 'Perfil' &&
       !congressStore.currentCongressId
     ) {
       return next('/select-congress')

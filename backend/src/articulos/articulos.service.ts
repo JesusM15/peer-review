@@ -76,6 +76,8 @@ export class ArticulosService {
       query.leftJoinAndSelect('articulo.asignaciones', 'asignacion');
       query.leftJoinAndSelect('asignacion.revisor', 'revisor');
       query.leftJoinAndSelect('articulo.autor', 'autor');
+      query.leftJoinAndSelect('articulo.tags', 'articuloTag');
+      query.leftJoinAndSelect('articuloTag.tag', 'tag');
     }
 
     if (filters.autor_id) {
@@ -127,6 +129,8 @@ export class ArticulosService {
       query.leftJoinAndSelect('articulo.asignaciones', 'asignacion');
       query.leftJoinAndSelect('asignacion.revisor', 'revisor');
       query.leftJoinAndSelect('articulo.autor', 'autor');
+      query.leftJoinAndSelect('articulo.tags', 'articuloTag');
+      query.leftJoinAndSelect('articuloTag.tag', 'tag');
     }
 
     const articulo = await query.getOne();

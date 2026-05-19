@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { CongresosService } from './congresos.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Rol } from '../users/entities/user.entity';
@@ -52,6 +52,16 @@ export class CongresosController {
   @Post(':id/assign-editor')
   assignEditor(@Param('id') id: string, @Body() body: { userId: string; tagId: string }) {
     return this.congresosService.assignEditorToTag(body.userId, body.tagId, id);
+  }
+
+  @Get(':id/editor/:userId/tags')
+  getEditorTags(@Param('id') id: string, @Param('userId') userId: string) {
+    return this.congresosService.getEditorTags(userId, id);
+  }
+
+  @Delete('editor-tag/:editorTagId')
+  removeEditorTag(@Param('editorTagId') editorTagId: string) {
+    return this.congresosService.removeEditorTag(editorTagId);
   }
 
   @Post(':id/assign-revisor')
