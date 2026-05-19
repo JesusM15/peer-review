@@ -2,6 +2,7 @@ import { Entity, PrimaryColumn, Column, BeforeInsert, BeforeUpdate, OneToOne } f
 import * as bcrypt from 'bcryptjs';
 import { Perfil } from './perfil.entity';
 import { OneToMany } from 'typeorm';
+import { UsuarioCongresoRol } from '../../congresos/entities/usuario-congreso-rol.entity';
 
 export enum Rol {
   AUTOR = 'Autor',
@@ -27,8 +28,8 @@ export class User {
   @Column({ type: 'enum', enum: Rol, default: Rol.AUTOR })
   rol: Rol;
 
-  @OneToMany('UsuarioCongresoRol', 'user')
-  membresias: any[];
+  @OneToMany(() => UsuarioCongresoRol, (membresia) => membresia.user)
+  membresias: UsuarioCongresoRol[];
 
   @OneToOne(() => Perfil, (perfil) => perfil.user, { cascade: true })
   perfil: Perfil;

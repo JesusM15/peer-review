@@ -13,10 +13,10 @@ export class UsuarioCongresoRol {
   @Column('uuid')
   congreso_id: string;
 
-  @Column({ type: 'enum', enum: Rol })
+  @Column({ type: 'enum', enum: ['Autor', 'Revisor', 'Editor', 'Admin'] })
   rol: Rol;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, (user) => user.membresias)
   @JoinColumn({ name: 'user_id' })
   user: User;
 

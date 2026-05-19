@@ -125,11 +125,13 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useCongressStore } from '../stores/congress'
 import { useTheme } from '../composables/useTheme'
+import { useOfflineStorage } from '../composables/useOfflineStorage'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const congressStore = useCongressStore()
 const { isDark } = useTheme()
+const offlineStorage = useOfflineStorage()
 
 const activeTab = ref('mine')
 const loading = ref(false)
@@ -151,10 +153,21 @@ async function loadData() {
   loading.value = true
   try {
     await congressStore.fetchMemberships()
-    const res = await fetch(`${API}/congresos`)
-    allCongresses.value = await res.json()
+    
+    if (!offlineStorage.isOnline()) {
+      allCongresses.value = await offlineStorage.getCongresses()
+    } else {
+      const res = await fetch(`${API}/congresos`)
+      if (res.ok) {
+        allCongresses.value = await res.json()
+        await offlineStorage.storeCongresses(JSON.parse(JSON.stringify(allCongresses.value)))
+      } else {
+        allCongresses.value = await offlineStorage.getCongresses()
+      }
+    }
   } catch (e) {
-    console.error('Error cargando congresos', e)
+    console.error('Error cargando congresos, usando fallback offline', e)
+    allCongresses.value = await offlineStorage.getCongresses()
   } finally {
     loading.value = false
   }

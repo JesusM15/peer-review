@@ -4,11 +4,13 @@
  */
 
 const DB_NAME = 'peer_review_offline'
-const DB_VERSION = 3
+const DB_VERSION = 4
 const STORE_PDFS = 'pdfs'
 const STORE_ASSIGNMENTS = 'assignments'
 const STORE_SYNC_QUEUE = 'sync_queue'
 const STORE_DRAFTS = 'draft_revisions'
+const STORE_CONGRESOS = 'congresos'
+const STORE_MEMBERSHIPS = 'memberships'
 
 
 interface StoredPdf {
@@ -66,6 +68,15 @@ async function initDB(): Promise<IDBDatabase> {
       if (!database.objectStoreNames.contains(STORE_DRAFTS)) {
         const draftStore = database.createObjectStore(STORE_DRAFTS, { keyPath: 'articuloId' })
         draftStore.createIndex('updatedAt', 'updatedAt', { unique: false })
+      }
+
+      if (!database.objectStoreNames.contains(STORE_CONGRESOS)) {
+        database.createObjectStore(STORE_CONGRESOS, { keyPath: 'id' })
+      }
+
+      if (!database.objectStoreNames.contains(STORE_MEMBERSHIPS)) {
+        const membershipStore = database.createObjectStore(STORE_MEMBERSHIPS, { keyPath: 'id' })
+        membershipStore.createIndex('congreso_id', 'congreso_id', { unique: false })
       }
     }
   })
@@ -234,6 +245,64 @@ async function deleteDraft(articuloId: string): Promise<void> {
 }
 
 /**
+ * Guarda la lista de congresos
+ */
+async function storeCongresses(congresos: any[]): Promise<void> {
+  const database = await initDB()
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction([STORE_CONGRESOS], 'readwrite')
+    const store = transaction.objectStore(STORE_CONGRESOS)
+    store.clear()
+    congresos.forEach(c => store.put(c))
+    transaction.oncomplete = () => resolve()
+    transaction.onerror = () => reject(transaction.error)
+  })
+}
+
+/**
+ * Obtiene la lista de congresos
+ */
+async function getCongresses(): Promise<any[]> {
+  const database = await initDB()
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction([STORE_CONGRESOS], 'readonly')
+    const store = transaction.objectStore(STORE_CONGRESOS)
+    const request = store.getAll()
+    request.onsuccess = () => resolve(request.result || [])
+    request.onerror = () => reject(request.error)
+  })
+}
+
+/**
+ * Guarda las membresías del usuario actual
+ */
+async function storeMemberships(memberships: any[]): Promise<void> {
+  const database = await initDB()
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction([STORE_MEMBERSHIPS], 'readwrite')
+    const store = transaction.objectStore(STORE_MEMBERSHIPS)
+    store.clear()
+    memberships.forEach(m => store.put(m))
+    transaction.oncomplete = () => resolve()
+    transaction.onerror = () => reject(transaction.error)
+  })
+}
+
+/**
+ * Obtiene las membresías almacenadas
+ */
+async function getMemberships(): Promise<any[]> {
+  const database = await initDB()
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction([STORE_MEMBERSHIPS], 'readonly')
+    const store = transaction.objectStore(STORE_MEMBERSHIPS)
+    const request = store.getAll()
+    request.onsuccess = () => resolve(request.result || [])
+    request.onerror = () => reject(request.error)
+  })
+}
+
+/**
  * Crea una URL blob para mostrar el PDF
  */
 function createPdfUrl(blob: Blob): string {
@@ -338,12 +407,14 @@ async function clearAllOfflineData(): Promise<void> {
   const database = await initDB()
 
   return new Promise((resolve, reject) => {
-    const transaction = database.transaction([STORE_PDFS, STORE_ASSIGNMENTS, STORE_SYNC_QUEUE, STORE_DRAFTS], 'readwrite')
+    const transaction = database.transaction([STORE_PDFS, STORE_ASSIGNMENTS, STORE_SYNC_QUEUE, STORE_DRAFTS, STORE_CONGRESOS, STORE_MEMBERSHIPS], 'readwrite')
     
     transaction.objectStore(STORE_PDFS).clear()
     transaction.objectStore(STORE_ASSIGNMENTS).clear()
     transaction.objectStore(STORE_SYNC_QUEUE).clear()
     transaction.objectStore(STORE_DRAFTS).clear()
+    transaction.objectStore(STORE_CONGRESOS).clear()
+    transaction.objectStore(STORE_MEMBERSHIPS).clear()
 
     transaction.oncomplete = () => resolve()
     transaction.onerror = () => reject(transaction.error)
@@ -369,6 +440,12 @@ export function useOfflineStorage() {
     storeDraft,
     getDraft,
     deleteDraft,
+
+    // Congresses and Memberships operations
+    storeCongresses,
+    getCongresses,
+    storeMemberships,
+    getMemberships,
 
     // Utilities
     isOnline,

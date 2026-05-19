@@ -17,7 +17,7 @@ import { SolicitudesModule } from './solicitudes/solicitudes.module';
       type: 'mysql',
       url: process.env.MARIADB_URI || 'mysql://dbuser:dbpassword@localhost:3307/peer_review_db',
       autoLoadEntities: true,
-      synchronize: false,
+      synchronize: true, // TEMPORAL: crear tablas desde cero — revertir después del seed
     }),
     
     // MongoDB configuration

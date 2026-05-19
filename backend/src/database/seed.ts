@@ -3,6 +3,10 @@ import { User, Rol } from '../users/entities/user.entity';
 import { Perfil } from '../users/entities/perfil.entity';
 import { Articulo, EstadoArticulo } from '../articulos/entities/articulo.entity';
 import { Asignacion } from '../asignaciones/entities/asignacion.entity';
+import { Congreso } from '../congresos/entities/congreso.entity';
+import { Tag } from '../congresos/entities/tag.entity';
+import { EditorTag } from '../congresos/entities/editor-tag.entity';
+import { UsuarioCongresoRol } from '../congresos/entities/usuario-congreso-rol.entity';
 
 /**
  * SEED: Usuarios de prueba (1 por rol)
@@ -15,7 +19,7 @@ import { Asignacion } from '../asignaciones/entities/asignacion.entity';
 const AppDataSource = new DataSource({
   type: 'mariadb',
   url: process.env.MARIADB_URI || 'mysql://dbuser:dbpassword@mariadb:3306/peer_review_db',
-  entities: [User, Perfil, Articulo, Asignacion],
+  entities: [User, Perfil, Articulo, Asignacion, Congreso, Tag, EditorTag, UsuarioCongresoRol],
   synchronize: false,
 });
 
@@ -58,6 +62,20 @@ async function runSeed() {
   const userRepo = AppDataSource.getRepository(User);
   const articuloRepo = AppDataSource.getRepository(Articulo);
   const asignacionRepo = AppDataSource.getRepository(Asignacion);
+  const congresoRepo = AppDataSource.getRepository(Congreso);
+
+  const existingCongreso = await congresoRepo.findOne({ where: { nombre: 'Congreso Internacional de Prueba 2026' } });
+  if (!existingCongreso) {
+    const congreso = congresoRepo.create({
+      id: 'c1111111-1111-4111-a111-111111111111',
+      nombre: 'Congreso Internacional de Prueba 2026',
+      descripcion: 'El congreso principal para revisión de artículos del sistema.',
+      fecha_inicio: new Date(),
+      fecha_fin: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    });
+    await congresoRepo.save(congreso);
+    console.log(`✅ Congreso creado: ${congreso.nombre}`);
+  }
 
   for (const seed of SEED_USERS) {
     // Buscar usuario por email (para detectar si existe aunque el ID cambie)
