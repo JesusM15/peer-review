@@ -114,4 +114,19 @@ export class ArticulosController {
     const fileStream = fs.createReadStream(pdfPath);
     fileStream.pipe(res);
   }
+
+  @Post(':id/tags')
+  addTag(@Param('id') id: string, @Body() body: { tagId: string }) {
+    return this.articulosService.addTagToArticle(id, body.tagId);
+  }
+
+  @Get(':id/tags')
+  getTags(@Param('id') id: string) {
+    return this.articulosService.getArticleTags(id);
+  }
+
+  @Delete('tags/:tagId')
+  removeTag(@Param('tagId') tagId: string) {
+    return this.articulosService.removeTagFromArticle(tagId);
+  }
 }

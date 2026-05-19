@@ -8,6 +8,11 @@ import { Revision, RevisionDocument } from './schemas/revision.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
+import { ArticuloTag } from '../articulos/entities/articulo-tag.entity';
+import { Tag } from '../congresos/entities/tag.entity';
+import { EditorTag } from '../congresos/entities/editor-tag.entity';
+import { RevisorTag } from '../congresos/entities/revisor-tag.entity';
+import { Congreso } from '../congresos/entities/congreso.entity';
 
 @Injectable()
 export class AsignacionesService {
@@ -18,6 +23,16 @@ export class AsignacionesService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Articulo)
     private readonly articuloRepository: Repository<Articulo>,
+    @InjectRepository(ArticuloTag)
+    private readonly articuloTagRepository: Repository<ArticuloTag>,
+    @InjectRepository(Tag)
+    private readonly tagRepository: Repository<Tag>,
+    @InjectRepository(EditorTag)
+    private readonly editorTagRepository: Repository<EditorTag>,
+    @InjectRepository(RevisorTag)
+    private readonly revisorTagRepository: Repository<RevisorTag>,
+    @InjectRepository(Congreso)
+    private readonly congresoRepository: Repository<Congreso>,
     @InjectModel(Revision.name)
     private readonly revisionModel: Model<RevisionDocument>,
   ) { }
@@ -97,26 +112,68 @@ export class AsignacionesService {
   /**
    * Asigna un revisor a un artículo.
    * Regla: un revisor no puede tener más de 3 artículos en revisión.
+   * Regla: el revisor debe tener al menos una etiqueta que coincida con las etiquetas del artículo.
    */
   async create(data: { articulo_id: string; revisor_id: string; fecha_limite?: string }) {
     const { articulo_id, revisor_id, fecha_limite } = data;
 
-    // Verificar que el revisor existe (El rol se valida por contexto o membresía si es necesario, 
-    // pero aquí validamos que sea capaz de revisar artículos en general)
+    // Verificar que el revisor existe
     const revisor = await this.userRepository.findOne({
       where: { id: revisor_id },
+      relations: ['perfil'],
     });
     if (!revisor) {
       throw new NotFoundException(`Revisor con ID ${revisor_id} no encontrado`);
     }
 
     // --- REGLA: No auto-revisión ---
-    const articulo = await this.articuloRepository.findOne({ where: { id: articulo_id } });
+    const articulo = await this.articuloRepository.findOne({ 
+      where: { id: articulo_id },
+      relations: ['tags', 'tags.tag', 'congreso']
+    });
     if (!articulo) {
       throw new NotFoundException(`Artículo con ID ${articulo_id} no encontrado`);
     }
     if (articulo.autor_id === revisor_id) {
       throw new BadRequestException('Un autor no puede revisar su propio artículo (Conflicto de interés)');
+    }
+
+    // --- REGLA: Coincidencia de etiquetas/especialidades ---
+    // Obtener las etiquetas del artículo
+    const articuloTags = await this.articuloTagRepository.find({
+      where: { articulo_id },
+      relations: ['tag']
+    });
+    const tagNames = articuloTags.map(at => at.tag.nombre.toLowerCase());
+    
+    // Obtener el congreso del artículo
+    const congreso_id = articulo.congreso_id;
+    
+    // Obtener las etiquetas del revisor en el contexto del congreso (si hay congreso)
+    let revisorTagNames: string[] = [];
+    if (congreso_id) {
+      const revisorTags = await this.revisorTagRepository.find({
+        where: { user_id: revisor_id, congreso_id },
+        relations: ['tag']
+      });
+      revisorTagNames = revisorTags.map(rt => rt.tag.nombre.toLowerCase());
+    }
+
+    // Si no hay tags del revisor en el congreso, usar las especialidades del perfil como fallback
+    if (revisorTagNames.length === 0) {
+      revisorTagNames = (revisor.perfil?.especialidades || []).map(e => e.toLowerCase());
+    }
+
+    // Verificar si hay al menos una coincidencia
+    if (tagNames.length > 0 && revisorTagNames.length > 0) {
+      const hasMatch = tagNames.some(tag => revisorTagNames.includes(tag));
+      if (!hasMatch) {
+        throw new BadRequestException(
+          `El revisor no tiene especialidades que coincidan con las etiquetas del artículo. ` +
+          `Etiquetas del artículo: ${tagNames.join(', ')}. ` +
+          `Especialidades del revisor: ${revisorTagNames.join(', ')}`
+        );
+      }
     }
 
     // --- REGLA: Máximo 3 revisores por artículo ---
