@@ -46,6 +46,12 @@
           </svg>
           Solicitudes
         </button>
+        <button class="nav-item" :class="{ active: vistaActiva === 'staffchat' }" id="nav-staffchat-editor" @click="vistaActiva = 'staffchat'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Chat Staff
+        </button>
       </nav>
 
       <div class="sidebar-footer relative-footer">
@@ -510,6 +516,19 @@
         </div>
       </template>
 
+      <!-- ─── STAFF CHAT ───────────────────────────── -->
+      <template v-if="vistaActiva === 'staffchat'">
+        <header class="topbar">
+          <div>
+            <h1 class="page-title">Chat del Staff</h1>
+            <p class="page-sub">Comunicación interna del congreso seleccionado</p>
+          </div>
+        </header>
+        <div class="section">
+          <StaffChat :congresoId="congressStore.currentCongressId" :jwt="authStore.token" />
+        </div>
+      </template>
+
     </main>
 
     <!-- ─── MODAL REVISOR ───────────────────────────── -->
@@ -595,6 +614,7 @@ import { useAuthStore } from '../stores/auth'
 import { useCongressStore } from '../stores/congress'
 import CustomSelect from '../components/CustomSelect.vue'
 import CongressSelector from '../components/CongressSelector.vue'
+import StaffChat from '../components/StaffChat.vue'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 
@@ -685,12 +705,12 @@ function badgeClass(estado: string) {
 async function cargarArticulos() {
   cargandoArticulos.value = true
   try {
-    const url = new URL(`${API}/articulos`);
-    url.searchParams.append('include_relations', 'true');
+    const params = new URLSearchParams()
+    params.append('include_relations', 'true')
     if (congressStore.currentCongressId) {
-      url.searchParams.append('congreso_id', congressStore.currentCongressId);
+      params.append('congreso_id', congressStore.currentCongressId)
     }
-    const res = await fetch(url.toString())
+    const res = await fetch(`${API}/articulos?${params.toString()}`)
     articulos.value = await res.json()
   } catch (e) {
     console.error('Error cargando artículos', e)

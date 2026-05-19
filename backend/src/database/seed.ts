@@ -3,6 +3,7 @@ import { User, Rol } from '../users/entities/user.entity';
 import { Perfil } from '../users/entities/perfil.entity';
 import { Articulo, EstadoArticulo } from '../articulos/entities/articulo.entity';
 import { Asignacion } from '../asignaciones/entities/asignacion.entity';
+import { UsuarioCongresoRol } from '../congresos/entities/usuario-congreso-rol.entity';
 
 /**
  * SEED: Usuarios de prueba (1 por rol)
@@ -15,7 +16,7 @@ import { Asignacion } from '../asignaciones/entities/asignacion.entity';
 const AppDataSource = new DataSource({
   type: 'mariadb',
   url: process.env.MARIADB_URI || 'mysql://dbuser:dbpassword@mariadb:3306/peer_review_db',
-  entities: [User, Perfil, Articulo, Asignacion],
+  entities: [User, Perfil, Articulo, Asignacion, UsuarioCongresoRol],
   synchronize: false,
 });
 

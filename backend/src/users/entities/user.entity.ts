@@ -36,10 +36,18 @@ export class User {
   @BeforeInsert()
   @BeforeUpdate()
   async hashPassword() {
-    if (this.password) {
-      const salt = await bcrypt.genSalt(10);
-      this.password = await bcrypt.hash(this.password, salt);
+    if (!this.password) {
+      return;
     }
+
+    // Evitar re-hashear una contraseña ya hasheada al guardar solo cambios de rol/email.
+    const isAlreadyHashed = /^\$2[aby]\$.{56}$/.test(this.password);
+    if (isAlreadyHashed) {
+      return;
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
   }
 
   async validatePassword(plainPassword: string): Promise<boolean> {

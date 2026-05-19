@@ -40,6 +40,12 @@
           </svg>
           Postularse
         </button>
+        <button class="nav-item" :class="{ active: vistaActiva === 'staffchat' }" id="nav-staffchat-revisor" @click="vistaActiva = 'staffchat'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Chat del Staff
+        </button>
       </nav>
 
       <!-- Indicador de conexión -->
@@ -302,6 +308,22 @@
         </div>
       </template>
 
+      <!-- ─── STAFF CHAT ───────────────────────────── -->
+      <template v-if="vistaActiva === 'staffchat'">
+        <header class="topbar">
+          <div>
+            <h1 class="page-title">Chat del Staff</h1>
+            <p class="page-sub">Comunicación interna (Solo lectura para Revisores)</p>
+          </div>
+        </header>
+        <div class="section">
+          <StaffChat v-if="congressStore.currentCongressId && authStore.token" :congresoId="congressStore.currentCongressId" :jwt="authStore.token" />
+          <div v-else class="empty-state">
+            <h3>{{ !congressStore.currentCongressId ? 'Selecciona un congreso primero' : 'Necesitas iniciar sesión' }}</h3>
+            <p>{{ !congressStore.currentCongressId ? 'Necesitas seleccionar un congreso para acceder al chat del staff.' : 'Inicia sesión para acceder al chat del staff.' }}</p>
+          </div>
+        </div>
+      </template>
     </main>
   </div>
 </template>
@@ -314,6 +336,7 @@ import { useToast } from '../composables/useToast'
 import { useAuthStore } from '../stores/auth'
 import { useCongressStore } from '../stores/congress'
 import { useOfflineStorage } from '../composables/useOfflineStorage'
+import StaffChat from '../components/StaffChat.vue'
 
 const router = useRouter()
 const { isDark, toggleTheme } = useTheme()
