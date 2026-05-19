@@ -21,8 +21,19 @@
 
     <main class="selection-content">
       <div class="content-header">
-        <h1>Selecciona un Congreso</h1>
-        <p>Continúa tu trabajo en uno de tus congresos o descubre nuevos eventos.</p>
+        <div class="content-header-row">
+          <div>
+            <h1>Selecciona un Congreso</h1>
+            <p>Continúa tu trabajo en uno de tus congresos o descubre nuevos eventos.</p>
+          </div>
+          <button class="btn-primary request-btn" @click="router.push('/solicitar-congreso')" title="Solicitar nuevo congreso">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Solicitar nuevo congreso
+          </button>
+        </div>
       </div>
 
       <div class="search-container">
@@ -348,6 +359,36 @@ function getRandomGradient() {
 
 .content-header {
   margin-bottom: 2rem;
+}
+
+.content-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.request-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1rem;
+  border: 1px solid #000;
+  background: #000;
+  color: #fff;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s ease;
+}
+.request-btn:hover { opacity: 0.85; }
+.dark .request-btn {
+  background: #fff;
+  color: #000;
+  border-color: #fff;
 }
 
 .content-header h1 {

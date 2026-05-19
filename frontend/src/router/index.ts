@@ -68,6 +68,12 @@ const routes = [
     name: 'Postulacion',
     component: () => import('../views/PostulacionView.vue'),
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/solicitar-congreso',
+    name: 'SolicitarCongreso',
+    component: () => import('../views/SolicitarCongresoView.vue'),
+    meta: { requiresAuth: true }
   }
 ]
 
@@ -101,7 +107,12 @@ router.beforeEach((to, from, next) => {
 
     // Si no es admin y no está en la página de selección ni tiene un congreso activo
     const congressStore = useCongressStore()
-    if (authStore.user?.rol !== 'Admin' && to.name !== 'CongressSelection' && !congressStore.currentCongressId) {
+    if (
+      authStore.user?.rol !== 'Admin' &&
+      to.name !== 'CongressSelection' &&
+      to.name !== 'SolicitarCongreso' &&
+      !congressStore.currentCongressId
+    ) {
       return next('/select-congress')
     }
 

@@ -9,26 +9,35 @@ import { AsignacionesModule } from './asignaciones/asignaciones.module';
 import { AuthModule } from './auth/auth.module';
 import { CongresosModule } from './congresos/congresos.module';
 import { SolicitudesModule } from './solicitudes/solicitudes.module';
+import { SolicitudesCongresoModule } from './solicitudes-congreso/solicitudes-congreso.module';
+import { NotificacionesModule } from './notificaciones/notificaciones.module';
 
 @Module({
   imports: [
     // MariaDB configuration
     TypeOrmModule.forRoot({
       type: 'mysql',
-      url: process.env.MARIADB_URI || 'mysql://dbuser:dbpassword@localhost:3307/peer_review_db',
+      url:
+        process.env.MARIADB_URI ||
+        'mysql://dbuser:dbpassword@localhost:3307/peer_review_db',
       autoLoadEntities: true,
       synchronize: false,
     }),
-    
+
     // MongoDB configuration
-    MongooseModule.forRoot(process.env.MONGODB_URI || 'mongodb://mongoadmin:mongopassword@localhost:27017/peer_review_nosql?authSource=admin'),
-    
+    MongooseModule.forRoot(
+      process.env.MONGODB_URI ||
+        'mongodb://mongoadmin:mongopassword@localhost:27017/peer_review_nosql?authSource=admin',
+    ),
+
     UsersModule,
     ArticulosModule,
     AsignacionesModule,
     AuthModule,
     CongresosModule,
     SolicitudesModule,
+    SolicitudesCongresoModule,
+    NotificacionesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

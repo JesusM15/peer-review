@@ -31,6 +31,13 @@
           </svg>
           Artículos
         </button>
+        <button class="nav-item" :class="{ active: currentView === 'solicitudes-congreso' }" id="nav-admin-solicitudes-congreso" @click="abrirSolicitudesCongreso">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Solicitudes de Congreso
+          <span v-if="solicitudesPendientesCount > 0" class="nav-badge">{{ solicitudesPendientesCount }}</span>
+        </button>
       </nav>
 
       <div class="sidebar-footer relative-footer">
@@ -87,6 +94,37 @@
           <div>
             <h1 class="page-title">Dashboard de Administración</h1>
             <p class="page-sub">Resumen del sistema</p>
+          </div>
+          <div class="topbar-actions">
+            <div class="notif-wrapper">
+              <button class="notif-btn" @click="toggleNotifPanel" title="Notificaciones">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span v-if="notificacionesNoLeidas > 0" class="notif-dot">{{ notificacionesNoLeidas }}</span>
+              </button>
+              <div v-if="showNotifPanel" class="notif-panel" @click.stop>
+                <div class="notif-panel-header">
+                  <span>Notificaciones</span>
+                  <button v-if="notificacionesNoLeidas > 0" class="notif-mark-all" @click="marcarTodasLeidas">Marcar todas como leídas</button>
+                </div>
+                <div v-if="notificacionesLoading" class="notif-empty">Cargando...</div>
+                <div v-else-if="notificaciones.length === 0" class="notif-empty">Sin notificaciones</div>
+                <ul v-else class="notif-list">
+                  <li
+                    v-for="notif in notificaciones"
+                    :key="notif.id"
+                    class="notif-item"
+                    :class="{ 'unread': !notif.leida }"
+                    @click="abrirNotificacion(notif)"
+                  >
+                    <div class="notif-item-title">{{ notif.titulo }}</div>
+                    <div class="notif-item-msg">{{ notif.mensaje }}</div>
+                    <div class="notif-item-date">{{ formatDateNotif(notif.fecha_creacion) }}</div>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
         </header>
         
@@ -263,6 +301,94 @@
               </tr>
             </tbody>
           </table>
+        </div>
+      </template>
+
+      <!-- ─── SOLICITUDES DE CONGRESO ─────────────────── -->
+      <template v-if="currentView === 'solicitudes-congreso'">
+        <header class="topbar">
+          <div>
+            <h1 class="page-title">Solicitudes de Congreso</h1>
+            <p class="page-sub">Revisa y aprueba propuestas de nuevos congresos enviadas por los usuarios.</p>
+          </div>
+          <div class="topbar-actions">
+            <button class="refresh-btn" @click="cargarSolicitudesCongreso" :disabled="cargandoSolicitudesCongreso" title="Refrescar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <polyline points="1 20 1 14 7 14"></polyline>
+                <path d="M3.51 9a9 9 0 0114.85-3.36L23 10"></path>
+                <path d="M20.49 15A9 9 0 015.64 18.36L1 14"></path>
+              </svg>
+              Refrescar
+            </button>
+          </div>
+        </header>
+
+        <div class="sc-filters">
+          <button
+            class="filter-chip"
+            :class="{ active: scFilter === 'pendientes' }"
+            @click="scFilter = 'pendientes'"
+          >
+            Pendientes
+            <span v-if="solicitudesPendientesCount > 0" class="filter-count">{{ solicitudesPendientesCount }}</span>
+          </button>
+          <button
+            class="filter-chip"
+            :class="{ active: scFilter === 'todas' }"
+            @click="scFilter = 'todas'"
+          >
+            Todas
+          </button>
+        </div>
+
+        <div v-if="cargandoSolicitudesCongreso" class="sc-loading">Cargando solicitudes...</div>
+        <div v-else-if="solicitudesCongresoFiltradas.length === 0" class="sc-empty">
+          {{ scFilter === 'pendientes' ? 'No hay solicitudes pendientes.' : 'Aún no hay solicitudes.' }}
+        </div>
+        <div v-else class="sc-grid">
+          <div
+            v-for="sol in solicitudesCongresoFiltradas"
+            :key="sol.id"
+            class="sc-card"
+            :class="sol.estado.toLowerCase()"
+          >
+            <div class="sc-card-header">
+              <h3 class="sc-card-title">{{ sol.nombre_propuesto }}</h3>
+              <span class="sc-badge" :class="sol.estado.toLowerCase()">{{ sol.estado }}</span>
+            </div>
+            <div class="sc-card-body">
+              <div class="sc-author">
+                <div class="sc-avatar">{{ (sol.solicitante?.nombre || '?').charAt(0).toUpperCase() }}</div>
+                <div>
+                  <div class="sc-author-name">{{ sol.solicitante?.nombre || 'Usuario' }}</div>
+                  <div class="sc-author-email">{{ sol.solicitante?.email || '' }}</div>
+                </div>
+              </div>
+              <p v-if="sol.descripcion_propuesta" class="sc-desc">{{ sol.descripcion_propuesta }}</p>
+              <div class="sc-dates" v-if="sol.fecha_inicio_propuesta || sol.fecha_fin_propuesta">
+                <span v-if="sol.fecha_inicio_propuesta"><strong>Inicio:</strong> {{ formatDateOnly(sol.fecha_inicio_propuesta) }}</span>
+                <span v-if="sol.fecha_fin_propuesta"><strong>Fin:</strong> {{ formatDateOnly(sol.fecha_fin_propuesta) }}</span>
+              </div>
+              <p v-if="sol.motivo" class="sc-motivo"><strong>Motivo:</strong> {{ sol.motivo }}</p>
+              <p v-if="sol.respuesta_admin" class="sc-resp"><strong>Tu respuesta:</strong> {{ sol.respuesta_admin }}</p>
+              <div class="sc-meta">Enviada: {{ formatDateNotif(sol.fecha_creacion) }}</div>
+            </div>
+            <div class="sc-card-actions" v-if="sol.estado === 'Pendiente'">
+              <button class="sc-btn approve" @click="resolverSolicitudCongreso(sol, 'Aprobado')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 13l4 4L19 7"/>
+                </svg>
+                Aprobar
+              </button>
+              <button class="sc-btn reject" @click="resolverSolicitudCongreso(sol, 'Rechazado')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+                Rechazar
+              </button>
+            </div>
+          </div>
         </div>
       </template>
     </main>
@@ -670,6 +796,180 @@ const logout = () => {
   router.push('/login');
 };
 
+interface SolicitanteRef { id: string; nombre: string; email: string }
+interface SolicitudCongreso {
+  id: string;
+  solicitante_id: string;
+  solicitante?: SolicitanteRef;
+  nombre_propuesto: string;
+  descripcion_propuesta?: string;
+  fecha_inicio_propuesta?: string;
+  fecha_fin_propuesta?: string;
+  motivo?: string;
+  estado: 'Pendiente' | 'Aprobado' | 'Rechazado';
+  respuesta_admin?: string;
+  congreso_creado_id?: string;
+  fecha_creacion: string;
+  fecha_resolucion?: string;
+}
+interface Notificacion {
+  id: string;
+  user_id: string;
+  tipo: string;
+  titulo: string;
+  mensaje: string;
+  link?: string;
+  leida: boolean;
+  fecha_creacion: string;
+}
+
+const solicitudesCongreso = ref<SolicitudCongreso[]>([]);
+const cargandoSolicitudesCongreso = ref(false);
+const scFilter = ref<'pendientes' | 'todas'>('pendientes');
+const notificaciones = ref<Notificacion[]>([]);
+const notificacionesLoading = ref(false);
+const showNotifPanel = ref(false);
+const notificacionesNoLeidas = computed(() =>
+  notificaciones.value.filter((n) => !n.leida).length
+);
+const solicitudesPendientesCount = computed(() =>
+  solicitudesCongreso.value.filter((s) => s.estado === 'Pendiente').length
+);
+const solicitudesCongresoFiltradas = computed(() => {
+  if (scFilter.value === 'pendientes') {
+    return solicitudesCongreso.value.filter((s) => s.estado === 'Pendiente');
+  }
+  return [...solicitudesCongreso.value].sort((a, b) => {
+    const orden: Record<string, number> = { Pendiente: 0, Aprobado: 1, Rechazado: 2 };
+    return orden[a.estado] - orden[b.estado];
+  });
+});
+
+const authHeaders = () => ({
+  'Authorization': `Bearer ${authStore.token}`,
+  'Content-Type': 'application/json'
+});
+
+const cargarSolicitudesCongreso = async () => {
+  cargandoSolicitudesCongreso.value = true;
+  try {
+    const res = await fetch(`${API_URL}/solicitudes-congreso`, { headers: authHeaders() });
+    if (res.ok) {
+      solicitudesCongreso.value = await res.json();
+    }
+  } catch (e) {
+    console.error('Error cargando solicitudes de congreso:', e);
+  } finally {
+    cargandoSolicitudesCongreso.value = false;
+  }
+};
+
+const abrirSolicitudesCongreso = () => {
+  currentView.value = 'solicitudes-congreso';
+  cargarSolicitudesCongreso();
+};
+
+const resolverSolicitudCongreso = async (sol: SolicitudCongreso, estado: 'Aprobado' | 'Rechazado') => {
+  const label = estado === 'Aprobado' ? 'aprobar' : 'rechazar';
+  const respuesta = window.prompt(`Respuesta para el solicitante (opcional) al ${label} "${sol.nombre_propuesto}":`, '');
+  if (respuesta === null) return;
+  try {
+    const res = await fetch(`${API_URL}/solicitudes-congreso/${sol.id}/resolver`, {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ estado, respuesta: respuesta || undefined })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.message || `No se pudo ${label} la solicitud.`);
+      return;
+    }
+    await cargarSolicitudesCongreso();
+    await cargarNotificaciones();
+  } catch (e) {
+    console.error(`Error al ${label} solicitud:`, e);
+    alert(`Error al ${label} la solicitud.`);
+  }
+};
+
+const cargarNotificaciones = async () => {
+  notificacionesLoading.value = true;
+  try {
+    const res = await fetch(`${API_URL}/notificaciones`, { headers: authHeaders() });
+    if (res.ok) {
+      notificaciones.value = await res.json();
+    }
+  } catch (e) {
+    console.error('Error cargando notificaciones:', e);
+  } finally {
+    notificacionesLoading.value = false;
+  }
+};
+
+const toggleNotifPanel = () => {
+  showNotifPanel.value = !showNotifPanel.value;
+  if (showNotifPanel.value) {
+    cargarNotificaciones();
+  }
+};
+
+const marcarNotifLeida = async (id: string) => {
+  try {
+    const res = await fetch(`${API_URL}/notificaciones/${id}/leer`, {
+      method: 'PATCH',
+      headers: authHeaders()
+    });
+    if (res.ok) {
+      const idx = notificaciones.value.findIndex((n) => n.id === id);
+      if (idx !== -1) notificaciones.value[idx].leida = true;
+    }
+  } catch (e) {
+    console.error('Error marcando notificación:', e);
+  }
+};
+
+const marcarTodasLeidas = async () => {
+  try {
+    const res = await fetch(`${API_URL}/notificaciones/leer-todas`, {
+      method: 'PATCH',
+      headers: authHeaders()
+    });
+    if (res.ok) {
+      notificaciones.value = notificaciones.value.map((n) => ({ ...n, leida: true }));
+    }
+  } catch (e) {
+    console.error('Error marcando todas las notificaciones:', e);
+  }
+};
+
+const abrirNotificacion = (notif: Notificacion) => {
+  if (!notif.leida) {
+    marcarNotifLeida(notif.id);
+  }
+  if (notif.tipo === 'SolicitudCongresoCreada' || notif.link?.startsWith('/admin/solicitudes-congreso')) {
+    showNotifPanel.value = false;
+    abrirSolicitudesCongreso();
+  }
+};
+
+const formatDateNotif = (iso?: string) => {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+  } catch {
+    return iso;
+  }
+};
+
+const formatDateOnly = (iso?: string) => {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleDateString('es-MX', { dateStyle: 'medium' });
+  } catch {
+    return iso;
+  }
+};
+
 onMounted(() => {
   if (!authStore.isAuthenticated || authStore.userRole !== 'Admin') {
     router.push('/login');
@@ -679,6 +979,8 @@ onMounted(() => {
   loadStats();
   loadArticleStats();
   loadReviewerWorkload();
+  cargarSolicitudesCongreso();
+  cargarNotificaciones();
 });
 </script>
 
@@ -1069,4 +1371,281 @@ onMounted(() => {
     .section { padding: 1.5rem 1.25rem; }
     .stats-grid { grid-template-columns: 1fr; }
   }
+
+  /* ─── NAV BADGE ─── */
+  .nav-badge {
+    margin-left: auto;
+    background: #0070f3;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  /* ─── TOPBAR ACTIONS ─── */
+  .topbar-actions { display: flex; align-items: center; gap: 0.75rem; }
+
+  .refresh-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.85rem;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-normal);
+    border-radius: 4px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .refresh-btn svg { width: 14px; height: 14px; }
+  .refresh-btn:hover { background: var(--bg-card-hover); }
+  .refresh-btn:disabled { opacity: 0.5; cursor: wait; }
+
+  /* ─── NOTIFICATIONS ─── */
+  .notif-wrapper { position: relative; }
+
+  .notif-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-normal);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .notif-btn:hover { background: var(--bg-card-hover); }
+  .notif-btn svg { width: 18px; height: 18px; }
+
+  .notif-dot {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #0070f3;
+    color: #fff;
+    font-size: 0.6rem;
+    font-weight: 700;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  .notif-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 340px;
+    max-height: 420px;
+    overflow-y: auto;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    z-index: 50;
+  }
+  .notif-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-strong);
+  }
+  .notif-mark-all {
+    background: transparent;
+    border: none;
+    color: #0070f3;
+    font-size: 0.72rem;
+    cursor: pointer;
+    padding: 0;
+  }
+  .notif-mark-all:hover { text-decoration: underline; }
+
+  .notif-empty {
+    padding: 1.5rem;
+    text-align: center;
+    color: var(--text-faint);
+    font-size: 0.82rem;
+  }
+
+  .notif-list { list-style: none; margin: 0; padding: 0; }
+  .notif-item {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .notif-item:last-child { border-bottom: none; }
+  .notif-item:hover { background: var(--bg-card-hover); }
+  .notif-item.unread { background: rgba(0, 112, 243, 0.06); }
+  .notif-item-title { font-weight: 600; font-size: 0.82rem; color: var(--text-strong); margin-bottom: 0.2rem; }
+  .notif-item-msg { font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; }
+  .notif-item-date { font-size: 0.68rem; color: var(--text-faint); margin-top: 0.35rem; }
+
+  /* ─── SOLICITUDES DE CONGRESO ─── */
+  .sc-filters {
+    display: flex;
+    gap: 0.5rem;
+    padding: 1rem 2.5rem 0;
+  }
+  .filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.9rem;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-muted);
+    border-radius: 4px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .filter-chip:hover { background: var(--bg-card-hover); color: var(--text-normal); }
+  .filter-chip.active {
+    background: var(--text-strong);
+    color: var(--bg-page);
+    border-color: var(--text-strong);
+  }
+  .filter-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: #0070f3;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+  }
+
+  .sc-loading, .sc-empty {
+    padding: 3rem 2.5rem;
+    text-align: center;
+    color: var(--text-faint);
+    font-size: 0.88rem;
+  }
+
+  .sc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 1rem;
+    padding: 1rem 2.5rem 2.5rem;
+  }
+
+  .sc-card {
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-card);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .sc-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 1rem 1rem 0.6rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .sc-card-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-strong);
+    margin: 0;
+    line-height: 1.3;
+  }
+  .sc-badge {
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 0.18rem 0.55rem;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .sc-badge.pendiente { background: rgba(0, 112, 243, 0.12); color: #0070f3; }
+  .sc-badge.aprobado { background: rgba(16, 145, 76, 0.12); color: #10914c; }
+  .sc-badge.rechazado { background: rgba(220, 38, 38, 0.12); color: #dc2626; }
+
+  .sc-card-body {
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    flex: 1;
+  }
+  .sc-author { display: flex; align-items: center; gap: 0.6rem; }
+  .sc-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--bg-input);
+    color: var(--text-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+  .sc-author-name { font-size: 0.82rem; font-weight: 600; color: var(--text-normal); }
+  .sc-author-email { font-size: 0.72rem; color: var(--text-faint); }
+
+  .sc-desc, .sc-motivo, .sc-resp {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.45;
+    margin: 0;
+  }
+  .sc-dates { display: flex; flex-wrap: wrap; gap: 0.75rem; font-size: 0.75rem; color: var(--text-muted); }
+  .sc-meta { font-size: 0.7rem; color: var(--text-faint); margin-top: auto; }
+
+  .sc-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-page);
+  }
+  .sc-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.55rem 0.85rem;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: opacity 0.15s ease;
+  }
+  .sc-btn svg { width: 14px; height: 14px; }
+  .sc-btn.approve { background: #10914c; color: #fff; border-color: #10914c; }
+  .sc-btn.reject { background: transparent; color: #dc2626; border-color: #dc2626; }
+  .sc-btn:hover { opacity: 0.85; }
 </style>
