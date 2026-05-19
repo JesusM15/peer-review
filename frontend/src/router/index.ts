@@ -6,6 +6,7 @@ import EditorView from '../views/EditorView.vue'
 import ReviewerView from '../views/ReviewerView.vue'
 import AuthorView from '../views/AuthorView.vue'
 import AdminView from '../views/AdminView.vue'
+import DashboardView from '../views/DashboardView.vue'
 import RevisionForm from '../views/RevisionForm.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
@@ -64,6 +65,12 @@ const routes = [
     meta: { requiresAuth: true, role: 'Admin' }
   },
   {
+    path: '/dashboard',
+    name: 'Dashboard',
+    component: DashboardView,
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/postulacion',
     name: 'Postulacion',
     component: () => import('../views/PostulacionView.vue'),
@@ -93,6 +100,7 @@ router.beforeEach((to, from, next) => {
       const user = authStore.user
       if (user) {
         if (user.rol === 'Admin') return next('/admin')
+        if (user.rol === 'EditorJefe' || user.rol === 'SubEditor') return next('/dashboard')
         return next('/select-congress')
       }
     }
@@ -127,12 +135,18 @@ router.beforeEach((to, from, next) => {
       // Si no es admin, verificar rol en el congreso actual
       const membership = congressStore.memberships.find(m => m.congreso_id === congressStore.currentCongressId)
       const effectiveRole = membership?.rol
-      
-      if (effectiveRole !== to.meta.role) {
+      const roleMatches = (required: string, actual: string | undefined) => {
+        if (required === 'Editor') {
+          return actual === 'Editor' || actual === 'Editor Jefe';
+        }
+        return actual === required;
+      };
+
+      if (!roleMatches(to.meta.role as string, effectiveRole)) {
         // Redirigir a la ruta correspondiente a su rol en ESTE congreso
         if (effectiveRole === 'Autor') return next('/author')
         if (effectiveRole === 'Revisor') return next('/reviewer')
-        if (effectiveRole === 'Editor') return next('/editor')
+        if (effectiveRole === 'Editor' || effectiveRole === 'Editor Jefe') return next('/editor')
         return next('/select-congress')
       }
     }

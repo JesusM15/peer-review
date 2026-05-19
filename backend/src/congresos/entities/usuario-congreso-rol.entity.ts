@@ -13,7 +13,7 @@ export class UsuarioCongresoRol {
   @Column('uuid')
   congreso_id: string;
 
-  @Column({ type: 'enum', enum: Rol })
+  @Column({ type: 'varchar', length: 50 })
   rol: Rol;
 
   @ManyToOne(() => User)

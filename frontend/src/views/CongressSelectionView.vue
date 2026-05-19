@@ -219,7 +219,7 @@ async function selectCongress(congreso: any) {
 
   if (role === 'Admin' || authStore.user?.rol === 'Admin') {
     router.push('/admin')
-  } else if (role === 'Editor') {
+  } else if (role === 'Editor' || role === 'Editor Jefe') {
     router.push('/editor')
   } else if (role === 'Revisor') {
     router.push('/reviewer')
