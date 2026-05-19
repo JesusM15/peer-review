@@ -757,14 +757,20 @@ async function cargarArticulos() {
   cargandoArticulos.value = true
   try {
     const url = new URL(`${API}/articulos`);
-    url.searchParams.append('include_relations', 'true');
     if (congressStore.currentCongressId) {
       url.searchParams.append('congreso_id', congressStore.currentCongressId);
     }
     const res = await fetch(url.toString())
-    articulos.value = await res.json()
+    const data = await res.json().catch(() => [])
+    if (!res.ok || !Array.isArray(data)) {
+      articulos.value = []
+      console.error('Error cargando articulos', data)
+      return
+    }
+    articulos.value = data
   } catch (e) {
     console.error('Error cargando artículos', e)
+    articulos.value = []
   } finally {
     cargandoArticulos.value = false
   }
@@ -799,7 +805,8 @@ async function guardarTagsCongreso() {
       body: JSON.stringify({ tags: parsedCongresoTags.value })
     })
     if (!res.ok) {
-      alert('No se pudieron guardar los tags del congreso.')
+      const data = await res.json().catch(() => null)
+      alert(data?.message || 'No se pudieron guardar los tags del congreso.')
       return
     }
     await cargarTagsCongreso()

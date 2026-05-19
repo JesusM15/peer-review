@@ -1,12 +1,25 @@
 <template>
   <div class="profile-page">
-    <header class="profile-header">
-      <h1 class="page-title">Mi perfil</h1>
-      <p class="page-sub">Actualiza tus datos y especialidades para recibir asignaciones relevantes.</p>
+    <header class="profile-header topbar">
+      <div>
+        <h1 class="page-title">Mi perfil</h1>
+        <p class="page-sub">Actualiza tus datos y especialidades para recibir asignaciones relevantes.</p>
+      </div>
+      <button class="btn-ghost back-btn" type="button" @click="goBack">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5"></path>
+          <path d="M12 19l-7-7 7-7"></path>
+        </svg>
+        Volver
+      </button>
     </header>
 
     <main class="profile-main">
-      <section class="card profile-card">
+      <section class="profile-panel">
+        <div class="section-heading">
+          <h2>Informacion personal</h2>
+          <p class="hint">Estos datos se usan para identificar tu cuenta dentro del sistema.</p>
+        </div>
         <form class="form" @submit.prevent="saveProfile">
           <div class="form-group">
             <label for="profile-nombre">Nombre</label>
@@ -38,17 +51,22 @@
               placeholder="Escribe etiquetas separadas por comas, por ejemplo: IA, Machine Learning, Redes"
             />
             <p class="hint">Usa comas para separar especialidades. Estas se usan para emparejarte con congresos, artículos y revisiones.</p>
+            <div v-if="profileTagNames.length" class="profile-tags" aria-label="Especialidades actuales">
+              <span v-for="tag in profileTagNames" :key="tag" class="tag-chip">{{ tag }}</span>
+            </div>
           </div>
 
           <div v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</div>
 
-          <button type="submit" class="btn btn-primary" :disabled="saving">
+          <div class="form-actions">
+            <button type="submit" class="btn-primary" :disabled="saving">
             {{ saving ? 'Guardando...' : 'Guardar cambios' }}
-          </button>
+            </button>
+          </div>
         </form>
       </section>
 
-      <section v-if="canManageCongressTags" class="card profile-card">
+      <section v-if="canManageCongressTags" class="profile-panel">
         <div class="section-heading">
           <h2>Etiquetas en {{ currentCongressName }}</h2>
           <p class="hint">Selecciona las áreas que te corresponden en este congreso.</p>
@@ -62,9 +80,11 @@
           </label>
         </div>
         <div v-if="tagErrorMessage" class="alert alert-error">{{ tagErrorMessage }}</div>
-        <button class="btn btn-primary" :disabled="savingTags || loadingTags" @click="saveCongressTags">
-          {{ savingTags ? 'Guardando...' : 'Guardar etiquetas del congreso' }}
-        </button>
+        <div class="form-actions">
+          <button class="btn-primary" :disabled="savingTags || loadingTags" @click="saveCongressTags">
+            {{ savingTags ? 'Guardando...' : 'Guardar etiquetas del congreso' }}
+          </button>
+        </div>
       </section>
     </main>
   </div>
@@ -72,15 +92,15 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useCongressStore } from '../stores/congress'
-import { useTheme } from '../composables/useTheme'
 import { useToast } from '../composables/useToast'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+const router = useRouter()
 const authStore = useAuthStore()
 const congressStore = useCongressStore()
-const { isDark } = useTheme()
 const { showToast } = useToast()
 
 interface UserProfile {
@@ -117,6 +137,15 @@ const tagEndpointRole = computed(() => {
   return ''
 })
 const canManageCongressTags = computed(() => Boolean(congressStore.currentCongressId && tagEndpointRole.value && authStore.user?.id))
+const profileTagNames = computed(() => normalizeEspecialidades(form.value.especialidades))
+
+function goBack() {
+  if (window.history.length > 1) {
+    router.back()
+    return
+  }
+  router.push('/select-congress')
+}
 
 function authHeaders(extra: Record<string, string> = {}) {
   const headers: Record<string, string> = {
@@ -134,17 +163,31 @@ function normalizeEspecialidades(value: string) {
     .filter(Boolean)
 }
 
+async function readJson(res: Response) {
+  const text = await res.text()
+  if (!text) return null
+  return JSON.parse(text)
+}
+
 async function loadProfile() {
   errorMessage.value = ''
   try {
     const res = await fetch(`${API}/users/me`, { headers: authHeaders() })
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}))
+    if (!res.ok && !authStore.user?.id) {
+      const data = await readJson(res).catch(() => null)
       errorMessage.value = data?.message || 'No se pudo cargar la información del perfil.'
       return
     }
 
-    const data = await res.json()
+    let data = res.ok ? await readJson(res) : null
+    if (!data && authStore.user?.id) {
+      const fallbackRes = await fetch(`${API}/users/${authStore.user.id}?include_relations=true`, { headers: authHeaders() })
+      data = fallbackRes.ok ? await readJson(fallbackRes) : null
+    }
+    if (!data) {
+      errorMessage.value = 'No se pudo cargar la informaciÃ³n del perfil.'
+      return
+    }
     profile.value = data
     form.value.nombre = data.nombre || ''
     form.value.carrera = data.perfil?.carrera || ''
@@ -166,13 +209,13 @@ async function loadCongressTags() {
       fetch(`${API}/congresos/${congressStore.currentCongressId}/${tagEndpointRole.value}/${authStore.user.id}/tags`, { headers: authHeaders() }),
     ])
     if (congresoRes.ok) {
-      const congreso = await congresoRes.json()
-      availableTags.value = congreso.tags || []
+      const congreso = await readJson(congresoRes)
+      availableTags.value = congreso?.tags || []
     }
     if (assignedRes.ok) {
-      const assigned = await assignedRes.json()
-      originalCongressTagAssignments.value = assigned
-      selectedCongressTagIds.value = assigned.map((item: any) => item.tag_id)
+      const assigned = await readJson(assignedRes)
+      originalCongressTagAssignments.value = assigned || []
+      selectedCongressTagIds.value = (assigned || []).map((item: any) => item.tag_id)
     }
   } catch (e) {
     console.error('Error loading congress tags', e)
@@ -233,9 +276,14 @@ async function saveProfile() {
       body: JSON.stringify(payload),
     })
 
-    const data = await res.json()
+    const data = await readJson(res).catch(() => null)
     if (!res.ok) {
       errorMessage.value = data?.message || 'No se pudo actualizar el perfil.'
+      showToast(errorMessage.value, 'error')
+      return
+    }
+    if (!data) {
+      errorMessage.value = 'El servidor no devolviÃ³ la informaciÃ³n actualizada del perfil.'
       showToast(errorMessage.value, 'error')
       return
     }
@@ -261,57 +309,127 @@ onMounted(async () => {
 <style scoped>
 .profile-page {
   min-height: 100vh;
-  padding: 2rem;
-  background: var(--bg-page);
+  background: var(--bg-base);
   color: var(--text-normal);
 }
 
 .profile-header {
-  max-width: 900px;
-  margin: 0 auto 1.5rem;
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+.topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 2rem 2rem 1.5rem;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .page-title {
-  font-size: 1.8rem;
-  margin: 0 0 0.5rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  margin: 0 0 0.2rem;
 }
 
 .page-sub {
-  color: var(--text-muted);
+  color: var(--text-faint);
+  font-size: 0.8rem;
   margin: 0;
 }
 
 .profile-main {
-  max-width: 900px;
+  max-width: 1040px;
   margin: 0 auto;
+  padding: 1.5rem 2rem 2rem;
+  display: grid;
+  gap: 1rem;
 }
 
-.profile-card {
+.profile-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
   padding: 1.5rem;
-  margin-bottom: 1rem;
 }
 
 .section-heading h2 {
   margin: 0 0 0.25rem;
   font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.section-heading {
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.form {
+  display: grid;
+  gap: 1rem;
 }
 
 .form-group {
-  margin-bottom: 1rem;
+  display: grid;
+  gap: 0.35rem;
 }
 
 .form-input {
   width: 100%;
+  padding: 0.65rem 0.75rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-strong);
+  font-size: 0.875rem;
+  font-family: inherit;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--border-focus);
+}
+
+.form-input:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.form-group label {
+  color: var(--text-normal);
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .hint {
-  margin: 0.5rem 0 0;
+  margin: 0.35rem 0 0;
   color: var(--text-muted);
-  font-size: 0.9rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.alert {
+  margin: 0.75rem 0;
+  padding: 0.75rem 0.9rem;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  border: 1px solid var(--border-color);
 }
 
 .alert-error {
-  margin: 0.75rem 0;
+  color: var(--stat-rechazado);
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.25rem;
 }
 
 .tag-options {
@@ -321,19 +439,113 @@ onMounted(async () => {
   margin: 1rem 0;
 }
 
+.profile-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  color: var(--text-normal);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
 .tag-option {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.45rem;
   cursor: pointer;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.45rem 0.65rem;
+  background: var(--bg-input);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.tag-option:hover {
+  border-color: var(--border-hover);
+  background: var(--bg-card-hover);
+}
+
+.tag-option input {
+  accent-color: var(--text-strong);
 }
 
 .tag-option span {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  background: var(--bg-input);
+  font-size: 0.8rem;
+  color: var(--text-normal);
+}
+
+.btn-primary,
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  font-size: 0.825rem;
+  font-weight: 600;
+  padding: 0.6rem 1.05rem;
+  border-radius: 6px;
+  transition: opacity 0.15s, background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.btn-primary {
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+}
+
+.btn-primary:hover {
+  opacity: 0.88;
+}
+
+.btn-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-ghost {
+  color: var(--btn-ghost-text);
   border: 1px solid var(--border-color);
-  border-radius: 999px;
-  padding: 0.25rem 0.6rem;
+  background: var(--bg-card);
+}
+
+.btn-ghost:hover {
+  color: var(--btn-ghost-hover-text);
+  border-color: var(--border-focus);
+  background: var(--btn-ghost-hover-bg);
+}
+
+.back-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 720px) {
+  .topbar {
+    flex-direction: column;
+    padding: 1.25rem;
+  }
+
+  .profile-main {
+    padding: 1rem 1.25rem 1.5rem;
+  }
+
+  .profile-panel {
+    padding: 1.15rem;
+  }
+
+  .form-actions,
+  .back-btn {
+    width: 100%;
+  }
 }
 </style>

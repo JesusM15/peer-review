@@ -148,7 +148,7 @@ const searchQuery = ref('')
 const joiningId = ref<string | null>(null)
 const allCongresses = ref<any[]>([])
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 
 onMounted(async () => {
   if (!authStore.user) {

@@ -76,6 +76,7 @@ export class ArticulosService {
       query.leftJoinAndSelect('articulo.asignaciones', 'asignacion');
       query.leftJoinAndSelect('asignacion.revisor', 'revisor');
       query.leftJoinAndSelect('articulo.autor', 'autor');
+      query.leftJoinAndSelect('autor.perfil', 'autorPerfil');
       query.leftJoinAndSelect('articulo.tags', 'articuloTag');
       query.leftJoinAndSelect('articuloTag.tag', 'tag');
     }
@@ -92,16 +93,44 @@ export class ArticulosService {
       query.andWhere('articulo.estado = :estado', { estado: filters.estado });
     }
 
-    const articulos = await query.getMany();
+    let articulos: Articulo[];
+    let includeRelations = Boolean(filters.include_relations);
+    try {
+      articulos = await query.getMany();
+    } catch (error) {
+      console.error('Error consultando articulos con relaciones; usando consulta basica', error);
+      includeRelations = false;
+      const fallbackQuery = this.articuloRepository.createQueryBuilder('articulo');
+
+      if (filters.autor_id) {
+        fallbackQuery.andWhere('articulo.autor_id = :autor', { autor: filters.autor_id });
+      }
+
+      if (filters.congreso_id) {
+        fallbackQuery.andWhere('articulo.congreso_id = :congreso', { congreso: filters.congreso_id });
+      }
+
+      if (filters.estado) {
+        fallbackQuery.andWhere('articulo.estado = :estado', { estado: filters.estado });
+      }
+
+      articulos = await fallbackQuery.getMany();
+    }
     
     if (articulos.length === 0) return [];
 
     const ids = articulos.map(a => a.id);
-    const detalles = await this.articuloDetalleModel.find({ _id: { $in: ids } });
+    const detalles: ArticuloDetalleDocument[] = await this.articuloDetalleModel.find({ _id: { $in: ids } }).exec().catch((error): ArticuloDetalleDocument[] => {
+      console.error('Error consultando detalles de articulos en MongoDB', error);
+      return [];
+    });
     
     let revisiones: RevisionDocument[] = [];
-    if (filters.include_relations) {
-      revisiones = await this.revisionModel.find({ articulo_id: { $in: ids } }).exec();
+    if (includeRelations) {
+      revisiones = await this.revisionModel.find({ articulo_id: { $in: ids } }).exec().catch((error) => {
+        console.error('Error consultando revisiones en MongoDB', error);
+        return [];
+      });
     }
 
     return articulos.map(articulo => {
@@ -113,7 +142,7 @@ export class ArticulosService {
         keywords: detalle?.keywords || [],
       };
 
-      if (filters.include_relations) { 
+      if (includeRelations) { 
         payload.revisiones = revisiones.filter(r => r.articulo_id === articulo.id);
       }
 
@@ -129,6 +158,7 @@ export class ArticulosService {
       query.leftJoinAndSelect('articulo.asignaciones', 'asignacion');
       query.leftJoinAndSelect('asignacion.revisor', 'revisor');
       query.leftJoinAndSelect('articulo.autor', 'autor');
+      query.leftJoinAndSelect('autor.perfil', 'autorPerfil');
       query.leftJoinAndSelect('articulo.tags', 'articuloTag');
       query.leftJoinAndSelect('articuloTag.tag', 'tag');
     }
@@ -139,11 +169,17 @@ export class ArticulosService {
       throw new NotFoundException(`Articulo con ID ${id} no encontrado`);
     }
 
-    const detalle = await this.articuloDetalleModel.findById(id).exec();
+    const detalle = await this.articuloDetalleModel.findById(id).exec().catch((error) => {
+      console.error('Error consultando detalle de articulo en MongoDB', error);
+      return null;
+    });
     
     let revisiones: RevisionDocument[] = [];
     if (include_relations) {
-      revisiones = await this.revisionModel.find({ articulo_id: id }).exec();
+      revisiones = await this.revisionModel.find({ articulo_id: id }).exec().catch((error) => {
+        console.error('Error consultando revisiones en MongoDB', error);
+        return [];
+      });
     }
 
     const payload: any = {

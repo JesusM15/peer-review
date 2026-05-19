@@ -5,6 +5,7 @@ import { User, Rol } from './entities/user.entity';
 import { Perfil } from './entities/perfil.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdatePerfilDto } from './dto/update-perfil.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { Articulo } from '../articulos/entities/articulo.entity';
 import { Asignacion } from '../asignaciones/entities/asignacion.entity';
@@ -41,6 +42,55 @@ export class UsersService {
   async findOne(id: string, includeRelations: boolean = false) {
     const relations = includeRelations ? ['perfil'] : [];
     return this.userRepository.findOne({ where: { id }, relations });
+  }
+
+  async findMe(id: string) {
+    const user = await this.userRepository.findOne({ where: { id }, relations: ['perfil'] });
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    const { password, ...result } = user;
+    return result;
+  }
+
+  async updateMe(id: string, updatePerfilDto: UpdatePerfilDto) {
+    const user = await this.userRepository.findOne({ where: { id }, relations: ['perfil'] });
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    if (updatePerfilDto.nombre !== undefined) {
+      user.nombre = updatePerfilDto.nombre.trim();
+    }
+
+    let perfil = user.perfil;
+    if (!perfil) {
+      perfil = this.perfilRepository.create({
+        id: user.id,
+        nombre: user.nombre,
+        carrera: '',
+        especialidades: [],
+      });
+    }
+
+    if (updatePerfilDto.nombre !== undefined) {
+      perfil.nombre = updatePerfilDto.nombre.trim();
+    }
+    if (updatePerfilDto.carrera !== undefined) {
+      perfil.carrera = updatePerfilDto.carrera.trim();
+    }
+    if (updatePerfilDto.telefono !== undefined) {
+      perfil.telefono = updatePerfilDto.telefono.trim();
+    }
+    if (updatePerfilDto.especialidades !== undefined) {
+      perfil.especialidades = [...new Set(updatePerfilDto.especialidades.map((tag) => tag.trim()).filter(Boolean))];
+    }
+
+    await this.userRepository.save(user);
+    await this.perfilRepository.save(perfil);
+
+    return this.findMe(id);
   }
 
   async create(createUserDto: CreateUserDto) {
