@@ -43,11 +43,21 @@ export class AsignacionesService {
   }
 
   async findByRevisor(revisorId: string, includeRelations: boolean = false) {
-    const relations = includeRelations ? ['articulo', 'revisor', 'revisor.perfil', 'articulo.autor', 'articulo.autor.perfil'] : [];
-    return this.asignacionRepository.find({
-      where: { revisor_id: revisorId },
-      relations
-    });
+    try {
+      const relations = includeRelations ? ['articulo', 'revisor', 'revisor.perfil', 'articulo.autor', 'articulo.autor.perfil'] : [];
+      return this.asignacionRepository.find({
+        where: { revisor_id: revisorId },
+        relations
+      });
+    } catch (error) {
+      console.error('Error en findByRevisor:', error);
+      // Fallback sin relaciones anidadas si falla
+      const relations = includeRelations ? ['articulo', 'revisor'] : [];
+      return this.asignacionRepository.find({
+        where: { revisor_id: revisorId },
+        relations
+      });
+    }
   }
 
   async findOne(id: string, includeRelations: boolean = false) {
