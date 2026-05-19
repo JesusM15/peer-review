@@ -7,6 +7,7 @@ export enum Rol {
   AUTOR = 'Autor',
   REVISOR = 'Revisor',
   EDITOR = 'Editor',
+  EDITOR_JEFE = 'Editor Jefe',
   ADMIN = 'Admin',
 }
 
@@ -24,7 +25,7 @@ export class User {
   @Column()
   password: string;
 
-  @Column({ type: 'enum', enum: Rol, default: Rol.AUTOR })
+  @Column({ type: 'varchar', length: 50, default: Rol.AUTOR })
   rol: Rol;
 
   @OneToMany('UsuarioCongresoRol', 'user')

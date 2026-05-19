@@ -189,7 +189,7 @@ export class SolicitudesCongresoService {
         id: uuidv4(),
         user_id: solicitud.solicitante_id,
         congreso_id: congresoCreado.id,
-        rol: Rol.EDITOR,
+        rol: Rol.EDITOR_JEFE,
       });
       await this.ucrRepo.save(membresia);
 
