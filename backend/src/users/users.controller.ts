@@ -1,8 +1,12 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Query, Body, UseGuards, ForbiddenException } from '@nestjs/common';
 import { UsersService } from './users.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Rol } from './entities/user.entity';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Controller('users')
+@UseGuards(JwtAuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
@@ -16,6 +20,14 @@ export class UsersController {
     return this.usersService.findAll({ rol: rolEnum, include_relations: include });
   }
 
+  @Get('stats')
+  async getStats() {
+    console.log('Controller getStats called');
+    const result = await this.usersService.getStats();
+    console.log('Controller getStats result:', result);
+    return result;
+  }
+
   @Get(':id')
   findOne(
     @Param('id') id: string,
@@ -23,5 +35,21 @@ export class UsersController {
   ) {
     const include = includeRelations === 'true';
     return this.usersService.findOne(id, include);
+  }
+
+  // Admin endpoints
+  @Post()
+  create(@Body() createUserDto: CreateUserDto) {
+    return this.usersService.create(createUserDto);
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+    return this.usersService.update(id, updateUserDto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.usersService.remove(id);
   }
 }

@@ -6,6 +6,10 @@ export class Perfil {
   @PrimaryColumn('uuid')
   id: string;
 
+  @OneToOne(() => User)
+  @JoinColumn({ name: 'id' })
+  user: User;
+
   @Column()
   nombre: string;
 
@@ -15,7 +19,6 @@ export class Perfil {
   @Column('simple-array')
   especialidades: string[];
 
-  @OneToOne(() => User, (user) => user.perfil)
-  @JoinColumn({ name: 'id' })
-  user: User;
+  @Column({ nullable: true })
+  telefono: string;
 }
