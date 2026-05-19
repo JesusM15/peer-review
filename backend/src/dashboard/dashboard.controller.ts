@@ -8,7 +8,10 @@ export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
   @Get()
-  async getDashboard(@Request() req, @Query('sub_editor_id') subEditorId?: string) {
+  async getDashboard(
+    @Request() req,
+    @Query('sub_editor_id') subEditorId?: string,
+  ) {
     const user = req.user;
     return this.dashboardService.getDashboard(user.id, user.rol, subEditorId);
   }

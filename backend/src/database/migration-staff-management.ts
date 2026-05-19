@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Migration: Add Staff Management System with Tags
- * 
+ *
  * This migration:
  * 1. Creates the 'revisor_tags' table to map reviewers to their specialties/tags within a congress
  * 2. Creates the 'congreso_tags' table to map congress-related topics/tags
@@ -53,7 +53,7 @@ async function runMigration() {
       WHERE TABLE_SCHEMA = DATABASE() 
       AND TABLE_NAME = 'revisor_tags'
     `);
-    
+
     const congresoTagsExists = await queryRunner.query(`
       SELECT * FROM information_schema.TABLES 
       WHERE TABLE_SCHEMA = DATABASE() 
@@ -69,13 +69,22 @@ async function runMigration() {
 
     console.log('\n✅ Migración completada exitosamente.');
     console.log('\n📝 Resumen de cambios:');
-    console.log('   - Nueva tabla: revisor_tags (mapea revisores a etiquetas por congreso)');
-    console.log('   - Nueva tabla: congreso_tags (mapea congresos a etiquetas de temas)');
+    console.log(
+      '   - Nueva tabla: revisor_tags (mapea revisores a etiquetas por congreso)',
+    );
+    console.log(
+      '   - Nueva tabla: congreso_tags (mapea congresos a etiquetas de temas)',
+    );
     console.log('\n💡 El sistema ahora valida que:');
-    console.log('   1. Los revisores solo pueden asignarse a artículos si sus etiquetas coinciden');
-    console.log('   2. Los editores solo pueden asignarse a congresos si sus etiquetas coinciden');
-    console.log('   3. Los artículos y congresos pueden tener múltiples etiquetas de temas');
-
+    console.log(
+      '   1. Los revisores solo pueden asignarse a artículos si sus etiquetas coinciden',
+    );
+    console.log(
+      '   2. Los editores solo pueden asignarse a congresos si sus etiquetas coinciden',
+    );
+    console.log(
+      '   3. Los artículos y congresos pueden tener múltiples etiquetas de temas',
+    );
   } catch (error) {
     console.error('❌ Error durante la migración:', error);
     throw error;
@@ -85,7 +94,7 @@ async function runMigration() {
   }
 }
 
-runMigration().catch(err => {
+runMigration().catch((err) => {
   console.error('Migration failed:', err);
   process.exit(1);
 });

@@ -11,7 +11,14 @@ import { CongresoTag } from './entities/congreso-tag.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Congreso, Tag, UsuarioCongresoRol, EditorTag, RevisorTag, CongresoTag]),
+    TypeOrmModule.forFeature([
+      Congreso,
+      Tag,
+      UsuarioCongresoRol,
+      EditorTag,
+      RevisorTag,
+      CongresoTag,
+    ]),
   ],
   controllers: [CongresosController],
   providers: [CongresosService],

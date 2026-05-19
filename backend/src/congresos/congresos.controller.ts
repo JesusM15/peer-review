@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Body,
+  Param,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { CongresosService } from './congresos.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Rol } from '../users/entities/user.entity';
@@ -19,8 +28,14 @@ export class CongresosController {
   }
 
   @Post()
-  create(@Body() body: { nombre: string; descripcion?: string; tags?: string[] }) {
-    return this.congresosService.createCongreso(body.nombre, body.descripcion, body.tags);
+  create(
+    @Body() body: { nombre: string; descripcion?: string; tags?: string[] },
+  ) {
+    return this.congresosService.createCongreso(
+      body.nombre,
+      body.descripcion,
+      body.tags,
+    );
   }
 
   @Get(':id')
@@ -29,8 +44,16 @@ export class CongresosController {
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() body: { nombre?: string; descripcion?: string; tags?: string[] }) {
-    return this.congresosService.updateCongreso(id, body.nombre, body.descripcion, body.tags);
+  update(
+    @Param('id') id: string,
+    @Body() body: { nombre?: string; descripcion?: string; tags?: string[] },
+  ) {
+    return this.congresosService.updateCongreso(
+      id,
+      body.nombre,
+      body.descripcion,
+      body.tags,
+    );
   }
 
   @Post(':id/tags')
@@ -50,13 +73,23 @@ export class CongresosController {
   }
 
   @Post(':id/assign-editor')
-  assignEditor(@Param('id') id: string, @Body() body: { userId: string; tagId: string }) {
+  assignEditor(
+    @Param('id') id: string,
+    @Body() body: { userId: string; tagId: string },
+  ) {
     return this.congresosService.assignEditorToTag(body.userId, body.tagId, id);
   }
 
   @Post(':id/assign-revisor')
-  assignRevisor(@Param('id') id: string, @Body() body: { userId: string; tagId: string }) {
-    return this.congresosService.assignRevisorToTag(body.userId, body.tagId, id);
+  assignRevisor(
+    @Param('id') id: string,
+    @Body() body: { userId: string; tagId: string },
+  ) {
+    return this.congresosService.assignRevisorToTag(
+      body.userId,
+      body.tagId,
+      id,
+    );
   }
 
   @Get(':id/revisor/:userId/tags')
@@ -85,12 +118,18 @@ export class CongresosController {
   }
 
   @Get(':id/validate-revisor/:userId')
-  validateRevisor(@Param('id') congresoId: string, @Param('userId') userId: string) {
+  validateRevisor(
+    @Param('id') congresoId: string,
+    @Param('userId') userId: string,
+  ) {
     return this.congresosService.validateRevisorForCongreso(userId, congresoId);
   }
 
   @Get(':id/validate-editor/:userId')
-  validateEditor(@Param('id') congresoId: string, @Param('userId') userId: string) {
+  validateEditor(
+    @Param('id') congresoId: string,
+    @Param('userId') userId: string,
+  ) {
     return this.congresosService.validateEditorForCongreso(userId, congresoId);
   }
 }

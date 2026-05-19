@@ -13,6 +13,7 @@ import { SolicitudesCongresoModule } from './solicitudes-congreso/solicitudes-co
 import { NotificacionesModule } from './notificaciones/notificaciones.module';
 import { StaffChatModule } from './staff-chat/staff-chat.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { AIModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     NotificacionesModule,
     StaffChatModule,
     DashboardModule,
+    AIModule,
   ],
   controllers: [AppController],
   providers: [AppService],

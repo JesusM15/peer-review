@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Articulo, EstadoArticulo } from '../articulos/entities/articulo.entity';
+import {
+  Articulo,
+  EstadoArticulo,
+} from '../articulos/entities/articulo.entity';
 import { User, Rol } from '../users/entities/user.entity';
 import { Asignacion } from '../asignaciones/entities/asignacion.entity';
 
@@ -38,7 +41,7 @@ export class DashboardService {
       relations: ['articulo', 'articulo.autor'],
     });
 
-    const articulos = asignaciones.map(a => ({
+    const articulos = asignaciones.map((a) => ({
       id: a.articulo.id,
       titulo: a.articulo.titulo,
       estado: a.articulo.estado,
@@ -55,7 +58,7 @@ export class DashboardService {
   }
 
   private async getEditorJefeDashboard(subEditorId?: string) {
-    let queryBuilder = this.articuloRepository
+    const queryBuilder = this.articuloRepository
       .createQueryBuilder('articulo')
       .leftJoinAndSelect('articulo.autor', 'autor')
       .leftJoinAndSelect('articulo.asignaciones', 'asignaciones')
@@ -63,21 +66,24 @@ export class DashboardService {
 
     // Si se filtra por sub-editor específico
     if (subEditorId) {
-      queryBuilder.andWhere('asignaciones.revisor_id = :subEditorId', { subEditorId });
+      queryBuilder.andWhere('asignaciones.revisor_id = :subEditorId', {
+        subEditorId,
+      });
     }
 
     const articulos = await queryBuilder.getMany();
 
-    const articulosFormateados = articulos.map(a => ({
+    const articulosFormateados = articulos.map((a) => ({
       id: a.id,
       titulo: a.titulo,
       estado: a.estado,
       autor: a.autor?.nombre || 'N/A',
-      asignado_a: a.asignaciones?.map(asig => ({
-        revisor_id: asig.revisor_id,
-        revisor_nombre: asig.revisor?.nombre || 'N/A',
-        fecha_limite: asig.fecha_limite,
-      })) || [],
+      asignado_a:
+        a.asignaciones?.map((asig) => ({
+          revisor_id: asig.revisor_id,
+          revisor_nombre: asig.revisor?.nombre || 'N/A',
+          fecha_limite: asig.fecha_limite,
+        })) || [],
     }));
 
     // Obtener lista de sub-editores disponibles para el filtro
@@ -100,7 +106,7 @@ export class DashboardService {
       relations: ['autor'],
     });
 
-    const articulosFormateados = articulos.map(a => ({
+    const articulosFormateados = articulos.map((a) => ({
       id: a.id,
       titulo: a.titulo,
       estado: a.estado,
@@ -123,7 +129,7 @@ export class DashboardService {
       [EstadoArticulo.RECHAZADO]: 0,
     };
 
-    articulos.forEach(a => {
+    articulos.forEach((a) => {
       if (porEstado[a.estado] !== undefined) {
         porEstado[a.estado]++;
       }

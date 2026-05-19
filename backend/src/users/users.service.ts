@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, Rol } from './entities/user.entity';
@@ -29,11 +33,11 @@ export class UsersService {
 
   async findAll(options: { rol?: Rol; include_relations?: boolean }) {
     const where: any = {};
-    
+
     if (options.rol) {
       where.rol = options.rol;
     }
-    
+
     const relations = options.include_relations ? ['perfil'] : [];
     return this.userRepository.find({ where, relations });
   }
@@ -75,7 +79,7 @@ export class UsersService {
 
   async update(id: string, updateUserDto: UpdateUserDto) {
     const user = await this.userRepository.findOne({ where: { id } });
-    
+
     if (!user) {
       throw new NotFoundException('Usuario no encontrado');
     }
@@ -85,7 +89,7 @@ export class UsersService {
       const existingUser = await this.userRepository.findOne({
         where: { email: updateUserDto.email },
       });
-      
+
       if (existingUser) {
         throw new ConflictException('El correo electrónico ya está registrado');
       }
@@ -93,11 +97,11 @@ export class UsersService {
 
     // Filtrar campos vacíos (especialmente password para no borrarla accidentalmente)
     const { password: newPassword, ...otherFields } = updateUserDto;
-    
+
     if (newPassword && newPassword.trim() !== '') {
       user.password = newPassword;
     }
-    
+
     Object.assign(user, otherFields);
     await this.userRepository.save(user);
 
@@ -108,16 +112,18 @@ export class UsersService {
 
   async remove(id: string) {
     const user = await this.userRepository.findOne({ where: { id } });
-    
+
     if (!user) {
       throw new NotFoundException('Usuario no encontrado');
     }
 
     // 1. Borrar datos relacionados en MongoDB (Revisiones hechas por el usuario o de sus artículos)
     await this.revisionModel.deleteMany({ revisor_id: id }).exec();
-    
+
     // 2. Borrar artículos del usuario y sus sub-relaciones
-    const articulos = await this.articuloRepository.find({ where: { autor_id: id } });
+    const articulos = await this.articuloRepository.find({
+      where: { autor_id: id },
+    });
     for (const art of articulos) {
       // Borrar revisiones de este artículo en Mongo
       await this.revisionModel.deleteMany({ articulo_id: art.id }).exec();
@@ -135,22 +141,49 @@ export class UsersService {
 
     // 5. Finalmente borrar el usuario
     await this.userRepository.remove(user);
-    
-    return { message: 'Usuario y todos sus datos relacionados eliminados exitosamente' };
+
+    return {
+      message: 'Usuario y todos sus datos relacionados eliminados exitosamente',
+    };
   }
 
   async getStats() {
     const users = await this.userRepository.find();
     console.log('getStats - users found:', users.length);
     if (users.length > 0) {
-      console.log('getStats - sample user roles:', users.slice(0, 3).map(u => ({ id: u.id, rol: u.rol, rolType: typeof u.rol })));
+      console.log(
+        'getStats - sample user roles:',
+        users
+          .slice(0, 3)
+          .map((u) => ({ id: u.id, rol: u.rol, rolType: typeof u.rol })),
+      );
     }
 
     const usersByRole = {
-      Autor: users.filter(u => u.rol === Rol.AUTOR || (u.rol as any) === 'Autor' || (u.rol as any) === 'AUTOR').length,
-      Revisor: users.filter(u => u.rol === Rol.REVISOR || (u.rol as any) === 'Revisor' || (u.rol as any) === 'REVISOR').length,
-      Editor: users.filter(u => u.rol === Rol.EDITOR || (u.rol as any) === 'Editor' || (u.rol as any) === 'EDITOR').length,
-      Admin: users.filter(u => u.rol === Rol.ADMIN || (u.rol as any) === 'Admin' || (u.rol as any) === 'ADMIN').length,
+      Autor: users.filter(
+        (u) =>
+          u.rol === Rol.AUTOR ||
+          (u.rol as any) === 'Autor' ||
+          (u.rol as any) === 'AUTOR',
+      ).length,
+      Revisor: users.filter(
+        (u) =>
+          u.rol === Rol.REVISOR ||
+          (u.rol as any) === 'Revisor' ||
+          (u.rol as any) === 'REVISOR',
+      ).length,
+      Editor: users.filter(
+        (u) =>
+          u.rol === Rol.EDITOR ||
+          (u.rol as any) === 'Editor' ||
+          (u.rol as any) === 'EDITOR',
+      ).length,
+      Admin: users.filter(
+        (u) =>
+          u.rol === Rol.ADMIN ||
+          (u.rol as any) === 'Admin' ||
+          (u.rol as any) === 'ADMIN',
+      ).length,
     };
 
     const result = {

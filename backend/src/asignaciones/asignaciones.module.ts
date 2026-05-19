@@ -17,8 +17,20 @@ import { AsignacionesService } from './asignaciones.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Asignacion, User, Perfil, Articulo, ArticuloTag, Tag, EditorTag, RevisorTag, Congreso]),
-    MongooseModule.forFeature([{ name: Revision.name, schema: RevisionSchema }]),
+    TypeOrmModule.forFeature([
+      Asignacion,
+      User,
+      Perfil,
+      Articulo,
+      ArticuloTag,
+      Tag,
+      EditorTag,
+      RevisorTag,
+      Congreso,
+    ]),
+    MongooseModule.forFeature([
+      { name: Revision.name, schema: RevisionSchema },
+    ]),
   ],
   controllers: [AsignacionesController, RevisionesController],
   providers: [AsignacionesService],

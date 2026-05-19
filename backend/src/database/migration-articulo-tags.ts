@@ -6,7 +6,9 @@ dotenv.config({ path: join(__dirname, '../../.env') });
 
 const AppDataSource = new DataSource({
   type: 'mysql',
-  url: process.env.MARIADB_URI || 'mysql://dbuser:dbpassword@localhost:3307/peer_review_db',
+  url:
+    process.env.MARIADB_URI ||
+    'mysql://dbuser:dbpassword@localhost:3307/peer_review_db',
   synchronize: false,
   logging: true,
 });
@@ -14,13 +16,17 @@ const AppDataSource = new DataSource({
 async function migrate() {
   try {
     await AppDataSource.initialize();
-    console.log('📦 Conectado a la base de datos para migración de tags en articulos...');
+    console.log(
+      '📦 Conectado a la base de datos para migración de tags en articulos...',
+    );
 
     const queryRunner = AppDataSource.createQueryRunner();
 
-    console.log('🚀 Agregando columna `tags` a la tabla `articulos` (si no existe)...');
+    console.log(
+      '🚀 Agregando columna `tags` a la tabla `articulos` (si no existe)...',
+    );
     await queryRunner.query(
-      `ALTER TABLE articulos ADD COLUMN IF NOT EXISTS tags TEXT NULL;`
+      `ALTER TABLE articulos ADD COLUMN IF NOT EXISTS tags TEXT NULL;`,
     );
 
     console.log('✅ Columna `tags` agregada o ya existente.');

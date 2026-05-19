@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Patch, Delete, Param, Query, Body, UseGuards, ForbiddenException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Query,
+  Body,
+  UseGuards,
+  ForbiddenException,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Rol } from './entities/user.entity';
@@ -17,7 +28,10 @@ export class UsersController {
   ) {
     const include = includeRelations === 'true';
     const rolEnum = rol ? (rol as Rol) : undefined;
-    return this.usersService.findAll({ rol: rolEnum, include_relations: include });
+    return this.usersService.findAll({
+      rol: rolEnum,
+      include_relations: include,
+    });
   }
 
   @Get('stats')

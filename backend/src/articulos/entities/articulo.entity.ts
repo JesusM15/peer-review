@@ -1,4 +1,11 @@
-import { Entity, PrimaryColumn, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  OneToMany,
+} from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Asignacion } from '../../asignaciones/entities/asignacion.entity';
 import { Congreso } from '../../congresos/entities/congreso.entity';
@@ -19,7 +26,11 @@ export class Articulo {
   @Column()
   titulo: string;
 
-  @Column({ type: 'enum', enum: EstadoArticulo, default: EstadoArticulo.BORRADOR })
+  @Column({
+    type: 'enum',
+    enum: EstadoArticulo,
+    default: EstadoArticulo.BORRADOR,
+  })
   estado: EstadoArticulo;
 
   @Column('uuid')
@@ -36,9 +47,9 @@ export class Articulo {
   @JoinColumn({ name: 'congreso_id' })
   congreso: Congreso;
 
-  @OneToMany(() => Asignacion, asignacion => asignacion.articulo)
+  @OneToMany(() => Asignacion, (asignacion) => asignacion.articulo)
   asignaciones: Asignacion[];
 
-  @OneToMany(() => ArticuloTag, articuloTag => articuloTag.articulo)
+  @OneToMany(() => ArticuloTag, (articuloTag) => articuloTag.articulo)
   tags: ArticuloTag[];
 }

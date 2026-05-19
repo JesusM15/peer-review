@@ -6,9 +6,7 @@ import { SolicitudesController } from './solicitudes.controller';
 import { UsuarioCongresoRol } from '../congresos/entities/usuario-congreso-rol.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([SolicitudRol, UsuarioCongresoRol]),
-  ],
+  imports: [TypeOrmModule.forFeature([SolicitudRol, UsuarioCongresoRol])],
   providers: [SolicitudesService],
   controllers: [SolicitudesController],
   exports: [SolicitudesService],

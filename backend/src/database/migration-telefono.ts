@@ -7,7 +7,9 @@ import { DataSource } from 'typeorm';
 
 const AppDataSource = new DataSource({
   type: 'mariadb',
-  url: process.env.MARIADB_URI || 'mysql://dbuser:dbpassword@mariadb:3306/peer_review_db',
+  url:
+    process.env.MARIADB_URI ||
+    'mysql://dbuser:dbpassword@mariadb:3306/peer_review_db',
   entities: [],
   synchronize: false,
 });
@@ -22,22 +24,23 @@ async function runMigration() {
   try {
     // Verificar si la columna ya existe
     const tableInfo = await queryRunner.getTable('perfiles');
-    const telefonoColumnExists = tableInfo?.columns.find(column => column.name === 'telefono');
+    const telefonoColumnExists = tableInfo?.columns.find(
+      (column) => column.name === 'telefono',
+    );
 
     if (!telefonoColumnExists) {
       console.log('[+] Agregando columna telefono a la tabla perfiles...');
-      
+
       // Agregar la columna telefono
       await queryRunner.query(`
         ALTER TABLE perfiles 
         ADD COLUMN telefono VARCHAR(20) NULL
       `);
-      
+
       console.log('✅ Columna telefono agregada exitosamente.');
     } else {
       console.log('ℹ️  La columna telefono ya existe en la tabla perfiles.');
     }
-
   } catch (error) {
     console.error('❌ Error durante la migración:', error);
     throw error;

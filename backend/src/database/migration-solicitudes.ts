@@ -6,7 +6,9 @@ dotenv.config({ path: join(__dirname, '../../.env') });
 
 const AppDataSource = new DataSource({
   type: 'mysql',
-  url: process.env.MARIADB_URI || 'mysql://dbuser:dbpassword@localhost:3307/peer_review_db',
+  url:
+    process.env.MARIADB_URI ||
+    'mysql://dbuser:dbpassword@localhost:3307/peer_review_db',
   synchronize: false,
   logging: true,
 });
@@ -34,7 +36,7 @@ async function migrate() {
     `);
 
     console.log('✅ Tabla solicitudes_rol creada.');
-    
+
     await AppDataSource.destroy();
     console.log('👋 Fin.');
   } catch (error) {
