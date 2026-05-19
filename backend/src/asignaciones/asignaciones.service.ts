@@ -42,10 +42,14 @@ export class AsignacionesService {
    * Lista todos los revisores con cuántos artículos tienen asignados actualmente
    */
   async findRevisoresConConteo() {
-    const revisores = await this.userRepository.find({
-      where: { rol: Rol.REVISOR },
-      relations: ['perfil'],
-    });
+    // Nota: Ahora los revisores se definen por membresía en un congreso. 
+    // Por simplicidad, aquí buscamos todos los usuarios que tienen al menos una membresía como REVISOR
+    // o que tengan el rol global de REVISOR (para compatibilidad).
+    const revisores = await this.userRepository.createQueryBuilder('user')
+      .leftJoin('user.membresias', 'membresia')
+      .where('user.rol = :rol', { rol: Rol.REVISOR })
+      .orWhere('membresia.rol = :mrol', { mrol: Rol.REVISOR })
+      .getMany();
 
     const resultados = await Promise.all(
       revisores.map(async (revisor) => {
@@ -65,6 +69,7 @@ export class AsignacionesService {
           nombre: revisor.nombre || revisor.email,
           carrera: '',
           especialidades: [],
+          telefono: null,
           articulos_asignados: totalAsignados,
           puede_recibir_mas: totalAsignados < 3,
           articulos: asignaciones.map((a) => ({

@@ -2,6 +2,10 @@ import { DataSource } from 'typeorm';
 import { User, Rol } from '../users/entities/user.entity';
 import { Articulo, EstadoArticulo } from '../articulos/entities/articulo.entity';
 import { Asignacion } from '../asignaciones/entities/asignacion.entity';
+import { Congreso } from '../congresos/entities/congreso.entity';
+import { Tag } from '../congresos/entities/tag.entity';
+import { EditorTag } from '../congresos/entities/editor-tag.entity';
+import { UsuarioCongresoRol } from '../congresos/entities/usuario-congreso-rol.entity';
 
 /**
  * SEED: Usuarios de prueba (1 por rol)
@@ -14,8 +18,8 @@ import { Asignacion } from '../asignaciones/entities/asignacion.entity';
 const AppDataSource = new DataSource({
   type: 'mariadb',
   url: process.env.MARIADB_URI || 'mysql://dbuser:dbpassword@mariadb:3306/peer_review_db',
-  entities: [User, Articulo, Asignacion],
-  synchronize: false,
+  entities: [User, Articulo, Asignacion, Congreso, Tag, EditorTag, UsuarioCongresoRol],
+  synchronize: true, // Habilitado para crear tablas automáticamente
 });
 
 const SEED_USERS = [
