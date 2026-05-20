@@ -11,13 +11,14 @@ import { Tag } from '../congresos/entities/tag.entity';
 import { EditorTag } from '../congresos/entities/editor-tag.entity';
 import { RevisorTag } from '../congresos/entities/revisor-tag.entity';
 import { Congreso } from '../congresos/entities/congreso.entity';
+import { UsuarioCongresoRol } from '../congresos/entities/usuario-congreso-rol.entity';
 import { AsignacionesController } from './asignaciones.controller';
 import { RevisionesController } from './revisiones.controller';
 import { AsignacionesService } from './asignaciones.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Asignacion, User, Perfil, Articulo, ArticuloTag, Tag, EditorTag, RevisorTag, Congreso]),
+    TypeOrmModule.forFeature([Asignacion, User, Perfil, Articulo, ArticuloTag, Tag, EditorTag, RevisorTag, Congreso, UsuarioCongresoRol]),
     MongooseModule.forFeature([{ name: Revision.name, schema: RevisionSchema }]),
   ],
   controllers: [AsignacionesController, RevisionesController],

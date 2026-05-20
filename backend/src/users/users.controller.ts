@@ -60,6 +60,11 @@ export class UsersController {
     return this.usersService.update(id, updateUserDto);
   }
 
+  @Patch(':id/perfil')
+  updateUserPerfil(@Param('id') id: string, @Body() body: UpdatePerfilDto) {
+    return this.usersService.updateMe(id, body);
+  }
+
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);

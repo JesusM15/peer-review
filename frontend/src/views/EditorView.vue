@@ -46,11 +46,23 @@
           </svg>
           Solicitudes
         </button>
+        <button class="nav-item" :class="{ active: vistaActiva === 'congress-tags' }" id="nav-tags-editor-view" @click="vistaActiva = 'congress-tags'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Tags del Congreso
+        </button>
         <button class="nav-item" :class="{ active: vistaActiva === 'staffchat' }" id="nav-staffchat-editor" @click="vistaActiva = 'staffchat'">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
           Chat Staff
+        </button>
+        <button class="nav-item" id="nav-perfil-editor" @click="router.push('/perfil')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Perfil
         </button>
       </nav>
 
@@ -301,7 +313,7 @@
             <h3 class="sub-title">Revisores ya asignados</h3>
             <div class="revisores-asignados-list">
               <div v-for="rv in revisoresDelArticulo" :key="rv.revisor_id" class="revisor-asignado-chip">
-                <span class="chip-avatar">{{ ((rv.revisor?.perfil?.nombre || rv.revisor_id || '?') as string).charAt(0).toUpperCase() }}</span>
+                <span class="chip-avatar">{{ (rv.revisor?.perfil?.nombre || rv.revisor_id || '?').toString().charAt(0).toUpperCase() }}</span>
                 <span>{{ rv.revisor?.perfil?.nombre || rv.revisor_id }}</span>
                 <button class="chip-remove" @click="eliminarAsignacion(rv.id)" title="Quitar revisor">×</button>
               </div>
@@ -348,7 +360,7 @@
                     >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                         <path d="M3 21l1.65-5.67A8.94 8.94 0 0121 12a9 9 0 10-9 9 8.94 8.94 0 01-3.35-.67L3 21z" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M9 10a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v2a.5.5 0 01-.5.5h-2a.5.5 0 01-.5-.5v-2zM12.5 10a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v2a.5.5 0 01-.5.5h-2a.5.5 0 01-.5-.5v-2z" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M9 10a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v2a.5.5 0 01-.5.5h-2a.5.5 0 01-.5.5v-2zM12.5 10a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v2a.5.5 0 01-.5.5h-2a.5.5 0 01-.5.5v-2z" stroke-linecap="round" stroke-linejoin="round"/>
                       </svg>
                     </button>
                   </div>
@@ -386,8 +398,8 @@
       <template v-if="vistaActiva === 'revisores'">
         <header class="topbar">
           <div>
-            <h1 class="page-title">Lista de revisores</h1>
-            <p class="page-sub">Todos los revisores disponibles y sus artículos asignados</p>
+            <h1 class="page-title">Revisores de {{ currentCongressName }}</h1>
+            <p class="page-sub">Revisores con membresía en este congreso y sus artículos asignados</p>
           </div>
         </header>
         <div class="section">
@@ -400,8 +412,8 @@
                 <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            <h3>No hay revisores registrados</h3>
-            <p>Los revisores aparecerán aquí cuando se registren en el sistema.</p>
+            <h3>No hay revisores en este congreso</h3>
+            <p>Aún no hay revisores con membresía en <strong>{{ currentCongressName }}</strong>. Los revisores deben ser asignados al congreso primero.</p>
           </div>
           <div v-else>
             <div class="revisores-grid-full">
@@ -437,7 +449,7 @@
                     >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                         <path d="M3 21l1.65-5.67A8.94 8.94 0 0121 12a9 9 0 10-9 9 8.94 8.94 0 01-3.35-.67L3 21z" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M9 10a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v2a.5.5 0 01-.5.5h-2a.5.5 0 01-.5-.5v-2zM12.5 10a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v2a.5.5 0 01-.5.5h-2a.5.5 0 01-.5-.5v-2z" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M9 10a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v2a.5.5 0 01-.5.5h-2a.5.5 0 01-.5.5v-2zM12.5 10a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v2a.5.5 0 01-.5.5h-2a.5.5 0 01-.5.5v-2z" stroke-linecap="round" stroke-linejoin="round"/>
                       </svg>
                     </button>
                   </div>
@@ -603,6 +615,80 @@
       </div>
     </div>
 
+      <!-- ─── TAGS DEL CONGRESO ────────────────────────── -->
+      <template v-if="vistaActiva === 'congress-tags'">
+        <header class="topbar">
+          <div>
+            <h1 class="page-title">Tags de {{ currentCongressName }}</h1>
+            <p class="page-sub">Gestiona las etiquetas de clasificación de este congreso</p>
+          </div>
+        </header>
+
+        <div class="section">
+          <!-- Crear nuevo tag -->
+          <div class="ct-create-card">
+            <h3 class="ct-section-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:18px;height:18px">
+                <path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Nuevo tag
+            </h3>
+            <div class="ct-input-row">
+              <input
+                id="input-new-tag"
+                v-model="nuevoTag"
+                type="text"
+                class="ct-input"
+                placeholder="Nombre del tag (ej: Machine Learning)"
+                maxlength="80"
+                @keyup.enter="crearTag"
+              />
+              <button
+                id="btn-crear-tag"
+                class="btn-primary"
+                :disabled="!nuevoTag.trim() || creandoTag"
+                @click="crearTag"
+              >
+                {{ creandoTag ? 'Creando...' : 'Crear tag' }}
+              </button>
+            </div>
+            <p v-if="tagMensaje" :class="['ct-msg', tagMensaje.tipo]">
+              {{ tagMensaje.texto }}
+            </p>
+          </div>
+
+          <!-- Lista de tags existentes -->
+          <div class="ct-list-card">
+            <h3 class="ct-section-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:18px;height:18px">
+                <path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Tags actuales
+            </h3>
+            <div v-if="cargandoCongresoTags" class="loading-state">
+              <div class="spinner"></div><span>Cargando tags...</span>
+            </div>
+            <div v-else-if="congresoTags.length === 0" class="ct-empty">
+              Este congreso aún no tiene tags. ¡Crea el primero!
+            </div>
+            <div v-else class="ct-tags-grid">
+              <div v-for="tag in congresoTags" :key="tag.id" class="ct-tag-chip">
+                <span class="ct-tag-name">{{ tag.nombre }}</span>
+                <button
+                  class="ct-tag-delete"
+                  :title="'Eliminar ' + tag.nombre"
+                  @click="eliminarTag(tag.id)"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px">
+                    <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
   </div>
 </template>
 
@@ -661,6 +747,7 @@ const modalRevisor = ref<any>(null)
 const asignando = ref(false)
 const mensajeAsignacion = ref<{ texto: string; tipo: string } | null>(null)
 const mensajeModal = ref<{ texto: string; tipo: string } | null>(null)
+
 
 // ── Solicitudes de Rol ────────────────────────────────
 const solicitudesRol = ref<any[]>([])
@@ -730,12 +817,20 @@ async function cargarArticulos() {
 async function cargarRevisores() {
   cargandoRevisores.value = true
   try {
-    const res = await fetch(`${API}/asignaciones/revisores`, {
-      headers: authHeaders(),
-    })
+    const congresoId = congressStore.currentCongressId
+    const url = congresoId
+      ? `${API}/asignaciones/revisores?congreso_id=${congresoId}`
+      : `${API}/asignaciones/revisores`
+    const res = await fetch(url, { headers: authHeaders() })
+    if (!res.ok) {
+      console.error('Error cargando revisores', res.status)
+      revisores.value = []
+      return
+    }
     revisores.value = await res.json()
   } catch (e) {
     console.error('Error cargando revisores', e)
+    revisores.value = []
   } finally {
     cargandoRevisores.value = false
   }
@@ -764,6 +859,71 @@ async function irAAsignaciones() {
 async function irARevisores() {
   vistaActiva.value = 'revisores'
   await cargarRevisores()
+}
+
+// ── Tags del Congreso ─────────────────────────────────
+const congresoTags = ref<any[]>([])
+const cargandoCongresoTags = ref(false)
+const nuevoTag = ref('')
+const creandoTag = ref(false)
+const tagMensaje = ref<{ texto: string; tipo: string } | null>(null)
+
+async function cargarCongresoTags() {
+  const cid = congressStore.currentCongressId
+  if (!cid) return
+  cargandoCongresoTags.value = true
+  try {
+    const res = await fetch(`${API}/congresos/${cid}/tags`, { headers: authHeaders() })
+    congresoTags.value = res.ok ? await res.json() : []
+  } catch {
+    congresoTags.value = []
+  } finally {
+    cargandoCongresoTags.value = false
+  }
+}
+
+async function crearTag() {
+  const nombre = nuevoTag.value.trim()
+  if (!nombre) return
+  const cid = congressStore.currentCongressId
+  if (!cid) return
+  creandoTag.value = true
+  tagMensaje.value = null
+  try {
+    const res = await fetch(`${API}/congresos/${cid}/tags`, {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ nombre }),
+    })
+    if (res.ok) {
+      nuevoTag.value = ''
+      tagMensaje.value = { texto: `Tag "${nombre}" creado correctamente.`, tipo: 'success' }
+      await cargarCongresoTags()
+      setTimeout(() => { tagMensaje.value = null }, 3000)
+    } else {
+      const err = await res.json().catch(() => ({}))
+      tagMensaje.value = { texto: err.message || 'Error al crear el tag.', tipo: 'error' }
+    }
+  } catch {
+    tagMensaje.value = { texto: 'Error de conexión al crear el tag.', tipo: 'error' }
+  } finally {
+    creandoTag.value = false
+  }
+}
+
+async function eliminarTag(tagId: string) {
+  if (!confirm('¿Eliminar este tag del congreso? Los revisores y editores perderán esta asignación.')) return
+  try {
+    const res = await fetch(`${API}/congresos/congreso-tag/${tagId}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    })
+    if (res.ok) {
+      await cargarCongresoTags()
+    }
+  } catch (e) {
+    console.error('Error eliminando tag', e)
+  }
 }
 
 async function irASolicitudes() {
@@ -928,6 +1088,12 @@ watch(() => congressStore.currentCongressId, () => {
 
 onMounted(async () => {
   await cargarArticulos()
+})
+
+watch(vistaActiva, (newVal) => {
+  if (newVal === 'congress-tags') {
+    cargarCongresoTags()
+  }
 })
 </script>
 
@@ -1261,6 +1427,15 @@ onMounted(async () => {
 .modal-art-titulo { font-size: 0.8rem; color: var(--text-strong); font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .modal-footer { padding: 1rem 1.5rem 1.5rem; border-top: 1px solid var(--border-color); }
 
+/* ── Tags Management ── */
+.tags-management { display: flex; flex-direction: column; gap: 2rem; }
+.add-tag-box { display: flex; gap: 1rem; max-width: 500px; }
+.tags-list-admin { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+.tag-admin-card { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; font-weight: 500; color: var(--text-strong); }
+.btn-icon { background: none; border: none; cursor: pointer; color: var(--text-faint); padding: 0.25rem; border-radius: 4px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.btn-icon svg { width: 16px; height: 16px; }
+.btn-icon.delete:hover { color: var(--error); background: var(--error-faint); }
+
 /* ── Responsive ── */
 @media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 768px) {
@@ -1271,5 +1446,148 @@ onMounted(async () => {
   .topbar { flex-direction: column; gap: 1rem; padding: 1.25rem; }
   .section { padding: 1.5rem 1.25rem; }
   .revisores-grid { grid-template-columns: 1fr; }
+  .ct-input-row { flex-direction: column; }
 }
+
+/* ── Congress Tags Panel ──────────────────────────────── */
+.ct-create-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 1.75rem;
+  margin-bottom: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+.ct-create-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(99,102,241,.06) 0%, rgba(168,85,247,.04) 100%);
+  pointer-events: none;
+}
+
+.ct-list-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 1.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.ct-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0 0 1.25rem 0;
+  letter-spacing: -0.01em;
+}
+.ct-section-title svg { color: var(--accent); flex-shrink: 0; }
+
+.ct-input-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: stretch;
+}
+
+.ct-input {
+  flex: 1;
+  padding: 0.75rem 1.1rem;
+  border: 1.5px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-main, #fff);
+  color: var(--text-main);
+  font-size: 0.92rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  font-family: inherit;
+}
+.ct-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(99,102,241,.15);
+}
+.ct-input::placeholder { color: var(--text-faint); }
+
+.ct-msg {
+  font-size: 0.84rem;
+  margin-top: 0.85rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  animation: fadeIn 0.2s ease;
+}
+.ct-msg.success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+.ct-msg.error   { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+.ct-empty {
+  color: var(--text-faint);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 2.5rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ct-tags-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.ct-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: linear-gradient(135deg, rgba(99,102,241,.12), rgba(168,85,247,.08));
+  color: var(--accent);
+  border: 1.5px solid rgba(99,102,241,.28);
+  border-radius: 999px;
+  padding: 0.4rem 0.55rem 0.4rem 1rem;
+  font-size: 0.83rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: background 0.18s, border-color 0.18s, transform 0.15s;
+  cursor: default;
+}
+.ct-tag-chip:hover {
+  background: linear-gradient(135deg, rgba(99,102,241,.2), rgba(168,85,247,.14));
+  border-color: rgba(99,102,241,.45);
+  transform: translateY(-1px);
+}
+
+.ct-tag-name { line-height: 1; }
+
+.ct-tag-delete {
+  background: rgba(99,102,241,.1);
+  border: none;
+  cursor: pointer;
+  padding: 3px;
+  color: var(--accent);
+  opacity: 0.75;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s, background 0.15s, transform 0.1s;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.ct-tag-delete:hover {
+  opacity: 1;
+  background: rgba(239,68,68,.18);
+  color: #ef4444;
+  transform: scale(1.15);
+}
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
 </style>

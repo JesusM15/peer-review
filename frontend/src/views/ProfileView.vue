@@ -66,25 +66,30 @@
         </form>
       </section>
 
-      <section v-if="canManageCongressTags" class="profile-panel">
+      <section id="congress-tags" class="profile-panel">
         <div class="section-heading">
           <h2>Etiquetas en {{ currentCongressName }}</h2>
           <p class="hint">Selecciona las áreas que te corresponden en este congreso.</p>
         </div>
-        <div v-if="loadingTags" class="hint">Cargando etiquetas...</div>
-        <div v-else-if="availableTags.length === 0" class="hint">Este congreso todavía no tiene tags.</div>
-        <div v-else class="tag-options">
-          <label v-for="tag in availableTags" :key="tag.id" class="tag-option">
-            <input type="checkbox" :value="tag.id" v-model="selectedCongressTagIds" />
-            <span>{{ tag.nombre }}</span>
-          </label>
+        <div v-if="!canManageCongressTags" class="hint">
+          Las etiquetas de congreso solo aplican para Revisores y Editores.
         </div>
-        <div v-if="tagErrorMessage" class="alert alert-error">{{ tagErrorMessage }}</div>
-        <div class="form-actions">
-          <button class="btn-primary" :disabled="savingTags || loadingTags" @click="saveCongressTags">
-            {{ savingTags ? 'Guardando...' : 'Guardar etiquetas del congreso' }}
-          </button>
-        </div>
+        <template v-else>
+          <div v-if="loadingTags" class="hint">Cargando etiquetas...</div>
+          <div v-else-if="availableTags.length === 0" class="hint">Este congreso todavía no tiene tags.</div>
+          <div v-else class="tag-options">
+            <label v-for="tag in availableTags" :key="tag.id" class="tag-option">
+              <input type="checkbox" :value="tag.id" v-model="selectedCongressTagIds" />
+              <span>{{ tag.nombre }}</span>
+            </label>
+          </div>
+          <div v-if="tagErrorMessage" class="alert alert-error">{{ tagErrorMessage }}</div>
+          <div class="form-actions">
+            <button class="btn-primary" :disabled="savingTags || loadingTags" @click="saveCongressTags">
+              {{ savingTags ? 'Guardando...' : 'Guardar etiquetas del congreso' }}
+            </button>
+          </div>
+        </template>
       </section>
     </main>
   </div>
@@ -136,7 +141,11 @@ const tagEndpointRole = computed(() => {
   if (currentMembership.value?.rol === 'Editor' || currentMembership.value?.rol === 'Editor Jefe') return 'editor'
   return ''
 })
-const canManageCongressTags = computed(() => Boolean(congressStore.currentCongressId && tagEndpointRole.value && authStore.user?.id))
+const canManageCongressTags = computed(() => {
+  const role = congressStore.userRole
+  // Incluimos Admin para que pueda ver la sección
+  return role === 'Revisor' || role === 'Editor' || role === 'Editor Jefe' || authStore.userRole === 'Admin'
+})
 const profileTagNames = computed(() => normalizeEspecialidades(form.value.especialidades))
 
 function goBack() {
@@ -185,7 +194,7 @@ async function loadProfile() {
       data = fallbackRes.ok ? await readJson(fallbackRes) : null
     }
     if (!data) {
-      errorMessage.value = 'No se pudo cargar la informaciÃ³n del perfil.'
+      errorMessage.value = 'No se pudo cargar la información del perfil.'
       return
     }
     profile.value = data
@@ -283,7 +292,7 @@ async function saveProfile() {
       return
     }
     if (!data) {
-      errorMessage.value = 'El servidor no devolviÃ³ la informaciÃ³n actualizada del perfil.'
+      errorMessage.value = 'El servidor no devolvió la información actualizada del perfil.'
       showToast(errorMessage.value, 'error')
       return
     }
@@ -300,9 +309,28 @@ async function saveProfile() {
   }
 }
 
-onMounted(async () => {
-  await loadProfile()
-  await loadCongressTags()
+onMounted(() => {
+  loadProfile()
+  loadCongressTags()
+
+  // Hacer scroll al hash si existe — usar nextTick + retry para garantizar que el DOM está listo
+  const hash = window.location.hash
+  if (hash) {
+    const scrollToHash = () => {
+      const el = document.querySelector(hash)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }
+    // Primer intento después de que Vue actualice el DOM
+    import('vue').then(({ nextTick }) => {
+      nextTick(() => {
+        scrollToHash()
+        // Segundo intento por si las imágenes/contenido aún cargan
+        setTimeout(scrollToHash, 400)
+      })
+    })
+  }
 })
 </script>
 

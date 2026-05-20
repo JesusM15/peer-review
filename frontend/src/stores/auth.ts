@@ -86,7 +86,7 @@ export const useAuthStore = defineStore('auth', () => {
     clearAuth();
   };
 
-  const initAuth = () => {
+  const initAuth = async () => {
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
 
@@ -94,7 +94,18 @@ export const useAuthStore = defineStore('auth', () => {
       try {
         token.value = storedToken;
         user.value = JSON.parse(storedUser);
-      } catch {
+        
+        // Validar sesión con el backend
+        const response = await fetch(`${API_URL}/users/me`, {
+          headers: { 'Authorization': `Bearer ${storedToken}` }
+        });
+        
+        if (!response.ok) {
+          console.warn('Sesión inválida o usuario no encontrado, cerrando sesión...');
+          clearAuth();
+        }
+      } catch (e) {
+        console.error('Error al inicializar sesión:', e);
         clearAuth();
       }
     }

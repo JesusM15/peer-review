@@ -38,6 +38,12 @@
           Solicitudes de Congreso
           <span v-if="solicitudesPendientesCount > 0" class="nav-badge">{{ solicitudesPendientesCount }}</span>
         </button>
+        <button class="nav-item" id="nav-admin-tags" @click="router.push('/perfil').then(() => { setTimeout(() => { const el = document.getElementById('congress-tags'); if(el) el.scrollIntoView({ behavior: 'smooth' }); }, 300); })">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Tags del Congreso
+        </button>
         <button class="nav-item" id="nav-perfil-admin" @click="router.push('/perfil')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z" stroke-linecap="round" stroke-linejoin="round"/>
@@ -427,6 +433,17 @@
               <option value="Admin">Admin</option>
             </select>
           </div>
+
+          <div class="form-group">
+            <label>Especialidades / Tags
+              <span style="font-weight:400; color: var(--text-faint); font-size: 0.78rem;">(separadas por coma)</span>
+            </label>
+            <input
+              v-model="userForm.especialidades"
+              type="text"
+              placeholder="Ej: Machine Learning, Redes, Cloud"
+            />
+          </div>
           
           <div class="form-group" v-if="!showEditModal">
             <label>Contraseña</label>
@@ -486,7 +503,8 @@ const userForm = ref({
   nombre: '',
   email: '',
   rol: 'Autor',
-  password: ''
+  password: '',
+  especialidades: '' // comma-separated tags
 });
 
 const loadUsers = async () => {
@@ -735,38 +753,80 @@ const barChartOptions = {
 
 const submitUser = async () => {
   try {
-    const url = showEditModal.value 
+    const url = showEditModal.value
       ? `${API_URL}/users/${userForm.value.id}`
       : `${API_URL}/users`;
-    
+
     const method = showEditModal.value ? 'PATCH' : 'POST';
-    
-    const payload = { ...userForm.value };
+
+    const { especialidades, ...basePayload } = userForm.value;
+    const payload: Record<string, any> = { ...basePayload };
     if (showEditModal.value && !payload.password) {
       delete payload.password;
     }
 
+    const authHeaders = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${authStore.token}`
+    };
+
     const response = await fetch(url, {
       method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authStore.token}`
-      },
+      headers: authHeaders,
       body: JSON.stringify(payload)
     });
-    
-    if (response.ok) {
-      closeModal();
-      loadUsers();
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      console.error('Error guardando usuario:', err);
+      return;
     }
+
+    // Also update the profile (nombre + especialidades) for this user
+    // We do this via the admin-privileged PATCH /users/:id but we also
+    // update the perfil by calling /users/:id with nombre so both stay in sync.
+    // Additionally store the tags in the perfil via a direct perfil update.
+    const perfilPayload: Record<string, any> = {
+      nombre: userForm.value.nombre,
+    };
+    if (especialidades !== undefined) {
+      perfilPayload.especialidades = especialidades
+        .split(',')
+        .map((t: string) => t.trim())
+        .filter(Boolean);
+    }
+
+    // Call update-perfil endpoint if editing
+    if (showEditModal.value && userForm.value.id) {
+      await fetch(`${API_URL}/users/${userForm.value.id}/perfil`, {
+        method: 'PATCH',
+        headers: authHeaders,
+        body: JSON.stringify(perfilPayload)
+      }).catch(() => {}); // best-effort – may not exist yet
+    }
+
+    closeModal();
+    loadUsers();
   } catch (error) {
     console.error('Error guardando usuario:', error);
   }
 };
 
-const editUser = (user: any) => {
-  userForm.value = { ...user, password: '' };
+const editUser = async (user: any) => {
+  userForm.value = { ...user, password: '', especialidades: '' };
   showEditModal.value = true;
+  // Load the perfil to populate especialidades
+  try {
+    const res = await fetch(`${API_URL}/users/${user.id}?include_relations=true`, {
+      headers: { 'Authorization': `Bearer ${authStore.token}` }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.perfil?.especialidades?.length) {
+        userForm.value.especialidades = data.perfil.especialidades.join(', ');
+      }
+    }
+  } catch {}
 };
 
 const deleteUser = async (id: string) => {
@@ -792,7 +852,7 @@ const deleteUser = async (id: string) => {
 const closeModal = () => {
   showCreateModal.value = false;
   showEditModal.value = false;
-  userForm.value = { id: '', nombre: '', email: '', rol: 'Autor', password: '' };
+  userForm.value = { id: '', nombre: '', email: '', rol: 'Autor', password: '', especialidades: '' };
 };
 
 const changeCongress = () => {
@@ -1660,4 +1720,13 @@ onMounted(() => {
   .sc-btn.approve { background: var(--success); color: #fff; border-color: var(--success); }
   .sc-btn.reject { background: transparent; color: var(--error); border-color: var(--error); }
   .sc-btn:hover { opacity: 0.85; }
+
+  /* ── Tags Management ── */
+  .tags-management { display: flex; flex-direction: column; gap: 2rem; }
+  .add-tag-box { display: flex; gap: 1rem; max-width: 500px; }
+  .tags-list-admin { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+  .tag-admin-card { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; font-weight: 500; color: var(--text-strong); }
+  .loading-state { display: flex; align-items: center; gap: 0.75rem; padding: 2rem 0; color: var(--text-muted); font-size: 0.85rem; }
+  .spinner { width: 18px; height: 18px; border: 2px solid var(--border-color); border-top-color: var(--text-strong); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 </style>

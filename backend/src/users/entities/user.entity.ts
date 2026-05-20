@@ -28,8 +28,7 @@ export class User {
   @Column({ type: 'varchar', length: 50, default: Rol.AUTOR })
   rol: Rol;
 
-  @OneToOne(() => Perfil, { nullable: true })
-  @JoinColumn({ name: 'id' })
+  @OneToOne(() => Perfil, (perfil) => perfil.user, { nullable: true, cascade: true })
   perfil: Perfil;
 
   @BeforeInsert()

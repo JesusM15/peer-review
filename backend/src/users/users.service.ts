@@ -55,40 +55,54 @@ export class UsersService {
   }
 
   async updateMe(id: string, updatePerfilDto: UpdatePerfilDto) {
-    const user = await this.userRepository.findOne({ where: { id }, relations: ['perfil'] });
+    console.log('[UsersService] updateMe called with id:', id);
+    console.log('[UsersService] updateMe payload:', updatePerfilDto);
+    
+    const user = await this.userRepository.findOneBy({ id });
     if (!user) {
+      console.error('[UsersService] User not found for id:', id);
       throw new NotFoundException('Usuario no encontrado');
     }
 
+    console.log('[UsersService] User found:', user.nombre);
+
+    // Actualizar nombre en el usuario principal
     if (updatePerfilDto.nombre !== undefined) {
       user.nombre = updatePerfilDto.nombre.trim();
     }
 
-    let perfil = user.perfil;
+    // Buscar el perfil o crearlo si no existe
+    let perfil = await this.perfilRepository.findOneBy({ id });
     if (!perfil) {
+      console.log('[UsersService] Perfil not found, creating new one for id:', id);
       perfil = this.perfilRepository.create({
         id: user.id,
         nombre: user.nombre,
         carrera: '',
         especialidades: [],
       });
+    } else {
+      console.log('[UsersService] Perfil found:', perfil.nombre);
     }
 
-    if (updatePerfilDto.nombre !== undefined) {
-      perfil.nombre = updatePerfilDto.nombre.trim();
-    }
-    if (updatePerfilDto.carrera !== undefined) {
-      perfil.carrera = updatePerfilDto.carrera.trim();
-    }
-    if (updatePerfilDto.telefono !== undefined) {
-      perfil.telefono = updatePerfilDto.telefono.trim();
-    }
+    // Actualizar campos del perfil
+    if (updatePerfilDto.nombre !== undefined) perfil.nombre = updatePerfilDto.nombre.trim();
+    if (updatePerfilDto.carrera !== undefined) perfil.carrera = updatePerfilDto.carrera.trim();
+    if (updatePerfilDto.telefono !== undefined) perfil.telefono = updatePerfilDto.telefono.trim();
     if (updatePerfilDto.especialidades !== undefined) {
-      perfil.especialidades = [...new Set(updatePerfilDto.especialidades.map((tag) => tag.trim()).filter(Boolean))];
+      perfil.especialidades = [...new Set(updatePerfilDto.especialidades.map(tag => tag.trim()).filter(Boolean))];
     }
 
-    await this.userRepository.save(user);
-    await this.perfilRepository.save(perfil);
+    // Guardar ambos de forma independiente
+    try {
+      await this.userRepository.save(user);
+      console.log('[UsersService] User saved successfully');
+      await this.perfilRepository.save(perfil);
+      console.log('[UsersService] Perfil saved successfully');
+    } catch (error) {
+      console.error('[UsersService] Error saving user or perfil:', error);
+      throw error;
+    }
 
     return this.findMe(id);
   }

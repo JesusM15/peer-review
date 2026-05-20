@@ -6,8 +6,8 @@ export class AsignacionesController {
   constructor(private readonly asignacionesService: AsignacionesService) {}
 
   @Get('revisores')
-  findRevisoresConConteo() {
-    return this.asignacionesService.findRevisoresConConteo();
+  findRevisoresConConteo(@Query('congreso_id') congresoId?: string) {
+    return this.asignacionesService.findRevisoresConConteo(congresoId);
   }
 
   @Get()
