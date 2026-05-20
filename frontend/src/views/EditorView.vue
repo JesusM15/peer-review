@@ -805,10 +805,19 @@ async function cargarArticulos() {
     if (congressStore.currentCongressId) {
       params.append('congreso_id', congressStore.currentCongressId)
     }
-    const res = await fetch(`${API}/articulos?${params.toString()}`)
-    articulos.value = await res.json()
+    const res = await fetch(`${API}/articulos?${params.toString()}`, {
+      headers: authHeaders(),
+    })
+    if (!res.ok) {
+      console.error('Error cargando artículos:', res.status)
+      articulos.value = []
+      return
+    }
+    const data = await res.json()
+    articulos.value = Array.isArray(data) ? data : []
   } catch (e) {
     console.error('Error cargando artículos', e)
+    articulos.value = []
   } finally {
     cargandoArticulos.value = false
   }
@@ -837,13 +846,22 @@ async function cargarRevisores() {
 }
 
 async function cargarAsignacionesDeArticulo(articuloId: string) {
+  if (!articuloId) return
   try {
-    const res = await fetch(`${API}/asignaciones?revisor_id=&include_relations=true`, {
-      headers: authHeaders(),
-    })
-    // Filtrar las del artículo actual
+    // Filtrar directamente por articulo_id en el servidor
+    const res = await fetch(
+      `${API}/asignaciones?articulo_id=${articuloId}&include_relations=true`,
+      { headers: authHeaders() },
+    )
+    if (!res.ok) {
+      revisoresDelArticulo.value = []
+      return
+    }
     const todas = await res.json()
-    revisoresDelArticulo.value = todas.filter((a: any) => a.articulo_id === articuloId)
+    // El backend puede devolver todas o ya filtradas; filtramos por si acaso
+    revisoresDelArticulo.value = Array.isArray(todas)
+      ? todas.filter((a: any) => a.articulo_id === articuloId)
+      : []
   } catch (e) {
     revisoresDelArticulo.value = []
   }
