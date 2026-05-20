@@ -46,6 +46,12 @@
           </svg>
           Solicitudes
         </button>
+        <button class="nav-item" :class="{ active: vistaActiva === 'staffchat' }" id="nav-staffchat-editor" @click="vistaActiva = 'staffchat'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Chat Staff
+        </button>
       </nav>
 
       <div class="sidebar-footer relative-footer">
@@ -159,9 +165,6 @@
               <div class="articulo-info">
                 <span class="articulo-titulo">{{ art.titulo }}</span>
                 <span class="articulo-autor">{{ art.autor?.perfil?.nombre || art.autor_id }}</span>
-                <div v-if="articleTagNames(art).length" class="article-tags">
-                  <span v-for="tag in articleTagNames(art)" :key="tag" class="tag">{{ tag }}</span>
-                </div>
               </div>
               <span class="badge" :class="badgeClass(art.estado)">{{ art.estado }}</span>
             </div>
@@ -201,7 +204,6 @@
                   <th>Título</th>
                   <th>Autor</th>
                   <th>Estado</th>
-                  <th>Tags</th>
                   <th>Revisores asignados</th>
                   <th>Acción</th>
                 </tr>
@@ -211,12 +213,6 @@
                   <td class="td-titulo">{{ art.titulo }}</td>
                   <td class="td-muted">{{ art.autor?.perfil?.nombre || art.autor_id }}</td>
                   <td><span class="badge" :class="badgeClass(art.estado)">{{ art.estado }}</span></td>
-                  <td class="td-muted">
-                    <div class="article-tags compact">
-                      <span v-for="tag in articleTagNames(art)" :key="tag" class="tag">{{ tag }}</span>
-                      <span v-if="!articleTagNames(art).length">Sin tags</span>
-                    </div>
-                  </td>
                   <td class="td-muted">{{ (art.asignaciones || []).length }} revisor(es)</td>
                   <td>
                     <button class="btn-sm" @click="abrirAsignacionDesdeArticulo(art)">Asignar</button>
@@ -277,9 +273,6 @@
                     <span class="art-time">ID: {{ art.id.split('-')[0] }}</span>
                   </div>
                   <h4 class="art-card-title">{{ art.titulo }}</h4>
-                  <div v-if="articleTagNames(art).length" class="article-tags compact">
-                    <span v-for="tag in articleTagNames(art)" :key="tag" class="tag">{{ tag }}</span>
-                  </div>
                   <div class="art-card-meta">
                     <div class="meta-item" title="Autor del artículo">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -385,29 +378,6 @@
           <!-- Mensaje de error/éxito -->
           <div v-if="mensajeAsignacion" class="mensaje-toast" :class="mensajeAsignacion.tipo">
             {{ mensajeAsignacion.texto }}
-          </div>
-        </div>
-      </template>
-
-      <!-- ─── TAGS DEL CONGRESO ─────────────────────── -->
-      <template v-if="vistaActiva === 'congreso-tags'">
-        <header class="topbar">
-          <div>
-            <h1 class="page-title">Tags del congreso</h1>
-            <p class="page-sub">Solo el Editor en Jefe puede editar las áreas temáticas del congreso.</p>
-          </div>
-        </header>
-        <div class="section">
-          <div class="tag-editor-card">
-            <label for="congreso-tags-input">Etiquetas</label>
-            <input id="congreso-tags-input" v-model="congresoTagsInput" class="form-input" placeholder="IA, Software, Educación" />
-            <p class="field-hint">Separa cada tag con coma. Estos tags se reutilizan en perfiles y artículos.</p>
-            <div class="article-tags">
-              <span v-for="tag in parsedCongresoTags" :key="tag" class="tag">{{ tag }}</span>
-            </div>
-            <button class="btn-primary" :disabled="guardandoTagsCongreso" @click="guardarTagsCongreso">
-              {{ guardandoTagsCongreso ? 'Guardando...' : 'Guardar tags' }}
-            </button>
           </div>
         </div>
       </template>
@@ -669,10 +639,6 @@ const currentCongressName = computed(() => {
   const c = congressStore.memberships.find(m => m.congreso_id === congressStore.currentCongressId)
   return c?.congreso?.nombre || 'Sin Congreso'
 })
-const currentMembership = computed(() =>
-  congressStore.memberships.find(m => m.congreso_id === congressStore.currentCongressId)
-)
-const isEditorJefe = computed(() => currentMembership.value?.rol === 'Editor Jefe')
 
 const changeCongress = () => {
   congressStore.setCongress('') // Limpiar selección actual
@@ -695,9 +661,6 @@ const modalRevisor = ref<any>(null)
 const asignando = ref(false)
 const mensajeAsignacion = ref<{ texto: string; tipo: string } | null>(null)
 const mensajeModal = ref<{ texto: string; tipo: string } | null>(null)
-const congresoTagsInput = ref('')
-const guardandoTagsCongreso = ref(false)
-const parsedCongresoTags = computed(() => normalizeTags(congresoTagsInput.value))
 
 // ── Solicitudes de Rol ────────────────────────────────
 const solicitudesRol = ref<any[]>([])
@@ -746,78 +709,21 @@ function badgeClass(estado: string) {
   return map[estado] || 'badge-borrador'
 }
 
-function normalizeTags(value: string) {
-  return [...new Set(value.split(',').map(tag => tag.trim()).filter(Boolean))]
-}
-
-function articleTagNames(articulo: any) {
-  return (articulo.tags || []).map((item: any) => item.tag?.nombre).filter(Boolean)
-}
-
 // ── Fetch data ────────────────────────────────────────
 async function cargarArticulos() {
   cargandoArticulos.value = true
   try {
     const params = new URLSearchParams()
+    params.append('include_relations', 'true')
     if (congressStore.currentCongressId) {
       params.append('congreso_id', congressStore.currentCongressId)
     }
-    const query = params.toString()
-    const res = await fetch(`${API}/articulos${query ? `?${query}` : ''}`)
-    const data = await res.json().catch(() => [])
-    if (!res.ok || !Array.isArray(data)) {
-      articulos.value = []
-      console.error('Error cargando articulos', data)
-      return
-    }
-    articulos.value = data
+    const res = await fetch(`${API}/articulos?${params.toString()}`)
+    articulos.value = await res.json()
   } catch (e) {
     console.error('Error cargando artículos', e)
-    articulos.value = []
   } finally {
     cargandoArticulos.value = false
-  }
-}
-
-async function cargarTagsCongreso() {
-  if (!congressStore.currentCongressId) return
-  try {
-    const res = await fetch(`${API}/congresos/${congressStore.currentCongressId}`, {
-      headers: authHeaders(),
-    })
-    if (!res.ok) return
-    const data = await res.json()
-    congresoTagsInput.value = (data.tags || []).map((tag: any) => tag.nombre).join(', ')
-  } catch (e) {
-    console.error('Error cargando tags del congreso', e)
-  }
-}
-
-async function irATagsCongreso() {
-  vistaActiva.value = 'congreso-tags'
-  await cargarTagsCongreso()
-}
-
-async function guardarTagsCongreso() {
-  if (!isEditorJefe.value || !congressStore.currentCongressId) return
-  guardandoTagsCongreso.value = true
-  try {
-    const res = await fetch(`${API}/congresos/${congressStore.currentCongressId}`, {
-      method: 'PUT',
-      headers: authHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ tags: parsedCongresoTags.value })
-    })
-    if (!res.ok) {
-      const data = await res.json().catch(() => null)
-      alert(data?.message || 'No se pudieron guardar los tags del congreso.')
-      return
-    }
-    await cargarTagsCongreso()
-  } catch (e) {
-    console.error('Error guardando tags del congreso', e)
-    alert('Error guardando tags del congreso.')
-  } finally {
-    guardandoTagsCongreso.value = false
   }
 }
 
@@ -1022,7 +928,6 @@ watch(() => congressStore.currentCongressId, () => {
 
 onMounted(async () => {
   await cargarArticulos()
-  await cargarTagsCongreso()
 })
 </script>
 
@@ -1080,11 +985,6 @@ onMounted(async () => {
 .menu-item.text-danger { color: var(--stat-rechazado); }
 .menu-item.text-danger svg { color: var(--stat-rechazado); }
 .menu-item.text-danger:hover { background: rgba(248, 113, 113, 0.1); }
-.article-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.45rem; }
-.article-tags.compact { margin-top: 0; }
-.tag { font-size: 0.72rem; color: var(--text-muted); background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 999px; padding: 0.2rem 0.5rem; }
-.tag-editor-card { max-width: 720px; display: flex; flex-direction: column; gap: 0.85rem; border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem; background: var(--bg-card); }
-.tag-editor-card label { font-size: 0.8rem; font-weight: 600; color: var(--text-normal); }
 
 /* ── Main ── */
 .main { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
