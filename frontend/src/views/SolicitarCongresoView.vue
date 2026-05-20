@@ -301,14 +301,10 @@ onMounted(cargarMisSolicitudes)
 <style scoped>
 .sc-container {
   min-height: 100vh;
-  background-color: #fff;
-  color: #000;
+  background-color: var(--bg-base);
+  color: var(--text-normal);
   font-family: 'Inter', sans-serif;
   padding: 2rem;
-}
-.sc-container.dark {
-  background-color: #000;
-  color: #fff;
 }
 
 .sc-header {
@@ -321,18 +317,17 @@ onMounted(cargarMisSolicitudes)
   margin: 0.5rem 0;
 }
 .page-sub {
-  color: #666;
+  color: var(--text-muted);
   font-size: 0.95rem;
   margin: 0;
 }
-.sc-container.dark .page-sub { color: #aaa; }
 
 .back-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   background: transparent;
-  border: 1px solid #eaeaea;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   padding: 0.45rem 0.85rem;
   color: inherit;
@@ -340,9 +335,7 @@ onMounted(cargarMisSolicitudes)
   cursor: pointer;
   transition: background 0.15s ease;
 }
-.back-btn:hover { background: rgba(0,0,0,0.04); }
-.sc-container.dark .back-btn { border-color: #333; }
-.sc-container.dark .back-btn:hover { background: rgba(255,255,255,0.05); }
+.back-btn:hover { background: var(--bg-card-hover); }
 
 .sc-main {
   max-width: 900px;
@@ -352,14 +345,10 @@ onMounted(cargarMisSolicitudes)
 }
 
 .card {
-  border: 1px solid #eaeaea;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   padding: 1.5rem;
-  background: #fff;
-}
-.sc-container.dark .card {
-  background: #0a0a0a;
-  border-color: #333;
+  background: var(--bg-card);
 }
 
 .card-title {
@@ -379,16 +368,15 @@ onMounted(cargarMisSolicitudes)
   gap: 1rem;
 }
 .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
-.form-group label { font-size: 0.85rem; font-weight: 500; color: #444; }
-.sc-container.dark .form-group label { color: #ccc; }
+.form-group label { font-size: 0.85rem; font-weight: 500; color: var(--text-normal); }
 
 .form-input {
   width: 100%;
   padding: 0.6rem 0.75rem;
-  border: 1px solid #eaeaea;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
-  background: #fff;
-  color: #000;
+  background: var(--bg-input);
+  color: var(--text-normal);
   font-size: 0.9rem;
   font-family: inherit;
   box-sizing: border-box;
@@ -398,12 +386,7 @@ onMounted(cargarMisSolicitudes)
 .sc-container.dark .tag { color: #ddd; background: #151515; border-color: #333; }
 .form-input:focus {
   outline: none;
-  border-color: #0070f3;
-}
-.sc-container.dark .form-input {
-  background: #111;
-  color: #fff;
-  border-color: #333;
+  border-color: var(--border-focus);
 }
 .textarea { resize: vertical; min-height: 80px; }
 
@@ -421,12 +404,8 @@ onMounted(cargarMisSolicitudes)
   transition: opacity 0.15s ease;
 }
 .btn-primary {
-  background: #000;
-  color: #fff;
-}
-.sc-container.dark .btn-primary {
-  background: #fff;
-  color: #000;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
 }
 .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
 
@@ -436,12 +415,9 @@ onMounted(cargarMisSolicitudes)
   font-size: 0.85rem;
 }
 .alert-error {
-  background: rgba(239, 68, 68, 0.08);
-  color: #b91c1c;
-  border: 1px solid rgba(239, 68, 68, 0.25);
-}
-.sc-container.dark .alert-error {
-  color: #fca5a5;
+  background: var(--error-faint);
+  color: var(--error);
+  border: 1px solid var(--error-faint);
 }
 
 .empty-state {
@@ -459,14 +435,10 @@ onMounted(cargarMisSolicitudes)
   gap: 0.75rem;
 }
 .sol-item {
-  border: 1px solid #eaeaea;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   padding: 1rem;
-  background: #fafafa;
-}
-.sc-container.dark .sol-item {
-  background: #111;
-  border-color: #333;
+  background: var(--bg-card);
 }
 .sol-row {
   display: flex;
@@ -481,17 +453,16 @@ onMounted(cargarMisSolicitudes)
 }
 .sol-desc {
   font-size: 0.85rem;
-  color: #555;
+  color: var(--text-muted);
   margin: 0.5rem 0 0 0;
   line-height: 1.4;
 }
-.sc-container.dark .sol-desc { color: #bbb; }
 .sol-resp {
   font-size: 0.85rem;
   margin: 0.5rem 0 0 0;
   padding: 0.5rem 0.7rem;
-  border-left: 2px solid #0070f3;
-  background: rgba(0,112,243,0.06);
+  border-left: 2px solid var(--primary);
+  background: var(--primary-faint);
 }
 .sol-meta {
   font-size: 0.75rem;
@@ -507,9 +478,9 @@ onMounted(cargarMisSolicitudes)
   border-radius: 4px;
   letter-spacing: 0.04em;
 }
-.sol-badge.pendiente { background: rgba(59,130,246,0.12); color: #2563eb; }
-.sol-badge.aprobado { background: rgba(16,185,129,0.12); color: #059669; }
-.sol-badge.rechazado { background: rgba(239,68,68,0.12); color: #dc2626; }
+.sol-badge.pendiente { background: var(--primary-faint); color: var(--primary); }
+.sol-badge.aprobado { background: var(--success-faint); color: var(--success); }
+.sol-badge.rechazado { background: var(--error-faint); color: var(--error); }
 
 @media (max-width: 720px) {
   .form-row { grid-template-columns: 1fr; }

@@ -1387,7 +1387,7 @@ onMounted(() => {
   /* ─── NAV BADGE ─── */
   .nav-badge {
     margin-left: auto;
-    background: #0070f3;
+    background: var(--primary);
     color: #fff;
     font-size: 0.65rem;
     font-weight: 700;
@@ -1446,7 +1446,7 @@ onMounted(() => {
     position: absolute;
     top: -4px;
     right: -4px;
-    background: #0070f3;
+    background: var(--primary);
     color: #fff;
     font-size: 0.6rem;
     font-weight: 700;
@@ -1486,7 +1486,7 @@ onMounted(() => {
   .notif-mark-all {
     background: transparent;
     border: none;
-    color: #0070f3;
+    color: var(--primary);
     font-size: 0.72rem;
     cursor: pointer;
     padding: 0;
@@ -1509,7 +1509,7 @@ onMounted(() => {
   }
   .notif-item:last-child { border-bottom: none; }
   .notif-item:hover { background: var(--bg-card-hover); }
-  .notif-item.unread { background: rgba(0, 112, 243, 0.06); }
+  .notif-item.unread { background: var(--primary-faint); }
   .notif-item-title { font-weight: 600; font-size: 0.82rem; color: var(--text-strong); margin-bottom: 0.2rem; }
   .notif-item-msg { font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; }
   .notif-item-date { font-size: 0.68rem; color: var(--text-faint); margin-top: 0.35rem; }
@@ -1548,7 +1548,7 @@ onMounted(() => {
     height: 18px;
     padding: 0 5px;
     border-radius: 9px;
-    background: #0070f3;
+    background: var(--primary);
     color: #fff;
     font-size: 0.65rem;
     font-weight: 700;
@@ -1599,9 +1599,9 @@ onMounted(() => {
     text-transform: uppercase;
     letter-spacing: 0.03em;
   }
-  .sc-badge.pendiente { background: rgba(0, 112, 243, 0.12); color: #0070f3; }
-  .sc-badge.aprobado { background: rgba(16, 145, 76, 0.12); color: #10914c; }
-  .sc-badge.rechazado { background: rgba(220, 38, 38, 0.12); color: #dc2626; }
+  .sc-badge.pendiente { background: var(--primary-faint); color: var(--primary); }
+  .sc-badge.aprobado { background: var(--success-faint); color: var(--success); }
+  .sc-badge.rechazado { background: var(--error-faint); color: var(--error); }
 
   .sc-card-body {
     padding: 0.75rem 1rem;
@@ -1657,7 +1657,7 @@ onMounted(() => {
     transition: opacity 0.15s ease;
   }
   .sc-btn svg { width: 14px; height: 14px; }
-  .sc-btn.approve { background: #10914c; color: #fff; border-color: #10914c; }
-  .sc-btn.reject { background: transparent; color: #dc2626; border-color: #dc2626; }
+  .sc-btn.approve { background: var(--success); color: #fff; border-color: var(--success); }
+  .sc-btn.reject { background: transparent; color: var(--error); border-color: var(--error); }
   .sc-btn:hover { opacity: 0.85; }
 </style>

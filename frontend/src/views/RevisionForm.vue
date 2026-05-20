@@ -631,8 +631,8 @@ const eliminarPdfLocal = async (articuloId: string) => {
 
 .menu-item svg { width: 15px; height: 15px; color: var(--text-muted); }
 .menu-item:hover { background: var(--bg-card-hover); color: var(--text-strong); }
-.menu-item.text-danger { color: #f87171; }
-.menu-item.text-danger svg { color: #f87171; }
+.menu-item.text-danger { color: var(--error); }
+.menu-item.text-danger svg { color: var(--error); }
 
 .main {
   flex: 1;
@@ -659,11 +659,11 @@ const eliminarPdfLocal = async (articuloId: string) => {
 
 .offline-badge-pill {
   font-size: 0.65rem;
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
+  background: var(--error-faint);
+  color: var(--error);
   padding: 0.25rem 0.6rem;
   border-radius: 4px;
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  border: 1px solid var(--error-faint);
 }
 
 .read-only-badge {
@@ -714,8 +714,8 @@ const eliminarPdfLocal = async (articuloId: string) => {
   align-items: center;
   gap: 0.5rem;
   font-size: 0.75rem;
-  color: var(--stat-aceptado);
-  background: rgba(16, 185, 129, 0.05);
+  color: var(--success);
+  background: var(--success-faint);
   padding: 0.75rem 1rem;
   border-radius: 6px;
   margin-bottom: 1.5rem;
@@ -728,7 +728,7 @@ const eliminarPdfLocal = async (articuloId: string) => {
 .form-section { display: flex; flex-direction: column; gap: 0.75rem; }
 .section-top { display: flex; align-items: center; gap: 0.75rem; }
 .section-name { font-size: 0.9rem; font-weight: 700; color: var(--text-strong); }
-.section-tag { font-size: 0.65rem; color: var(--stat-aceptado); background: rgba(16, 185, 129, 0.1); padding: 0.2rem 0.4rem; border-radius: 4px; }
+.section-tag { font-size: 0.65rem; color: var(--success); background: var(--success-faint); padding: 0.2rem 0.4rem; border-radius: 4px; }
 .section-instruction { font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; }
 
 .textarea-container textarea {
@@ -785,9 +785,9 @@ const eliminarPdfLocal = async (articuloId: string) => {
   color: var(--text-normal);
 }
 
-.verdict-card.selected.accepted { border-color: var(--stat-aceptado); background: rgba(16, 185, 129, 0.1); color: var(--stat-aceptado); }
-.verdict-card.selected.revision { border-color: var(--stat-revision); background: rgba(245, 158, 11, 0.1); color: var(--stat-revision); }
-.verdict-card.selected.rejected { border-color: var(--stat-rechazado); background: rgba(239, 68, 68, 0.1); color: var(--stat-rechazado); }
+.verdict-card.selected.accepted { border-color: var(--success); background: var(--success-faint); color: var(--success); }
+.verdict-card.selected.revision { border-color: var(--warning); background: var(--warning-faint); color: var(--warning); }
+.verdict-card.selected.rejected { border-color: var(--error); background: var(--error-faint); color: var(--error); }
 
 .verdict-icon { font-size: 1.25rem; font-weight: 700; }
 .verdict-label { font-size: 0.75rem; font-weight: 600; }
