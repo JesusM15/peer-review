@@ -592,14 +592,14 @@ const cancelarFormulario = () => {
 .congress-name-text {
   font-size: 0.7rem;
   font-weight: 600;
-  color: #10b981;
+  color: var(--success);
   letter-spacing: 0.02em;
   opacity: 0.9;
 }
 
 .dark .congress-name-text {
-  color: #34d399;
-  text-shadow: 0 0 8px rgba(52, 211, 153, 0.3);
+  color: var(--success);
+  text-shadow: 0 0 8px var(--success-faint);
 }
 .brand { display: flex; align-items: center; gap: 0.45rem; }
 .brand-icon { width: 16px; height: 16px; color: var(--text-strong); }
@@ -697,9 +697,9 @@ const cancelarFormulario = () => {
 .articulo-meta { display: flex; align-items: center; gap: 0.75rem; }
 .estado-badge { font-size: 0.7rem; font-weight: 500; padding: 0.25rem 0.5rem; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
 .estado-badge.borrador { background: var(--bg-input); color: var(--text-muted); }
-.estado-badge.en-revision { background: rgba(229, 162, 76, 0.15); color: var(--stat-revision); }
-.estado-badge.aceptado { background: rgba(74, 222, 128, 0.15); color: var(--stat-aceptado); }
-.estado-badge.rechazado { background: rgba(248, 113, 113, 0.15); color: var(--stat-rechazado); }
+.estado-badge.en-revision { background: var(--warning-faint); color: var(--warning); }
+.estado-badge.aceptado { background: var(--success-faint); color: var(--success); }
+.estado-badge.rechazado { background: var(--error-faint); color: var(--error); }
 .fecha-creacion { font-size: 0.75rem; color: var(--text-muted); }
 .articulo-actions { display: flex; align-items: center; }
 .arrow-icon { width: 16px; height: 16px; color: var(--text-faint); transition: color 0.15s; }
@@ -714,7 +714,7 @@ const cancelarFormulario = () => {
 .panel-placeholder p { font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; }
 
 .pdf-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-.pdf-frame { flex: 1; width: 100%; height: 100%; border: none; background: #fff; }
+.pdf-frame { flex: 1; width: 100%; height: 100%; border: none; background: var(--bg-card); }
 
 /* ─── BACK BUTTON ───────────────────────────────────── */
 .btn-back { display: flex; align-items: center; gap: 0.5rem; background: transparent; color: var(--text-faint); font-size: 0.8rem; font-weight: 500; padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); cursor: pointer; transition: all 0.15s; }
