@@ -25,7 +25,7 @@
           </svg>
           Usuarios
         </button>
-        <button class="nav-item" id="nav-admin-articles" @click="currentView = 'articles'">
+        <button class="nav-item" :class="{ active: currentView === 'articles' }" id="nav-admin-articles" @click="goToArticles">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
@@ -399,6 +399,48 @@
         </div>
       </template>
 
+      <!-- ─── ARTÍCULOS ───────────────────────────────── -->
+      <template v-if="currentView === 'articles'">
+        <header class="topbar">
+          <div>
+            <h1 class="page-title">Artículos</h1>
+            <p class="page-sub">Lista de artículos. Ejecuta análisis con IA (plagio textual, alertas éticas y similitud).</p>
+          </div>
+          <button class="btn-primary" @click="loadArticles" :disabled="loadingArticles">
+            {{ loadingArticles ? 'Cargando...' : 'Recargar' }}
+          </button>
+        </header>
+
+        <div class="ai-config-container">
+          <div class="sc-card">
+            <div class="sc-card-body">
+              <table v-if="articles.length" class="sc-table">
+                <thead>
+                  <tr>
+                    <th>Título</th>
+                    <th>Estado</th>
+                    <th>Autor</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="a in articles" :key="a.id">
+                    <td>{{ a.titulo }}</td>
+                    <td><span class="sc-badge">{{ a.estado }}</span></td>
+                    <td>{{ a.autor?.nombre || a.autor_id }}</td>
+                    <td>
+                      <button class="btn-primary" @click="openAIAnalysis(a)">Analizar con IA</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <p v-else-if="!loadingArticles">No hay artículos para mostrar.</p>
+              <p v-else>Cargando artículos...</p>
+            </div>
+          </div>
+        </div>
+      </template>
+
       <!-- ─── CONFIGURACIÓN IA ────────────────────────── -->
       <template v-if="currentView === 'ai-settings'">
         <header class="topbar">
@@ -524,6 +566,72 @@
         </form>
       </div>
     </div>
+
+    <!-- Modal Análisis IA -->
+    <div v-if="showAIModal" class="modal-overlay" @click="closeAIModal">
+      <div class="modal ai-analysis-modal" @click.stop>
+        <div class="ai-modal-header">
+          <h2>Análisis IA — {{ currentAnalysisArticle?.titulo }}</h2>
+          <button class="btn-ghost" @click="closeAIModal">Cerrar</button>
+        </div>
+
+        <div v-if="!aiAnalysisResult && !aiAnalysisLoading">
+          <p>Se ejecutarán los tres análisis sobre este artículo (puede tardar 10-30s):</p>
+          <ul>
+            <li>Plagio textual mediante LLM.</li>
+            <li>Alertas éticas (consentimiento, datos personales, afirmaciones no respaldadas).</li>
+            <li>Similitud contra otros artículos del sistema (embeddings).</li>
+          </ul>
+          <div class="modal-actions">
+            <button class="btn-primary" @click="runFullAnalysis">Ejecutar análisis completo</button>
+          </div>
+        </div>
+
+        <div v-if="aiAnalysisLoading">
+          <p>Analizando con IA... (esto puede tardar 10-30 segundos)</p>
+        </div>
+
+        <div v-if="aiAnalysisResult && !aiAnalysisLoading" class="ai-result">
+          <section class="report-section">
+            <h3>Plagio textual</h3>
+            <p v-if="aiAnalysisResult.plagiarism_report">
+              <strong>Score:</strong>
+              <span :class="getPlagioClass(aiAnalysisResult.plagiarism_report.score || 0)">
+                {{ aiAnalysisResult.plagiarism_report.score ?? 'n/d' }}%
+              </span>
+            </p>
+            <p>{{ aiAnalysisResult.plagiarism_report?.summary || aiAnalysisResult.plagiarism_report?.raw || 'Sin resultados.' }}</p>
+          </section>
+
+          <section class="report-section">
+            <h3>Alertas éticas</h3>
+            <p><strong>Riesgo general:</strong> {{ aiAnalysisResult.ethics_report?.overall_risk || 'n/d' }}</p>
+            <p>{{ aiAnalysisResult.ethics_report?.summary || '' }}</p>
+            <ul v-if="aiAnalysisResult.ethics_report?.alerts?.length">
+              <li v-for="(al, i) in aiAnalysisResult.ethics_report.alerts" :key="i">
+                <strong>[{{ al.severity }}] {{ al.type }}</strong>: {{ al.description }}
+                <em v-if="al.evidence"> — Evidencia: {{ al.evidence }}</em>
+              </li>
+            </ul>
+            <p v-else>No se detectaron alertas.</p>
+          </section>
+
+          <section class="report-section">
+            <h3>Similitud con otros artículos</h3>
+            <p v-if="!aiAnalysisResult.similarity?.hits?.length">Sin coincidencias significativas (umbral {{ aiAnalysisResult.similarity?.threshold ?? 0 }}).</p>
+            <table v-else class="sc-table">
+              <thead><tr><th>ID de artículo</th><th>Similitud</th></tr></thead>
+              <tbody>
+                <tr v-for="h in aiAnalysisResult.similarity.hits" :key="h.articulo_id">
+                  <td>{{ h.articulo_id }}</td>
+                  <td>{{ (h.similarity * 100).toFixed(1) }}%</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -571,6 +679,12 @@ const aiForm = ref({
   temperature: 0.7,
   maxTokens: 2048
 });
+const articles = ref<any[]>([]);
+const loadingArticles = ref(false);
+const showAIModal = ref(false);
+const currentAnalysisArticle = ref<any>(null);
+const aiAnalysisResult = ref<any>(null);
+const aiAnalysisLoading = ref(false);
 const currentUser = computed(() => authStore.user);
 const userInitial = computed(() => currentUser.value?.nombre?.[0]?.toUpperCase() || 'A');
 
@@ -876,9 +990,59 @@ const checkPlagiarism = async (id: string) => {
   try {
     const report = await aiStore.checkPlagiarism(id);
     alert(`Análisis completado: ${report.score}% de similitud detectada.`);
-    loadArticles(); // Recargar lista
+    loadArticles();
   } catch (error) {
     alert('Error al realizar el análisis');
+  }
+};
+
+const loadArticles = async () => {
+  loadingArticles.value = true;
+  try {
+    const response = await fetch(`${API_URL}/articulos?include_relations=true`, {
+      headers: { 'Authorization': `Bearer ${authStore.token}` },
+    });
+    if (response.ok) {
+      articles.value = await response.json();
+    }
+  } catch (e) {
+    console.error('Error cargando artículos:', e);
+  } finally {
+    loadingArticles.value = false;
+  }
+};
+
+const goToArticles = () => {
+  currentView.value = 'articles';
+  if (!articles.value.length) loadArticles();
+};
+
+const openAIAnalysis = (article: any) => {
+  currentAnalysisArticle.value = article;
+  aiAnalysisResult.value = null;
+  aiAnalysisLoading.value = false;
+  showAIModal.value = true;
+};
+
+const closeAIModal = () => {
+  showAIModal.value = false;
+  currentAnalysisArticle.value = null;
+  aiAnalysisResult.value = null;
+  aiAnalysisLoading.value = false;
+};
+
+const runFullAnalysis = async () => {
+  if (!currentAnalysisArticle.value) return;
+  aiAnalysisLoading.value = true;
+  try {
+    aiAnalysisResult.value = await aiStore.fullAnalysis(
+      currentAnalysisArticle.value.id,
+      { topK: 5, threshold: 0.7 },
+    );
+  } catch (e: any) {
+    alert('Error al ejecutar el análisis: ' + (e?.message || e));
+  } finally {
+    aiAnalysisLoading.value = false;
   }
 };
 
