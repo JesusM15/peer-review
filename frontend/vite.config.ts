@@ -12,20 +12,37 @@ export default defineConfig({
   plugins: [
     vue(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       injectRegister: 'auto',
+      // Habilitar SW en modo dev para poder probar la PWA sin hacer build
+      devOptions: {
+        enabled: true,
+        type: 'module',
+      },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-        // Preparando el terreno para estrategia Offline-First y posterior uso de Dexie.js
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^\/api\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-cache',
+              networkTimeoutSeconds: 10,
+              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 },
+            },
+          },
+        ],
       },
       manifest: {
         name: 'Peer Review System',
         short_name: 'PeerReview',
-        description: 'Offline-First Peer Review PWA System',
-        // Estética minimalista B&N (estilo Vercel)
-        theme_color: '#000000',
-        background_color: '#ffffff',
+        description: 'Sistema de revisión de artículos académicos por pares',
+        theme_color: '#6366f1',
+        background_color: '#0f0f13',
         display: 'standalone',
+        start_url: '/',
+        scope: '/',
+        orientation: 'portrait-primary',
         icons: [
           {
             src: '/icon-192x192.png',
@@ -37,6 +54,12 @@ export default defineConfig({
             sizes: '512x512',
             type: 'image/png',
           },
+          {
+            src: '/icon-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
         ],
       },
     }),
@@ -47,7 +70,6 @@ export default defineConfig({
     },
   },
   server: {
-    // Proxy para redirigir peticiones de la API al backend
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
@@ -55,9 +77,5 @@ export default defineConfig({
         secure: false,
       },
     },
-  },
-  // Configuración de dependencias preparadas (por ej: lucide-vue-next, dexie)
-  optimizeDeps: {
-    include: ['lucide-vue-next', 'dexie'],
   },
 });
