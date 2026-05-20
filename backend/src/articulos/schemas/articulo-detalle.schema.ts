@@ -19,6 +19,9 @@ export class ArticuloDetalle {
 
   @Prop({ type: Object })
   plagiarism_report: any;
+
+  @Prop({ type: Object })
+  ethics_report: any;
 }
 
 export const ArticuloDetalleSchema =

@@ -190,6 +190,8 @@ export class ArticulosService {
       pdf_url?: string;
       keywords?: string[];
       plagiarism_report?: any;
+      ethics_report?: any;
+      embeddings?: number[];
     },
   ) {
     const articulo = await this.articuloRepository.findOne({ where: { id } });
@@ -230,6 +232,16 @@ export class ArticulosService {
 
     if (updateData.plagiarism_report !== undefined) {
       mongoUpdate.plagiarism_report = updateData.plagiarism_report;
+      hasMongoUpdate = true;
+    }
+
+    if (updateData.ethics_report !== undefined) {
+      mongoUpdate.ethics_report = updateData.ethics_report;
+      hasMongoUpdate = true;
+    }
+
+    if (updateData.embeddings !== undefined) {
+      mongoUpdate.embeddings = updateData.embeddings;
       hasMongoUpdate = true;
     }
 

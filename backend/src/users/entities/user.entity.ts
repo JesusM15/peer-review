@@ -5,8 +5,10 @@ import {
   BeforeInsert,
   BeforeUpdate,
   OneToMany,
+  OneToOne,
 } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
+import { Perfil } from './perfil.entity';
 
 export enum Rol {
   AUTOR = 'Autor',
@@ -33,6 +35,9 @@ export class User {
 
   @Column({ type: 'varchar', length: 50, default: Rol.AUTOR })
   rol: Rol;
+
+  @OneToOne(() => Perfil, (perfil) => perfil.user)
+  perfil?: Perfil;
 
   @BeforeInsert()
   @BeforeUpdate()

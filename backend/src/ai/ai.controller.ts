@@ -11,6 +11,8 @@ import {
 import * as path from 'path';
 import { LLMService } from './services/llm.service';
 import { PlagiarismService } from './services/plagiarism.service';
+import { EthicsService } from './services/ethics.service';
+import { EmbeddingService } from './services/embedding.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AIConfig } from './entities/ai-config.entity';
@@ -23,6 +25,8 @@ export class AIController {
   constructor(
     private readonly llmService: LLMService,
     private readonly plagiarismService: PlagiarismService,
+    private readonly ethicsService: EthicsService,
+    private readonly embeddingService: EmbeddingService,
     private readonly articulosService: ArticulosService,
     @InjectRepository(AIConfig)
     private readonly aiConfigRepository: Repository<AIConfig>,
@@ -34,7 +38,6 @@ export class AIController {
       where: { isActive: true },
     });
     if (!config) {
-      // Crear una configuración por defecto si no existe
       config = this.aiConfigRepository.create({
         isActive: true,
         provider: 'Gemini' as any,
@@ -60,32 +63,102 @@ export class AIController {
 
   @Post('check-plagiarism/:articuloId')
   async checkPlagiarism(@Param('articuloId') articuloId: string) {
-    // 1. Obtener datos del artículo
-    const articulo = await this.articulosService.findOne(articuloId);
-    if (!articulo) {
-      throw new NotFoundException('Artículo no encontrado');
-    }
-
-    // 2. Determinar la ruta del PDF
-    // En el proyecto, los PDFs se guardan en backend/uploads/pdfs/
-    // La pdf_url es algo como /uploads/pdfs/filename.pdf
-    const pdfRelativePath = articulo.pdf_url.replace(
-      /.*\/uploads\//,
-      'uploads/',
-    );
-    const pdfPath = path.join(process.cwd(), pdfRelativePath);
-
-    // 3. Ejecutar análisis
+    const pdfPath = await this.resolvePdfPath(articuloId);
     const report = await this.plagiarismService.analyzeArticle(pdfPath);
 
-    // 4. Guardar reporte en MongoDB (ArticuloDetalle)
     await this.articulosService.update(articuloId, {
-      // @ts-ignore
       plagiarism_report: report,
     });
 
     return report;
   }
-}
 
-import * as path from 'path';
+  @Post('check-plagiarism-similarity/:articuloId')
+  async checkPlagiarismSimilarity(
+    @Param('articuloId') articuloId: string,
+    @Body() body: { topK?: number; threshold?: number } = {},
+  ) {
+    const pdfPath = await this.resolvePdfPath(articuloId);
+    const text = await this.plagiarismService.extractPdfText(pdfPath);
+
+    const result = await this.plagiarismService.analyzeSimilarity(
+      articuloId,
+      text,
+      { topK: body.topK, threshold: body.threshold },
+    );
+
+    await this.articulosService.update(articuloId, {
+      embeddings: result.embedding,
+    });
+
+    return {
+      query_articulo_id: result.query_articulo_id,
+      threshold: result.threshold,
+      hits: result.hits,
+    };
+  }
+
+  @Post('ethics-report/:articuloId')
+  async ethicsReport(@Param('articuloId') articuloId: string) {
+    const pdfPath = await this.resolvePdfPath(articuloId);
+    const report = await this.ethicsService.analyzeArticle(pdfPath);
+
+    await this.articulosService.update(articuloId, {
+      ethics_report: report,
+    });
+
+    return report;
+  }
+
+  @Post('full-analysis/:articuloId')
+  async fullAnalysis(
+    @Param('articuloId') articuloId: string,
+    @Body() body: { topK?: number; threshold?: number } = {},
+  ) {
+    const pdfPath = await this.resolvePdfPath(articuloId);
+    const text = await this.plagiarismService.extractPdfText(pdfPath);
+
+    const [plagiarism, ethics, similarity] = await Promise.all([
+      this.plagiarismService.analyzeText(text),
+      this.ethicsService.analyzeText(text),
+      this.plagiarismService.analyzeSimilarity(articuloId, text, {
+        topK: body.topK,
+        threshold: body.threshold,
+      }),
+    ]);
+
+    await this.articulosService.update(articuloId, {
+      plagiarism_report: plagiarism,
+      ethics_report: ethics,
+      embeddings: similarity.embedding,
+    });
+
+    return {
+      plagiarism_report: plagiarism,
+      ethics_report: ethics,
+      similarity: {
+        query_articulo_id: similarity.query_articulo_id,
+        threshold: similarity.threshold,
+        hits: similarity.hits,
+      },
+    };
+  }
+
+  private async resolvePdfPath(articuloId: string): Promise<string> {
+    const articulo = await this.articulosService.findOne(articuloId);
+    if (!articulo) {
+      throw new NotFoundException('Artículo no encontrado');
+    }
+    if (!articulo.pdf_url) {
+      throw new NotFoundException(
+        'El artículo no tiene un PDF asociado para analizar.',
+      );
+    }
+
+    const pdfRelativePath = articulo.pdf_url.replace(
+      /.*\/uploads\//,
+      'uploads/',
+    );
+    return path.join(process.cwd(), pdfRelativePath);
+  }
+}

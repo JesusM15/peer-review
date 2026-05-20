@@ -5,7 +5,7 @@ import { useAuthStore } from './auth';
 export const useAIStore = defineStore('ai', () => {
   const authStore = useAuthStore();
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-  
+
   const config = ref({
     provider: 'Gemini',
     apiKey: '',
@@ -13,16 +13,21 @@ export const useAIStore = defineStore('ai', () => {
     baseUrl: '',
     temperature: 0.7,
     maxTokens: 2048,
-    isActive: true
+    isActive: true,
   });
 
   const loading = ref(false);
 
+  const authHeaders = (extra: Record<string, string> = {}) => ({
+    Authorization: `Bearer ${authStore.token}`,
+    ...extra,
+  });
+
   const fetchConfig = async () => {
-    loading.ref = true;
+    loading.value = true;
     try {
       const response = await fetch(`${API_URL}/ai/config`, {
-        headers: { 'Authorization': `Bearer ${authStore.token}` }
+        headers: authHeaders(),
       });
       if (response.ok) {
         config.value = await response.json();
@@ -39,11 +44,8 @@ export const useAIStore = defineStore('ai', () => {
     try {
       const response = await fetch(`${API_URL}/ai/config`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authStore.token}`
-        },
-        body: JSON.stringify(newConfig)
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(newConfig),
       });
       if (response.ok) {
         config.value = await response.json();
@@ -61,10 +63,13 @@ export const useAIStore = defineStore('ai', () => {
   const checkPlagiarism = async (articuloId: string) => {
     loading.value = true;
     try {
-      const response = await fetch(`${API_URL}/ai/check-plagiarism/${articuloId}`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${authStore.token}` }
-      });
+      const response = await fetch(
+        `${API_URL}/ai/check-plagiarism/${articuloId}`,
+        {
+          method: 'POST',
+          headers: authHeaders(),
+        },
+      );
       if (response.ok) {
         return await response.json();
       }
@@ -77,11 +82,88 @@ export const useAIStore = defineStore('ai', () => {
     }
   };
 
+  const checkPlagiarismSimilarity = async (
+    articuloId: string,
+    options: { topK?: number; threshold?: number } = {},
+  ) => {
+    loading.value = true;
+    try {
+      const response = await fetch(
+        `${API_URL}/ai/check-plagiarism-similarity/${articuloId}`,
+        {
+          method: 'POST',
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify(options),
+        },
+      );
+      if (response.ok) {
+        return await response.json();
+      }
+      throw new Error('Error en el análisis de similitud');
+    } catch (error) {
+      console.error('Error checking similarity:', error);
+      throw error;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const ethicsReport = async (articuloId: string) => {
+    loading.value = true;
+    try {
+      const response = await fetch(
+        `${API_URL}/ai/ethics-report/${articuloId}`,
+        {
+          method: 'POST',
+          headers: authHeaders(),
+        },
+      );
+      if (response.ok) {
+        return await response.json();
+      }
+      throw new Error('Error en el reporte de alertas éticas');
+    } catch (error) {
+      console.error('Error generating ethics report:', error);
+      throw error;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const fullAnalysis = async (
+    articuloId: string,
+    options: { topK?: number; threshold?: number } = {},
+  ) => {
+    loading.value = true;
+    try {
+      const response = await fetch(
+        `${API_URL}/ai/full-analysis/${articuloId}`,
+        {
+          method: 'POST',
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify(options),
+        },
+      );
+      if (response.ok) {
+        return await response.json();
+      }
+      throw new Error('Error en el análisis completo');
+    } catch (error) {
+      console.error('Error running full analysis:', error);
+      throw error;
+    } finally {
+      loading.value = false;
+    }
+  };
+
   return {
     config,
     loading,
     fetchConfig,
     updateConfig,
-    checkPlagiarism
+    checkPlagiarism,
+    checkPlagiarismSimilarity,
+    ethicsReport,
+    fullAnalysis,
   };
 });
