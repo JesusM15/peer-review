@@ -10,8 +10,19 @@ import { EditorTag } from '../congresos/entities/editor-tag.entity';
 
 const AppDataSource = new DataSource({
   type: 'mariadb',
-  url: process.env.MARIADB_URI || 'mysql://dbuser:dbpassword@peer_review_mariadb:3306/peer_review_db',
-  entities: [User, Perfil, Articulo, Asignacion, Congreso, Tag, UsuarioCongresoRol, EditorTag],
+  url:
+    process.env.MARIADB_URI ||
+    'mysql://dbuser:dbpassword@peer_review_mariadb:3306/peer_review_db',
+  entities: [
+    User,
+    Perfil,
+    Articulo,
+    Asignacion,
+    Congreso,
+    Tag,
+    UsuarioCongresoRol,
+    EditorTag,
+  ],
   synchronize: false,
 });
 
@@ -49,12 +60,12 @@ async function repair() {
     console.log('👥 Generando perfiles para usuarios existentes...');
     const userRepo = AppDataSource.getRepository(User);
     const users = await userRepo.find();
-    
+
     for (const user of users) {
       console.log(`[+] Creando perfil para: ${user.nombre}`);
       await queryRunner.query(
-        "INSERT INTO perfiles (id, nombre, carrera, especialidades) VALUES (?, ?, ?, ?)",
-        [user.id, user.nombre, 'Ingeniería', 'General']
+        'INSERT INTO perfiles (id, nombre, carrera, especialidades) VALUES (?, ?, ?, ?)',
+        [user.id, user.nombre, 'Ingeniería', 'General'],
       );
     }
 

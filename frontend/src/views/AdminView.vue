@@ -38,6 +38,13 @@
           Solicitudes de Congreso
           <span v-if="solicitudesPendientesCount > 0" class="nav-badge">{{ solicitudesPendientesCount }}</span>
         </button>
+        <button class="nav-item" :class="{ active: currentView === 'ai-settings' }" id="nav-admin-ai" @click="currentView = 'ai-settings'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M12 2a10 10 0 100 20 10 10 0 000-20zM12 6a6 6 0 110 12 6 6 0 010-12z" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 8v4l3 3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Configuración IA
+        </button>
       </nav>
 
       <div class="sidebar-footer relative-footer">
@@ -391,6 +398,90 @@
           </div>
         </div>
       </template>
+
+      <!-- ─── CONFIGURACIÓN IA ────────────────────────── -->
+      <template v-if="currentView === 'ai-settings'">
+        <header class="topbar">
+          <div>
+            <h1 class="page-title">Configuración de Inteligencia Artificial</h1>
+            <p class="page-sub">Gestiona los modelos de lenguaje y parámetros para detección de plagio.</p>
+          </div>
+        </header>
+
+        <div class="ai-config-container">
+          <div class="sc-card">
+            <div class="sc-card-header">
+              <h3 class="sc-card-title">Proveedor de LLM</h3>
+              <span class="sc-badge" :class="aiStore.config.isActive ? 'aprobado' : 'rechazado'">
+                {{ aiStore.config.isActive ? 'Activo' : 'Inactivo' }}
+              </span>
+            </div>
+            <div class="sc-card-body">
+              <form @submit.prevent="saveAIConfig" class="ai-form">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label>Proveedor</label>
+                    <select v-model="aiForm.provider" class="custom-select">
+                      <option value="Gemini">Google Gemini</option>
+                      <option value="Groq">Groq</option>
+                      <option value="Ollama">Ollama (Local)</option>
+                    </select>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label>Modelo</label>
+                    <input v-model="aiForm.modelName" placeholder="ej. gemini-1.5-flash" />
+                  </div>
+
+                  <div class="form-group full-width" v-if="aiForm.provider !== 'Ollama'">
+                    <label>API Key</label>
+                    <div class="password-input">
+                      <input 
+                        :type="showApiKey ? 'text' : 'password'" 
+                        v-model="aiForm.apiKey" 
+                        placeholder="Ingresa tu clave de API"
+                      />
+                      <button type="button" @click="showApiKey = !showApiKey">
+                        {{ showApiKey ? 'Ocultar' : 'Mostrar' }}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="form-group full-width" v-if="aiForm.provider === 'Ollama'">
+                    <label>Base URL</label>
+                    <input v-model="aiForm.baseUrl" placeholder="http://localhost:11434" />
+                  </div>
+
+                  <div class="form-group">
+                    <label>Temperatura ({{ aiForm.temperature }})</label>
+                    <input type="range" v-model.number="aiForm.temperature" min="0" max="1" step="0.1" />
+                  </div>
+
+                  <div class="form-group">
+                    <label>Máximo de Tokens</label>
+                    <input type="number" v-model.number="aiForm.maxTokens" />
+                  </div>
+                </div>
+
+                <div class="ai-actions">
+                  <button type="submit" class="btn-primary" :disabled="aiStore.loading">
+                    {{ aiStore.loading ? 'Guardando...' : 'Guardar Configuración' }}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div class="info-card">
+            <h4>💡 Recomendaciones</h4>
+            <ul>
+              <li><strong>Gemini 1.5 Flash:</strong> Recomendado por su gran ventana de contexto (1M tokens). Ideal para artículos largos.</li>
+              <li><strong>Groq:</strong> Increíblemente rápido, pero con límites de tokens más estrictos.</li>
+              <li><strong>Ollama:</strong> Usa tus propios recursos locales. Totalmente gratuito y privado.</li>
+            </ul>
+          </div>
+        </div>
+      </template>
     </main>
 
     <!-- Create/Edit Modal -->
@@ -441,6 +532,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { useCongressStore } from '../stores/congress';
+import { useAIStore } from '../stores/ai';
 import { useTheme } from '../composables/useTheme';
 import { Pie, Bar } from 'vue-chartjs';
 import { Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend, Title } from 'chart.js';
@@ -450,6 +542,7 @@ ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Le
 const router = useRouter();
 const authStore = useAuthStore();
 const congressStore = useCongressStore();
+const aiStore = useAIStore();
 const { isDark, toggleTheme } = useTheme();
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -469,6 +562,15 @@ const articleStats = ref<{
   activityByDay: { day: string; count: number }[];
 } | null>(null);
 const reviewerWorkload = ref<{nombre: string; articulos_asignados: number; email: string}[]>([]);
+const showApiKey = ref(false);
+const aiForm = ref({
+  provider: 'Gemini',
+  apiKey: '',
+  modelName: 'gemini-1.5-flash',
+  baseUrl: '',
+  temperature: 0.7,
+  maxTokens: 2048
+});
 const currentUser = computed(() => authStore.user);
 const userInitial = computed(() => currentUser.value?.nombre?.[0]?.toUpperCase() || 'A');
 
@@ -755,6 +857,31 @@ const submitUser = async () => {
   }
 };
 
+const saveAIConfig = async () => {
+  const success = await aiStore.updateConfig(aiForm.value);
+  if (success) {
+    alert('Configuración de IA guardada con éxito');
+  } else {
+    alert('Error al guardar la configuración');
+  }
+};
+
+const getPlagioClass = (score: number) => {
+  if (score < 15) return 'plagio-low';
+  if (score < 40) return 'plagio-mid';
+  return 'plagio-high';
+};
+
+const checkPlagiarism = async (id: string) => {
+  try {
+    const report = await aiStore.checkPlagiarism(id);
+    alert(`Análisis completado: ${report.score}% de similitud detectada.`);
+    loadArticles(); // Recargar lista
+  } catch (error) {
+    alert('Error al realizar el análisis');
+  }
+};
+
 const editUser = (user: any) => {
   userForm.value = { ...user, password: '' };
   showEditModal.value = true;
@@ -970,15 +1097,18 @@ const formatDateOnly = (iso?: string) => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
   if (!authStore.isAuthenticated || authStore.userRole !== 'Admin') {
     router.push('/login');
     return;
   }
-  loadUsers();
-  loadStats();
-  loadArticleStats();
-  loadReviewerWorkload();
+  await loadUsers();
+  await loadStats();
+  await loadArticleStats();
+  await loadReviewerWorkload();
+  await aiStore.fetchConfig();
+  // Sincronizar form con store
+  aiForm.value = { ...aiStore.config };
   cargarSolicitudesCongreso();
   cargarNotificaciones();
 });
@@ -1648,4 +1778,121 @@ onMounted(() => {
   .sc-btn.approve { background: #10914c; color: #fff; border-color: #10914c; }
   .sc-btn.reject { background: transparent; color: #dc2626; border-color: #dc2626; }
   .sc-btn:hover { opacity: 0.85; }
+
+/* AI Config Styles */
+.ai-config-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding: 2rem;
+  max-width: 800px;
+}
+
+.ai-form .form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.ai-form .full-width {
+  grid-column: span 2;
+}
+
+.ai-form label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.ai-form input, .ai-form select {
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-normal);
+  font-size: 0.9rem;
+}
+
+.password-input {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.password-input button {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  padding: 0 1rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.ai-actions {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.info-card {
+  background: rgba(59, 130, 246, 0.05);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  padding: 1.5rem;
+  border-radius: 8px;
+}
+
+.info-card h4 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #3b82f6;
+  font-size: 1rem;
+}
+
+.info-card ul {
+  padding-left: 1.25rem;
+  margin: 0;
+}
+
+.info-card li {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.sc-badge.aprobado {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.sc-badge.rechazado {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.plagio-low {
+  color: #10b981;
+  font-weight: 700;
+}
+
+.plagio-mid {
+  color: #f59e0b;
+  font-weight: 700;
+}
+
+.plagio-high {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.btn-text {
+  background: none;
+  border: none;
+  color: #3b82f6;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
 </style>

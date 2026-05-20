@@ -10,7 +10,7 @@ import { Asignacion } from '../asignaciones/entities/asignacion.entity';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
- * MIGRACIÓN SPRINT 3: 
+ * MIGRACIÓN SPRINT 3:
  * 1. Crear manualmente las nuevas tablas para evitar conflictos de sincronización.
  * 2. Crear un Congreso por defecto.
  * 3. Migrar usuarios existentes al Congreso por defecto manteniendo sus roles.
@@ -19,8 +19,19 @@ import { v4 as uuidv4 } from 'uuid';
 
 const AppDataSource = new DataSource({
   type: 'mariadb',
-  url: process.env.MARIADB_URI || 'mysql://dbuser:dbpassword@localhost:3307/peer_review_db',
-  entities: [User, Perfil, Congreso, Tag, UsuarioCongresoRol, EditorTag, Articulo, Asignacion],
+  url:
+    process.env.MARIADB_URI ||
+    'mysql://dbuser:dbpassword@localhost:3307/peer_review_db',
+  entities: [
+    User,
+    Perfil,
+    Congreso,
+    Tag,
+    UsuarioCongresoRol,
+    EditorTag,
+    Articulo,
+    Asignacion,
+  ],
   synchronize: false, // Desactivamos sync para evitar que TypeORM intente alterar tablas existentes con datos
 });
 
@@ -82,7 +93,10 @@ async function runMigration() {
 
     // 5. Agregar congreso_id a articulos si no existe
     const tableArticulos = await queryRunner.getTable('articulos');
-    if (tableArticulos && !tableArticulos.columns.find(c => c.name === 'congreso_id')) {
+    if (
+      tableArticulos &&
+      !tableArticulos.columns.find((c) => c.name === 'congreso_id')
+    ) {
       console.log('➕ Agregando columna congreso_id a la tabla articulos...');
       await queryRunner.query(`
         ALTER TABLE \`articulos\` 
@@ -100,7 +114,9 @@ async function runMigration() {
     const articuloRepo = AppDataSource.getRepository(Articulo);
 
     // 1. Crear Congreso por defecto si no hay ninguno
-    let defaultCongreso = await congresoRepo.findOne({ where: { nombre: 'Congreso Fundacional 2026' } });
+    let defaultCongreso = await congresoRepo.findOne({
+      where: { nombre: 'Congreso Fundacional 2026' },
+    });
     if (!defaultCongreso) {
       console.log('🏠 Creando Congreso por defecto...');
       defaultCongreso = congresoRepo.create({
@@ -119,7 +135,9 @@ async function runMigration() {
     console.log(`👥 Migrando roles de ${users.length} usuarios al congreso...`);
     let userCount = 0;
     for (const user of users) {
-      const existingUCR = await ucrRepo.findOne({ where: { user_id: user.id, congreso_id: defaultCongreso.id } });
+      const existingUCR = await ucrRepo.findOne({
+        where: { user_id: user.id, congreso_id: defaultCongreso.id },
+      });
       if (!existingUCR) {
         const ucr = ucrRepo.create({
           id: uuidv4(),
@@ -147,7 +165,6 @@ async function runMigration() {
     console.log(`✅ ${artCount} artículos actualizados.`);
 
     console.log('\n🎉 Migración Sprint 3 finalizada con éxito.');
-
   } catch (error) {
     console.error('❌ Error fatal en migración Sprint 3:', error);
     process.exit(1);

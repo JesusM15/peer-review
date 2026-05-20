@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { SolicitudesService } from './solicitudes.service';
 import { EstadoSolicitud } from './entities/solicitud-rol.entity';
 import { Rol } from '../users/entities/user.entity';
@@ -13,7 +22,7 @@ export class SolicitudesController {
   @Post()
   create(
     @Body() body: { congreso_id: string; rol_solicitado: Rol; motivo?: string },
-    @Request() req: AuthRequest
+    @Request() req: AuthRequest,
   ) {
     return this.solicitudesService.create(req.user.id, body);
   }
@@ -21,16 +30,13 @@ export class SolicitudesController {
   @Get('congreso/:congreso_id')
   findAllByCongreso(
     @Param('congreso_id') congreso_id: string,
-    @Request() req: AuthRequest
+    @Request() req: AuthRequest,
   ) {
     return this.solicitudesService.findAllByCongreso(congreso_id, req.user.id);
   }
 
   @Get('usuario/:user_id')
-  findByUser(
-    @Param('user_id') user_id: string,
-    @Request() req: AuthRequest
-  ) {
+  findByUser(@Param('user_id') user_id: string, @Request() req: AuthRequest) {
     return this.solicitudesService.findByUser(user_id, req.user.id);
   }
 
@@ -38,7 +44,7 @@ export class SolicitudesController {
   resolve(
     @Param('id') id: string,
     @Body() body: { estado: EstadoSolicitud; respuesta?: string },
-    @Request() req: AuthRequest
+    @Request() req: AuthRequest,
   ) {
     return this.solicitudesService.resolve(id, req.user.id, body);
   }

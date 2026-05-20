@@ -1,11 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { StaffMessage, StaffMessageDocument } from './schemas/staff-message.schema';
+import {
+  StaffMessage,
+  StaffMessageDocument,
+} from './schemas/staff-message.schema';
 
 @Injectable()
 export class StaffChatService {
-  constructor(@InjectModel(StaffMessage.name) private staffModel: Model<StaffMessageDocument>) {}
+  constructor(
+    @InjectModel(StaffMessage.name)
+    private staffModel: Model<StaffMessageDocument>,
+  ) {}
 
   async saveMessage(data: Partial<StaffMessage>) {
     const doc = new this.staffModel(data);
@@ -17,7 +23,11 @@ export class StaffChatService {
     if (before) {
       query.createdAt = { $lt: new Date(before) };
     }
-    const docs = await this.staffModel.find(query).sort({ createdAt: -1 }).limit(limit).lean();
+    const docs = await this.staffModel
+      .find(query)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
     return docs;
   }
 }

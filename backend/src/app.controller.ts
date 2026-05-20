@@ -15,7 +15,7 @@ export class AppController {
     return {
       message: '¡Pong! 🏓 Comunicación exitosa con NestJS en Docker',
       status: 'success',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
 }

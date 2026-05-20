@@ -16,6 +16,10 @@ export class ArticuloDetalle {
 
   @Prop({ type: [String] })
   keywords: string[];
+
+  @Prop({ type: Object })
+  plagiarism_report: any;
 }
 
-export const ArticuloDetalleSchema = SchemaFactory.createForClass(ArticuloDetalle);
+export const ArticuloDetalleSchema =
+  SchemaFactory.createForClass(ArticuloDetalle);

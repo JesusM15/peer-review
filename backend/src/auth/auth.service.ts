@@ -1,4 +1,9 @@
-import { Injectable, ConflictException, UnauthorizedException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  UnauthorizedException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
@@ -23,7 +28,9 @@ export class AuthService {
 
     // No permitir registro público de usuarios Admin
     if (rol === Rol.ADMIN) {
-      throw new ForbiddenException('No se permite registrar usuarios Admin desde el registro público. Solo un admin existente puede crear otros admins.');
+      throw new ForbiddenException(
+        'No se permite registrar usuarios Admin desde el registro público. Solo un admin existente puede crear otros admins.',
+      );
     }
 
     // Verificar si el email ya existe

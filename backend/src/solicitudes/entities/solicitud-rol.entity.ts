@@ -1,4 +1,11 @@
-import { Entity, PrimaryColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { User, Rol } from '../../users/entities/user.entity';
 import { Congreso } from '../../congresos/entities/congreso.entity';
 
@@ -22,7 +29,11 @@ export class SolicitudRol {
   @Column({ type: 'enum', enum: Rol })
   rol_solicitado: Rol;
 
-  @Column({ type: 'enum', enum: EstadoSolicitud, default: EstadoSolicitud.PENDIENTE })
+  @Column({
+    type: 'enum',
+    enum: EstadoSolicitud,
+    default: EstadoSolicitud.PENDIENTE,
+  })
   estado: EstadoSolicitud;
 
   @Column({ type: 'text', nullable: true })

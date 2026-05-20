@@ -1,12 +1,22 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Articulo, EstadoArticulo } from './entities/articulo.entity';
 import { ArticuloTag } from './entities/articulo-tag.entity';
-import { ArticuloDetalle, ArticuloDetalleDocument } from './schemas/articulo-detalle.schema';
-import { Revision, RevisionDocument } from '../asignaciones/schemas/revision.schema';
+import {
+  ArticuloDetalle,
+  ArticuloDetalleDocument,
+} from './schemas/articulo-detalle.schema';
+import {
+  Revision,
+  RevisionDocument,
+} from '../asignaciones/schemas/revision.schema';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -53,7 +63,7 @@ export class ArticulosService {
         embeddings: [],
         keywords: keywords || [],
       });
-      
+
       // Guardar en MongoDB (Mongoose)
       await nuevoDetalle.save();
 
@@ -64,14 +74,19 @@ export class ArticulosService {
     } catch (error) {
       throw new InternalServerErrorException(
         'Error al realizar la doble inserción en MariaDB y MongoDB',
-        error instanceof Error ? error.message : String(error)
+        error instanceof Error ? error.message : String(error),
       );
     }
   }
 
-  async findAll(filters: { autor_id?: string; congreso_id?: string; estado?: EstadoArticulo, include_relations?: boolean }) {
+  async findAll(filters: {
+    autor_id?: string;
+    congreso_id?: string;
+    estado?: EstadoArticulo;
+    include_relations?: boolean;
+  }) {
     const query = this.articuloRepository.createQueryBuilder('articulo');
-    
+
     if (filters.include_relations) {
       query.leftJoinAndSelect('articulo.asignaciones', 'asignacion');
       query.leftJoinAndSelect('asignacion.revisor', 'revisor');
@@ -83,36 +98,45 @@ export class ArticulosService {
     }
 
     if (filters.congreso_id) {
-      query.andWhere('articulo.congreso_id = :congreso', { congreso: filters.congreso_id });
+      query.andWhere('articulo.congreso_id = :congreso', {
+        congreso: filters.congreso_id,
+      });
     }
-    
+
     if (filters.estado) {
       query.andWhere('articulo.estado = :estado', { estado: filters.estado });
     }
 
     const articulos = await query.getMany();
-    
+
     if (articulos.length === 0) return [];
 
-    const ids = articulos.map(a => a.id);
-    const detalles = await this.articuloDetalleModel.find({ _id: { $in: ids } });
-    
+    const ids = articulos.map((a) => a.id);
+    const detalles = await this.articuloDetalleModel.find({
+      _id: { $in: ids },
+    });
+
     let revisiones: RevisionDocument[] = [];
     if (filters.include_relations) {
-      revisiones = await this.revisionModel.find({ articulo_id: { $in: ids } }).exec();
+      revisiones = await this.revisionModel
+        .find({ articulo_id: { $in: ids } })
+        .exec();
     }
 
-    return articulos.map(articulo => {
-      const detalle = detalles.find(d => d._id === articulo.id);
-      
+    return articulos.map((articulo) => {
+      const detalle = detalles.find((d) => d._id === articulo.id);
+
       const payload: any = {
         ...articulo,
         pdf_url: detalle?.pdf_url || '',
         keywords: detalle?.keywords || [],
+        plagiarism_report: detalle?.plagiarism_report || null,
       };
 
-      if (filters.include_relations) { 
-        payload.revisiones = revisiones.filter(r => r.articulo_id === articulo.id);
+      if (filters.include_relations) {
+        payload.revisiones = revisiones.filter(
+          (r) => r.articulo_id === articulo.id,
+        );
       }
 
       return payload;
@@ -120,7 +144,8 @@ export class ArticulosService {
   }
 
   async findOne(id: string, include_relations: boolean = false) {
-    const query = this.articuloRepository.createQueryBuilder('articulo')
+    const query = this.articuloRepository
+      .createQueryBuilder('articulo')
       .where('articulo.id = :id', { id });
 
     if (include_relations) {
@@ -130,13 +155,13 @@ export class ArticulosService {
     }
 
     const articulo = await query.getOne();
-    
+
     if (!articulo) {
       throw new NotFoundException(`Articulo con ID ${id} no encontrado`);
     }
 
     const detalle = await this.articuloDetalleModel.findById(id).exec();
-    
+
     let revisiones: RevisionDocument[] = [];
     if (include_relations) {
       revisiones = await this.revisionModel.find({ articulo_id: id }).exec();
@@ -147,6 +172,7 @@ export class ArticulosService {
       pdf_url: detalle?.pdf_url || '',
       keywords: detalle?.keywords || [],
       embeddings: detalle?.embeddings || [],
+      plagiarism_report: detalle?.plagiarism_report || null,
     };
 
     if (include_relations) {
@@ -156,9 +182,18 @@ export class ArticulosService {
     return payload;
   }
 
-  async update(id: string, updateData: { titulo?: string; estado?: EstadoArticulo; pdf_url?: string; keywords?: string[] }) {
+  async update(
+    id: string,
+    updateData: {
+      titulo?: string;
+      estado?: EstadoArticulo;
+      pdf_url?: string;
+      keywords?: string[];
+      plagiarism_report?: any;
+    },
+  ) {
     const articulo = await this.articuloRepository.findOne({ where: { id } });
-    
+
     if (!articulo) {
       throw new NotFoundException(`Articulo con ID ${id} no encontrado`);
     }
@@ -170,7 +205,7 @@ export class ArticulosService {
       articulo.titulo = titulo;
       hasMariaUpdate = true;
     }
-    
+
     if (estado !== undefined) {
       articulo.estado = estado;
       hasMariaUpdate = true;
@@ -182,20 +217,27 @@ export class ArticulosService {
 
     let hasMongoUpdate = false;
     const mongoUpdate: any = {};
-    
+
     if (pdf_url !== undefined) {
       mongoUpdate.pdf_url = pdf_url;
       hasMongoUpdate = true;
     }
-    
+
     if (keywords !== undefined) {
       mongoUpdate.keywords = keywords;
       hasMongoUpdate = true;
     }
 
+    if (updateData.plagiarism_report !== undefined) {
+      mongoUpdate.plagiarism_report = updateData.plagiarism_report;
+      hasMongoUpdate = true;
+    }
+
     let detalle: ArticuloDetalleDocument | null = null;
     if (hasMongoUpdate) {
-      detalle = await this.articuloDetalleModel.findByIdAndUpdate(id, mongoUpdate, { new: true }).exec();
+      detalle = await this.articuloDetalleModel
+        .findByIdAndUpdate(id, mongoUpdate, { new: true })
+        .exec();
     } else {
       detalle = await this.articuloDetalleModel.findById(id).exec();
     }
@@ -204,12 +246,13 @@ export class ArticulosService {
       ...articulo,
       pdf_url: detalle?.pdf_url || '',
       keywords: detalle?.keywords || [],
+      plagiarism_report: detalle?.plagiarism_report || null,
     };
   }
 
   async remove(id: string) {
     const articulo = await this.articuloRepository.findOne({ where: { id } });
-    
+
     if (!articulo) {
       throw new NotFoundException(`Articulo con ID ${id} no encontrado`);
     }
@@ -219,19 +262,41 @@ export class ArticulosService {
       await this.articuloDetalleModel.findByIdAndDelete(id).exec();
       return { message: `Articulo con ID ${id} eliminado correctamente` };
     } catch (error) {
-      throw new InternalServerErrorException('Error al eliminar el artículo', error instanceof Error ? error.message : String(error));
+      throw new InternalServerErrorException(
+        'Error al eliminar el artículo',
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
 
   async getStats() {
     // 1. Artículos por estado
-    const allArticles = await this.articuloRepository.find({ relations: ['autor'] });
-    
+    const allArticles = await this.articuloRepository.find({
+      relations: ['autor'],
+    });
+
     const articlesByStatus = {
-      Borrador: allArticles.filter(a => a.estado === EstadoArticulo.BORRADOR || (a.estado as any) === 'Borrador').length,
-      EnRevision: allArticles.filter(a => a.estado === EstadoArticulo.EN_REVISION || (a.estado as any) === 'En Revisión' || (a.estado as any) === 'En_Revision').length,
-      Aceptado: allArticles.filter(a => a.estado === EstadoArticulo.ACEPTADO || (a.estado as any) === 'Aceptado').length,
-      Rechazado: allArticles.filter(a => a.estado === EstadoArticulo.RECHAZADO || (a.estado as any) === 'Rechazado').length,
+      Borrador: allArticles.filter(
+        (a) =>
+          a.estado === EstadoArticulo.BORRADOR ||
+          (a.estado as any) === 'Borrador',
+      ).length,
+      EnRevision: allArticles.filter(
+        (a) =>
+          a.estado === EstadoArticulo.EN_REVISION ||
+          (a.estado as any) === 'En Revisión' ||
+          (a.estado as any) === 'En_Revision',
+      ).length,
+      Aceptado: allArticles.filter(
+        (a) =>
+          a.estado === EstadoArticulo.ACEPTADO ||
+          (a.estado as any) === 'Aceptado',
+      ).length,
+      Rechazado: allArticles.filter(
+        (a) =>
+          a.estado === EstadoArticulo.RECHAZADO ||
+          (a.estado as any) === 'Rechazado',
+      ).length,
     };
 
     // 2. Top 5 autores con más artículos
@@ -251,10 +316,16 @@ export class ArticulosService {
     // 3. Métricas generales
     const totalArticles = allArticles.length;
     const articlesNeedingReview = articlesByStatus.EnRevision;
-    const completedArticles = articlesByStatus.Aceptado + articlesByStatus.Rechazado;
-    const acceptanceRate = totalArticles > 0 
-      ? Math.round((articlesByStatus.Aceptado / (articlesByStatus.Aceptado + articlesByStatus.Rechazado || 1)) * 100) 
-      : 0;
+    const completedArticles =
+      articlesByStatus.Aceptado + articlesByStatus.Rechazado;
+    const acceptanceRate =
+      totalArticles > 0
+        ? Math.round(
+            (articlesByStatus.Aceptado /
+              (articlesByStatus.Aceptado + articlesByStatus.Rechazado || 1)) *
+              100,
+          )
+        : 0;
 
     // 4. Actividad simulada por día (últimos 7 días)
     // Como no hay campo de fecha, generamos datos de ejemplo
@@ -282,16 +353,23 @@ export class ArticulosService {
   /**
    * Asigna una etiqueta a un artículo
    */
-  async addTagToArticle(articuloId: string, tagId: string): Promise<ArticuloTag> {
+  async addTagToArticle(
+    articuloId: string,
+    tagId: string,
+  ): Promise<ArticuloTag> {
     // Verificar que el artículo existe
-    const articulo = await this.articuloRepository.findOne({ where: { id: articuloId } });
+    const articulo = await this.articuloRepository.findOne({
+      where: { id: articuloId },
+    });
     if (!articulo) {
-      throw new NotFoundException(`Artículo con ID ${articuloId} no encontrado`);
+      throw new NotFoundException(
+        `Artículo con ID ${articuloId} no encontrado`,
+      );
     }
 
     // Verificar que la etiqueta no esté ya asignada
     const existing = await this.articuloTagRepository.findOne({
-      where: { articulo_id: articuloId, tag_id: tagId }
+      where: { articulo_id: articuloId, tag_id: tagId },
     });
     if (existing) {
       throw new Error('La etiqueta ya está asignada a este artículo');
@@ -312,7 +390,7 @@ export class ArticulosService {
   async getArticleTags(articuloId: string): Promise<ArticuloTag[]> {
     return this.articuloTagRepository.find({
       where: { articulo_id: articuloId },
-      relations: ['tag']
+      relations: ['tag'],
     });
   }
 
@@ -321,10 +399,12 @@ export class ArticulosService {
    */
   async removeTagFromArticle(articuloTagId: string): Promise<void> {
     const articuloTag = await this.articuloTagRepository.findOne({
-      where: { id: articuloTagId }
+      where: { id: articuloTagId },
     });
     if (!articuloTag) {
-      throw new NotFoundException('Asignación de etiqueta a artículo no encontrada');
+      throw new NotFoundException(
+        'Asignación de etiqueta a artículo no encontrada',
+      );
     }
     await this.articuloTagRepository.remove(articuloTag);
   }
