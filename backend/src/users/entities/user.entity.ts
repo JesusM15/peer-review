@@ -35,14 +35,11 @@ export class User {
   @BeforeInsert()
   @BeforeUpdate()
   async hashPassword() {
-<<<<<<< HEAD
     if (this.password && !this.password.startsWith('$2')) {
       const salt = await bcrypt.genSalt(10);
       this.password = await bcrypt.hash(this.password, salt);
-=======
     if (!this.password) {
       return;
->>>>>>> master
     }
 
     // Evitar re-hashear una contraseña ya hasheada al guardar solo cambios de rol/email.
