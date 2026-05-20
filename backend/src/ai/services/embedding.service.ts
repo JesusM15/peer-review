@@ -9,7 +9,8 @@ import {
 } from '../../articulos/schemas/articulo-detalle.schema';
 import { AIConfig, AIProvider } from '../entities/ai-config.entity';
 
-const DEFAULT_GEMINI_EMBEDDING_MODEL = 'text-embedding-004';
+const DEFAULT_GEMINI_EMBEDDING_MODEL =
+  process.env.GEMINI_EMBEDDING_MODEL || 'gemini-embedding-001';
 
 @Injectable()
 export class EmbeddingService {
