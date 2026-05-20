@@ -159,32 +159,30 @@ const goBack = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+  background: var(--bg-base);
   padding: 2rem;
 }
 
 .register-card {
-  background: #111;
-  border: 1px solid #333;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 16px;
   padding: 3rem;
   width: 100%;
   max-width: 450px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
 h1 {
   font-size: 2rem;
   font-weight: 800;
-  background: -webkit-linear-gradient(120deg, #ffffff, #888888);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--text-strong);
   margin-bottom: 0.5rem;
   text-align: center;
 }
 
 .subtitle {
-  color: #888;
+  color: var(--text-muted);
   text-align: center;
   margin-bottom: 2rem;
   font-size: 0.9rem;
@@ -205,26 +203,26 @@ h1 {
 .form-group label {
   font-size: 0.85rem;
   font-weight: 500;
-  color: #bbb;
+  color: var(--text-normal);
 }
 
 .form-input {
   padding: 0.75rem 1rem;
-  border: 1px solid #333;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  background: #1a1a1a;
-  color: #fff;
+  background: var(--bg-input);
+  color: var(--text-normal);
   font-size: 0.95rem;
   transition: border-color 0.2s;
 }
 
 .form-input:focus {
   outline: none;
-  border-color: #555;
+  border-color: var(--border-focus);
 }
 
 .form-input::placeholder {
-  color: #555;
+  color: var(--text-faint);
 }
 
 .form-input.input-error {
@@ -254,8 +252,8 @@ h1 {
 
 .btn-primary {
   flex: 1;
-  background: #fff;
-  color: #000;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
   border: none;
   padding: 0.875rem;
   border-radius: 8px;
@@ -276,9 +274,9 @@ h1 {
 
 .btn-ghost {
   padding: 0.875rem 1.5rem;
-  border: 1px solid #444;
+  border: 1px solid var(--border-color);
   background: transparent;
-  color: #888;
+  color: var(--text-muted);
   border-radius: 8px;
   font-weight: 500;
   cursor: pointer;
@@ -286,19 +284,19 @@ h1 {
 }
 
 .btn-ghost:hover {
-  border-color: #666;
-  color: #bbb;
+  border-color: var(--border-hover);
+  color: var(--text-normal);
 }
 
 .login-text {
   text-align: center;
-  color: #888;
+  color: var(--text-muted);
   font-size: 0.9rem;
   margin: 1.5rem 0 0 0;
 }
 
 .login-link {
-  color: #fff;
+  color: var(--text-strong);
   text-decoration: none;
   font-weight: 500;
   transition: opacity 0.2s;
