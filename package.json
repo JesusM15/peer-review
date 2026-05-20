@@ -6,6 +6,12 @@
 
     "vue-chartjs": "^5.3.3"
 
+  },
+
+  "devDependencies": {
+
+    "@playwright/test": "^1.60.0"
+
   }
 
 }
