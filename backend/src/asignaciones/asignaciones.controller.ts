@@ -11,10 +11,17 @@ export class AsignacionesController {
   }
 
   @Get()
-  findAll(@Query('include_relations') includeRelations?: string, @Query('revisor_id') revisorId?: string) {
+  findAll(
+    @Query('include_relations') includeRelations?: string,
+    @Query('revisor_id') revisorId?: string,
+    @Query('articulo_id') articuloId?: string,
+  ) {
     const include = includeRelations === 'true';
     if (revisorId) {
       return this.asignacionesService.findByRevisor(revisorId, include);
+    }
+    if (articuloId) {
+      return this.asignacionesService.findByArticulo(articuloId, include);
     }
     return this.asignacionesService.findAll(include);
   }

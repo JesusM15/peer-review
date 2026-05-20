@@ -369,6 +369,13 @@ const { showToast } = useToast()
 const authStore = useAuthStore()
 const congressStore = useCongressStore()
 
+// Helper para headers con JWT
+const authHeaders = (extra: Record<string, string> = {}): Record<string, string> => {
+  const headers: Record<string, string> = { ...extra }
+  if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`
+  return headers
+}
+
 const showUserMenu = ref(false)
 
 const vistaActiva = ref<string>('overview')
@@ -464,7 +471,10 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 const cargarTagsCongreso = async () => {
   if (!congressStore.currentCongressId) return
   try {
-    const response = await fetch(`${API_BASE_URL}/congresos/${congressStore.currentCongressId}`)
+    const response = await fetch(
+      `${API_BASE_URL}/congresos/${congressStore.currentCongressId}`,
+      { headers: authHeaders() },
+    )
     if (!response.ok) return
     const data = await response.json()
     availableTags.value = data.tags || []
@@ -479,23 +489,19 @@ const articleTagNames = (articulo: Articulo) =>
 // ─── Funciones para manejo de artículos ─────────────────────────────────────
 const cargarArticulos = async () => {
   if (!currentUser.value?.id) return
-  
   try {
     loadingArticulos.value = true
-    const response = await fetch(`${API_BASE_URL}/articulos?autor_id=${currentUser.value.id}&include_relations=true`)
-    
+    const response = await fetch(
+      `${API_BASE_URL}/articulos?autor_id=${currentUser.value.id}&include_relations=true`,
+      { headers: authHeaders() },
+    )
     if (!response.ok) throw new Error(`Error HTTP: ${response.status}`)
-    
     const data = await response.json()
-    
-    // Construir URLs completas para los PDFs
     const baseUrl = API_BASE_URL.replace('/api', '')
     articulos.value = data.map((articulo: any) => ({
       ...articulo,
       pdf_url: articulo.pdf_url ? `${baseUrl}${articulo.pdf_url}` : ''
     }))
-    
-    console.log('Artículos cargados:', articulos.value)
   } catch (error) {
     console.error('Error al cargar artículos:', error)
     articulos.value = []
@@ -508,21 +514,15 @@ const verArticulo = async (articuloId: string) => {
   try {
     loadingPdf.value = true
     vistaActiva.value = 'articulo'
-    
-    const response = await fetch(`${API_BASE_URL}/articulos/${articuloId}?include_relations=true`)
-    
+    const response = await fetch(
+      `${API_BASE_URL}/articulos/${articuloId}?include_relations=true`,
+      { headers: authHeaders() },
+    )
     if (!response.ok) throw new Error(`Error HTTP: ${response.status}`)
-    
     const data = await response.json()
-    
-    // Construir URL completa para el PDF
     const baseUrl = API_BASE_URL.replace('/api', '')
-    if (data.pdf_url) {
-      data.pdf_url = `${baseUrl}${data.pdf_url}`
-    }
-    
+    if (data.pdf_url) data.pdf_url = `${baseUrl}${data.pdf_url}`
     articuloActual.value = data
-    console.log('Artículo cargado:', data)
   } catch (error) {
     console.error('Error al cargar artículo:', error)
     showToast('Error al cargar el artículo', 'error')
@@ -554,44 +554,46 @@ const submitArticulo = async () => {
     isLoading.value = true
     const articuloId = generateUUID()
     const autorIdFinal = currentUser.value?.id || generateUUID()
-    
-    // Usar FormData para subir archivo
+
     const formData = new FormData()
     formData.append('id', articuloId)
     formData.append('titulo', tituloArticulo.value)
     formData.append('autor_id', autorIdFinal)
     formData.append('keywords', JSON.stringify([]))
-    
     if (congressStore.currentCongressId) {
       formData.append('congreso_id', congressStore.currentCongressId)
     }
-    
     if (archivoPdf.value) {
       formData.append('pdf', archivoPdf.value)
     }
-    
-    console.log('Enviando artículo con PDF:', articuloId, archivoPdf.value?.name)
+
+    // FormData: NO poner Content-Type (el browser lo pone con el boundary)
     const response = await fetch(`${API_BASE_URL}/articulos`, {
       method: 'POST',
-      body: formData // No Content-Type header needed for FormData
+      headers: authHeaders(), // solo Authorization, sin Content-Type
+      body: formData,
     })
-    
-    if (!response.ok) throw new Error(`Error HTTP: ${response.status}`)
-    const result = await response.json()
-    await Promise.all(selectedArticleTagIds.value.map((tagId) =>
-      fetch(`${API_BASE_URL}/articulos/${articuloId}/tags`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tagId })
-      }).catch((error) => console.error('Error asignando tag al artículo:', error))
-    ))
-    console.log('Artículo registrado:', result)
+
+    if (!response.ok) {
+      const errBody = await response.json().catch(() => ({}))
+      throw new Error(errBody.message || `Error HTTP: ${response.status}`)
+    }
+
+    // Asignar tags al artículo recien creado
+    await Promise.all(
+      selectedArticleTagIds.value.map((tagId) =>
+        fetch(`${API_BASE_URL}/articulos/${articuloId}/tags`, {
+          method: 'POST',
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ tagId }),
+        }).catch((error) => console.error('Error asignando tag al artículo:', error))
+      )
+    )
+
     showToast(`Artículo "${tituloArticulo.value}" registrado con éxito`, 'success')
     tituloArticulo.value = ''
     archivoPdf.value = null
     selectedArticleTagIds.value = []
-    
-    // Recargar artículos y volver a borradores
     await cargarArticulos()
     vistaActiva.value = 'borradores'
   } catch (error) {
