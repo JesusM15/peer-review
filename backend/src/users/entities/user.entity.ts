@@ -1,13 +1,14 @@
-import { Entity, PrimaryColumn, Column, BeforeInsert, BeforeUpdate, OneToOne } from 'typeorm';
+import { Entity, PrimaryColumn, Column, BeforeInsert, BeforeUpdate, OneToMany, OneToOne, JoinColumn } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { Perfil } from './perfil.entity';
-import { OneToMany } from 'typeorm';
 import { UsuarioCongresoRol } from '../../congresos/entities/usuario-congreso-rol.entity';
 
 export enum Rol {
   AUTOR = 'Autor',
   REVISOR = 'Revisor',
   EDITOR = 'Editor',
+  SUB_EDITOR = 'Sub Editor',
+  EDITOR_JEFE = 'Editor Jefe',
   ADMIN = 'Admin',
 }
 
@@ -25,22 +26,31 @@ export class User {
   @Column()
   password: string;
 
-  @Column({ type: 'enum', enum: Rol, default: Rol.AUTOR })
+  @Column({ type: 'varchar', length: 50, default: Rol.AUTOR })
   rol: Rol;
 
   @OneToMany(() => UsuarioCongresoRol, (membresia) => membresia.user)
   membresias: UsuarioCongresoRol[];
 
-  @OneToOne(() => Perfil, (perfil) => perfil.user, { cascade: true })
+  @OneToOne(() => Perfil, { nullable: true })
+  @JoinColumn({ name: 'id' })
   perfil: Perfil;
 
   @BeforeInsert()
   @BeforeUpdate()
   async hashPassword() {
-    if (this.password) {
-      const salt = await bcrypt.genSalt(10);
-      this.password = await bcrypt.hash(this.password, salt);
+    if (!this.password) {
+      return;
     }
+
+    // Evitar re-hashear una contraseña ya hasheada al guardar solo cambios de rol/email.
+    const isAlreadyHashed = /^\$2[aby]\$.{56}$/.test(this.password);
+    if (isAlreadyHashed) {
+      return;
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
   }
 
   async validatePassword(plainPassword: string): Promise<boolean> {

@@ -40,6 +40,12 @@
           </svg>
           Postularse
         </button>
+        <button class="nav-item" :class="{ active: vistaActiva === 'staffchat' }" id="nav-staffchat-revisor" @click="vistaActiva = 'staffchat'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Chat del Staff
+        </button>
       </nav>
 
       <!-- Indicador de conexión -->
@@ -302,6 +308,22 @@
         </div>
       </template>
 
+      <!-- ─── STAFF CHAT ───────────────────────────── -->
+      <template v-if="vistaActiva === 'staffchat'">
+        <header class="topbar">
+          <div>
+            <h1 class="page-title">Chat del Staff</h1>
+            <p class="page-sub">Comunicación interna (Solo lectura para Revisores)</p>
+          </div>
+        </header>
+        <div class="section">
+          <StaffChat v-if="congressStore.currentCongressId && authStore.token" :congresoId="congressStore.currentCongressId" :jwt="authStore.token" />
+          <div v-else class="empty-state">
+            <h3>{{ !congressStore.currentCongressId ? 'Selecciona un congreso primero' : 'Necesitas iniciar sesión' }}</h3>
+            <p>{{ !congressStore.currentCongressId ? 'Necesitas seleccionar un congreso para acceder al chat del staff.' : 'Inicia sesión para acceder al chat del staff.' }}</p>
+          </div>
+        </div>
+      </template>
     </main>
   </div>
 </template>
@@ -314,6 +336,7 @@ import { useToast } from '../composables/useToast'
 import { useAuthStore } from '../stores/auth'
 import { useCongressStore } from '../stores/congress'
 import { useOfflineStorage } from '../composables/useOfflineStorage'
+import StaffChat from '../components/StaffChat.vue'
 
 const router = useRouter()
 const { isDark, toggleTheme } = useTheme()
@@ -667,14 +690,14 @@ const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString()
 .congress-name-text {
   font-size: 0.7rem;
   font-weight: 600;
-  color: #10b981;
+  color: var(--success);
   letter-spacing: 0.02em;
   opacity: 0.9;
 }
 
 .dark .congress-name-text {
-  color: #34d399;
-  text-shadow: 0 0 8px rgba(52, 211, 153, 0.3);
+  color: var(--success);
+  text-shadow: 0 0 8px var(--success-faint);
 }
 .brand { display: flex; align-items: center; gap: 0.45rem; }
 .brand-icon { width: 16px; height: 16px; color: var(--text-strong); }
@@ -813,24 +836,24 @@ const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString()
 }
 
 .assignment-status.borrador {
-  background: rgba(229, 162, 76, 0.1);
-  color: var(--stat-revision);
+  background: var(--warning-faint);
+  color: var(--warning);
 }
 
 .assignment-status.en-revisión,
 .assignment-status.en-revision {
-  background: rgba(96, 165, 250, 0.1);
-  color: var(--stat-progreso);
+  background: var(--primary-faint);
+  color: var(--primary);
 }
 
 .assignment-status.aceptado {
-  background: rgba(74, 222, 128, 0.1);
-  color: var(--stat-aceptado);
+  background: var(--success-faint);
+  color: var(--success);
 }
 
 .assignment-status.rechazado {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--stat-rechazado);
+  background: var(--error-faint);
+  color: var(--error);
 }
 
 .assignment-info {
@@ -912,8 +935,8 @@ const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString()
   gap: 0.4rem;
   font-size: 0.7rem;
   font-weight: 500;
-  color: var(--stat-aceptado);
-  background: rgba(74, 222, 128, 0.1);
+  color: var(--success);
+  background: var(--success-faint);
   padding: 0.4rem 0.75rem;
   border-radius: 6px;
 }
@@ -929,8 +952,8 @@ const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString()
   gap: 0.3rem;
   font-size: 0.65rem;
   font-weight: 600;
-  color: var(--stat-aceptado);
-  background: rgba(74, 222, 128, 0.1);
+  color: var(--success);
+  background: var(--success-faint);
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
 }
@@ -958,15 +981,15 @@ const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString()
 }
 
 .connection-status.online {
-  background: rgba(74, 222, 128, 0.1);
-  color: #4ade80;
-  border: 1px solid rgba(74, 222, 128, 0.2);
+  background: var(--success-faint);
+  color: var(--success);
+  border: 1px solid var(--success-faint);
 }
 
 .connection-status.offline {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: var(--error-faint);
+  color: var(--error);
+  border: 1px solid var(--error-faint);
 }
 
 @media (max-width: 768px) {

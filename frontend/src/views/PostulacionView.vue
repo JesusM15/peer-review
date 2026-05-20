@@ -68,9 +68,11 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useCongressStore } from '../stores/congress'
+import { useAuthStore } from '../stores/auth'
 import { useToast } from '../composables/useToast'
 
 const congressStore = useCongressStore()
+const authStore = useAuthStore()
 const { showToast } = useToast()
 
 const form = ref({
@@ -90,11 +92,23 @@ const currentUser = computed(() => {
   return raw ? JSON.parse(raw) : null
 })
 
+const authHeaders = () => {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json'
+  }
+  if (authStore.token) {
+    headers.Authorization = `Bearer ${authStore.token}`
+  }
+  return headers
+}
+
 const fetchSolicitudes = async () => {
   if (!currentUser.value) return
   loading.value = true
   try {
-    const res = await fetch(`${API_BASE_URL}/solicitudes/usuario/${currentUser.value.id}`)
+    const res = await fetch(`${API_BASE_URL}/solicitudes/usuario/${currentUser.value.id}`, {
+      headers: authHeaders()
+    })
     if (res.ok) {
       solicitudes.value = await res.json()
       checkCooldown()
@@ -129,7 +143,7 @@ const enviarPostulacion = async () => {
   try {
     const res = await fetch(`${API_BASE_URL}/solicitudes`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify({
         user_id: currentUser.value.id,
         congreso_id: congressStore.currentCongressId,

@@ -21,8 +21,19 @@
 
     <main class="selection-content">
       <div class="content-header">
-        <h1>Selecciona un Congreso</h1>
-        <p>Continúa tu trabajo en uno de tus congresos o descubre nuevos eventos.</p>
+        <div class="content-header-row">
+          <div>
+            <h1>Selecciona un Congreso</h1>
+            <p>Continúa tu trabajo en uno de tus congresos o descubre nuevos eventos.</p>
+          </div>
+          <button class="btn-primary request-btn" @click="router.push('/solicitar-congreso')" title="Solicitar nuevo congreso">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Solicitar nuevo congreso
+          </button>
+        </div>
       </div>
 
       <div class="search-container">
@@ -221,7 +232,7 @@ async function selectCongress(congreso: any) {
 
   if (role === 'Admin' || authStore.user?.rol === 'Admin') {
     router.push('/admin')
-  } else if (role === 'Editor') {
+  } else if (role === 'Editor' || role === 'Editor Jefe') {
     router.push('/editor')
   } else if (role === 'Revisor') {
     router.push('/reviewer')
@@ -278,25 +289,25 @@ function getRandomGradient() {
 <style scoped>
 .selection-container {
   min-height: 100vh;
-  background-color: #fff;
-  color: #000;
+  background-color: var(--bg-base);
+  color: var(--text-normal);
   font-family: 'Inter', sans-serif;
   transition: background-color 0.3s ease;
 }
 
 .selection-container.dark {
-  background-color: #000;
-  color: #fff;
+  background-color: var(--bg-base);
+  color: var(--text-normal);
 }
 
 .selection-header {
   height: 64px;
-  border-bottom: 1px solid #eaeaea;
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 1.5rem;
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: var(--bg-base);
   backdrop-filter: blur(8px);
   position: sticky;
   top: 0;
@@ -325,11 +336,7 @@ function getRandomGradient() {
 .user-name {
   font-size: 0.85rem;
   font-weight: 500;
-  color: #666;
-}
-
-.dark .user-name {
-  color: #888;
+  color: var(--text-muted);
 }
 
 .logout-btn {
@@ -337,20 +344,20 @@ function getRandomGradient() {
   border: none;
   cursor: pointer;
   padding: 0.4rem;
-  color: #666;
+  color: var(--text-muted);
   border-radius: 6px;
   display: flex;
   transition: all 0.2s;
 }
 
 .logout-btn:hover {
-  background-color: #f5f5f5;
-  color: #000;
+  background-color: var(--bg-card-hover);
+  color: var(--text-strong);
 }
 
 .dark .logout-btn:hover {
-  background-color: #111;
-  color: #fff;
+  background-color: var(--bg-card-hover);
+  color: var(--text-strong);
 }
 
 .selection-content {
@@ -363,20 +370,42 @@ function getRandomGradient() {
   margin-bottom: 2rem;
 }
 
+.content-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.request-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--btn-primary-bg);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s ease;
+}
+.request-btn:hover { opacity: 0.85; }
+
 .content-header h1 {
   font-size: 2.5rem;
   font-weight: 800;
   letter-spacing: -0.05em;
   margin-bottom: 0.5rem;
+  color: var(--text-strong);
 }
 
 .content-header p {
-  color: #666;
+  color: var(--text-muted);
   font-size: 1rem;
-}
-
-.dark .content-header p {
-  color: #888;
 }
 
 .search-container {
@@ -392,46 +421,31 @@ function getRandomGradient() {
 .search-icon {
   position: absolute;
   left: 1rem;
-  color: #888;
+  color: var(--text-faint);
 }
 
 .search-input {
   width: 100%;
   padding: 0.8rem 1rem 0.8rem 3rem;
-  border: 1px solid #eaeaea;
+  border: 1px solid var(--border-color);
   border-radius: 10px;
   font-size: 0.95rem;
-  background-color: #fff;
-  color: #000;
+  background-color: var(--bg-input);
+  color: var(--text-normal);
   transition: all 0.2s;
-}
-
-.dark .search-input {
-  background-color: #111;
-  border-color: #333;
-  color: #fff;
 }
 
 .search-input:focus {
   outline: none;
-  border-color: #000;
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
-}
-
-.dark .search-input:focus {
-  border-color: #fff;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 2px var(--border-focus-faint);
 }
 
 .tabs {
   display: flex;
   gap: 1.5rem;
-  border-bottom: 1px solid #eaeaea;
+  border-bottom: 1px solid var(--border-color);
   margin-bottom: 2.5rem;
-}
-
-.dark .tabs {
-  border-bottom-color: #333;
 }
 
 .tab-btn {
@@ -440,19 +454,15 @@ function getRandomGradient() {
   padding: 0.75rem 0.25rem;
   font-size: 0.9rem;
   font-weight: 500;
-  color: #666;
+  color: var(--text-muted);
   cursor: pointer;
   position: relative;
   transition: all 0.2s;
 }
 
 .tab-btn.active {
-  color: #000;
+  color: var(--text-strong);
   font-weight: 600;
-}
-
-.dark .tab-btn.active {
-  color: #fff;
 }
 
 .tab-btn.active::after {
@@ -462,11 +472,7 @@ function getRandomGradient() {
   left: 0;
   right: 0;
   height: 2px;
-  background-color: #000;
-}
-
-.dark .tab-btn.active::after {
-  background-color: #fff;
+  background-color: var(--text-strong);
 }
 
 .cards-grid {
@@ -476,8 +482,8 @@ function getRandomGradient() {
 }
 
 .congress-card {
-  background-color: #fff;
-  border: 1px solid #eaeaea;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 14px;
   overflow: hidden;
   cursor: pointer;
@@ -487,20 +493,12 @@ function getRandomGradient() {
   transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
-.dark .congress-card {
-  background-color: #000;
-  border-color: #333;
-}
+
 
 .congress-card:hover {
   transform: translateY(-8px);
-  border-color: #000;
+  border-color: var(--border-hover);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
-}
-
-.dark .congress-card:hover {
-  border-color: #fff;
-  box-shadow: 0 20px 40px rgba(255, 255, 255, 0.1);
 }
 
 .card-image {
@@ -535,15 +533,13 @@ function getRandomGradient() {
 
 .card-body p {
   font-size: 0.85rem;
-  color: #666;
+  color: var(--text-muted);
   line-height: 1.6;
   margin-bottom: 1.5rem;
   flex-grow: 1;
 }
 
-.dark .card-body p {
-  color: #999;
-}
+
 
 .card-tags {
   display: flex;
@@ -554,16 +550,11 @@ function getRandomGradient() {
 
 .tag-pill {
   font-size: 0.7rem;
-  background-color: #f5f5f5;
-  color: #666;
+  background-color: var(--bg-input);
+  color: var(--text-muted);
   padding: 0.2rem 0.6rem;
   border-radius: 100px;
   font-weight: 500;
-}
-
-.dark .tag-pill {
-  background-color: #111;
-  color: #999;
 }
 
 .tag-more {
@@ -578,24 +569,20 @@ function getRandomGradient() {
   align-items: center;
   justify-content: space-between;
   padding-top: 1rem;
-  border-top: 1px solid #f5f5f5;
-}
-
-.dark .card-footer {
-  border-top-color: #111;
+  border-top: 1px solid var(--border-color);
 }
 
 .role-badge {
   font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
-  color: #999;
+  color: var(--text-faint);
   letter-spacing: 0.05em;
 }
 
 .btn-join {
-  background-color: #000;
-  color: #fff;
+  background-color: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
   border: none;
   padding: 0.5rem 1rem;
   border-radius: 8px;
@@ -605,20 +592,11 @@ function getRandomGradient() {
   transition: all 0.2s;
 }
 
-.dark .btn-join {
-  background-color: #fff;
-  color: #000;
-}
-
 .arrow-icon {
   opacity: 0;
   transform: translateX(-10px);
   transition: all 0.3s ease;
-  color: #000;
-}
-
-.dark .arrow-icon {
-  color: #fff;
+  color: var(--text-strong);
 }
 
 .congress-card:hover .arrow-icon {
@@ -636,15 +614,10 @@ function getRandomGradient() {
 .spinner {
   width: 24px;
   height: 24px;
-  border: 2px solid #eaeaea;
-  border-top-color: #000;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--text-strong);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
-}
-
-.dark .spinner {
-  border-color: #222;
-  border-top-color: #fff;
 }
 
 @keyframes spin {
@@ -652,15 +625,11 @@ function getRandomGradient() {
 }
 
 .badge {
-  background-color: #f0f0f0;
+  background-color: var(--bg-input);
+  color: var(--text-muted);
   padding: 0.1rem 0.4rem;
   border-radius: 6px;
   font-size: 0.7rem;
   margin-left: 0.4rem;
-}
-
-.dark .badge {
-  background-color: #111;
-  color: #888;
 }
 </style>

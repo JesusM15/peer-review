@@ -46,6 +46,12 @@
           </svg>
           Solicitudes
         </button>
+        <button class="nav-item" :class="{ active: vistaActiva === 'staffchat' }" id="nav-staffchat-editor" @click="vistaActiva = 'staffchat'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Chat Staff
+        </button>
       </nav>
 
       <div class="sidebar-footer relative-footer">
@@ -473,7 +479,7 @@
             <p>Las peticiones de cambio de rol aparecerán aquí.</p>
           </div>
           <div v-else class="solicitudes-grid">
-            <div v-for="sol in solicitudesRol" :key="sol.id" class="sol-card" :class="sol.estado.toLowerCase()">
+            <div v-for="sol in solicitudesRol" :key="sol.id" class="sol-card" :class="sol?.estado?.toLowerCase()">
               <div class="sol-card-header">
                 <div class="sol-user-info">
                   <div class="sol-avatar">{{ sol.user?.nombre?.charAt(0).toUpperCase() }}</div>
@@ -507,6 +513,19 @@
               </div>
             </div>
           </div>
+        </div>
+      </template>
+
+      <!-- ─── STAFF CHAT ───────────────────────────── -->
+      <template v-if="vistaActiva === 'staffchat'">
+        <header class="topbar">
+          <div>
+            <h1 class="page-title">Chat del Staff</h1>
+            <p class="page-sub">Comunicación interna del congreso seleccionado</p>
+          </div>
+        </header>
+        <div class="section">
+          <StaffChat :congresoId="congressStore.currentCongressId" :jwt="authStore.token" />
         </div>
       </template>
 
@@ -595,6 +614,7 @@ import { useAuthStore } from '../stores/auth'
 import { useCongressStore } from '../stores/congress'
 import CustomSelect from '../components/CustomSelect.vue'
 import CongressSelector from '../components/CongressSelector.vue'
+import StaffChat from '../components/StaffChat.vue'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 
@@ -602,6 +622,14 @@ const router = useRouter()
 const { isDark, toggleTheme } = useTheme()
 const authStore = useAuthStore()
 const congressStore = useCongressStore()
+
+const authHeaders = (extra: Record<string, string> = {}) => {
+  const headers: Record<string, string> = {}
+  if (authStore.token) {
+    headers.Authorization = `Bearer ${authStore.token}`
+  }
+  return { ...headers, ...extra }
+}
 
 const showUserMenu = ref(false)
 const vistaActiva = ref<string>('overview')
@@ -685,12 +713,12 @@ function badgeClass(estado: string) {
 async function cargarArticulos() {
   cargandoArticulos.value = true
   try {
-    const url = new URL(`${API}/articulos`);
-    url.searchParams.append('include_relations', 'true');
+    const params = new URLSearchParams()
+    params.append('include_relations', 'true')
     if (congressStore.currentCongressId) {
-      url.searchParams.append('congreso_id', congressStore.currentCongressId);
+      params.append('congreso_id', congressStore.currentCongressId)
     }
-    const res = await fetch(url.toString())
+    const res = await fetch(`${API}/articulos?${params.toString()}`)
     articulos.value = await res.json()
   } catch (e) {
     console.error('Error cargando artículos', e)
@@ -702,7 +730,9 @@ async function cargarArticulos() {
 async function cargarRevisores() {
   cargandoRevisores.value = true
   try {
-    const res = await fetch(`${API}/asignaciones/revisores`)
+    const res = await fetch(`${API}/asignaciones/revisores`, {
+      headers: authHeaders(),
+    })
     revisores.value = await res.json()
   } catch (e) {
     console.error('Error cargando revisores', e)
@@ -713,7 +743,9 @@ async function cargarRevisores() {
 
 async function cargarAsignacionesDeArticulo(articuloId: string) {
   try {
-    const res = await fetch(`${API}/asignaciones?revisor_id=&include_relations=true`)
+    const res = await fetch(`${API}/asignaciones?revisor_id=&include_relations=true`, {
+      headers: authHeaders(),
+    })
     // Filtrar las del artículo actual
     const todas = await res.json()
     revisoresDelArticulo.value = todas.filter((a: any) => a.articulo_id === articuloId)
@@ -743,7 +775,9 @@ async function cargarSolicitudes() {
   if (!congressStore.currentCongressId) return
   cargandoSolicitudes.value = true
   try {
-    const res = await fetch(`${API}/solicitudes/congreso/${congressStore.currentCongressId}`)
+    const res = await fetch(`${API}/solicitudes/congreso/${congressStore.currentCongressId}`, {
+      headers: authHeaders(),
+    })
     solicitudesRol.value = await res.json()
   } catch (e) {
     console.error('Error cargando solicitudes', e)
@@ -760,7 +794,7 @@ async function responderSolicitud(sol: any, estado: string) {
   try {
     const res = await fetch(`${API}/solicitudes/${sol.id}/responder`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ 
         estado, 
         respuesta: respuesta || (estado === 'Aprobado' ? '¡Bienvenido al equipo!' : 'Lo sentimos, por ahora no cumples con el perfil.') 
@@ -825,7 +859,7 @@ async function asignarRevisorDesdeModal() {
   try {
     const res = await fetch(`${API}/asignaciones`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         articulo_id: articuloSeleccionadoId.value,
         revisor_id: modalRevisor.value.id,
@@ -853,7 +887,10 @@ async function asignarRevisorDesdeModal() {
 // ── Eliminar asignación ───────────────────────────────
 async function eliminarAsignacion(asignacionId: string) {
   try {
-    await fetch(`${API}/asignaciones/${asignacionId}`, { method: 'DELETE' })
+    await fetch(`${API}/asignaciones/${asignacionId}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    })
     await cargarAsignacionesDeArticulo(articuloSeleccionadoId.value)
     await cargarRevisores()
   } catch (e) {
@@ -1011,10 +1048,10 @@ onMounted(async () => {
 
 /* ── Badges ── */
 .badge { display: inline-flex; align-items: center; padding: 0.25rem 0.6rem; border-radius: 99px; font-size: 0.7rem; font-weight: 600; }
-.badge-borrador { background: rgba(148,163,184,0.15); color: var(--text-muted); }
-.badge-revision { background: rgba(251,191,36,0.15); color: #b45309; }
-.badge-aceptado { background: rgba(34,197,94,0.15); color: #15803d; }
-.badge-rechazado { background: rgba(248,113,113,0.15); color: #dc2626; }
+.badge-borrador { background: var(--bg-input); color: var(--text-muted); }
+.badge-revision { background: var(--warning-faint); color: var(--warning); }
+.badge-aceptado { background: var(--success-faint); color: var(--success); }
+.badge-rechazado { background: var(--error-faint); color: var(--error); }
 [data-theme="dark"] .badge-revision { color: #fbbf24; }
 [data-theme="dark"] .badge-aceptado { color: #4ade80; }
 [data-theme="dark"] .badge-rechazado { color: #f87171; }
@@ -1090,8 +1127,7 @@ onMounted(async () => {
 .rev-email { display: block; font-size: 0.72rem; color: var(--text-faint); margin-top: 0.1rem; }
 .rev-badge-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 0.2rem; flex-shrink: 0; }
 .rev-count { font-size: 0.8rem; font-weight: 700; color: var(--text-strong); background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 99px; padding: 0.15rem 0.55rem; }
-.rev-count.count-full { background: rgba(248,113,113,0.12); color: #dc2626; border-color: rgba(248,113,113,0.3); }
-[data-theme="dark"] .rev-count.count-full { color: #f87171; }
+.rev-count.count-full { background: var(--error-faint); color: var(--error); border-color: var(--error-faint); }
 .rev-count-label { font-size: 0.65rem; color: var(--text-faint); }
 .gmail-btn { background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 0.3rem; border-radius: 4px; transition: all 0.15s; margin-top: 0.2rem; }
 .gmail-btn:hover { background: var(--bg-card-hover); color: #ea4335; }
@@ -1108,12 +1144,10 @@ onMounted(async () => {
 .tag { font-size: 0.68rem; font-weight: 500; padding: 0.2rem 0.5rem; border-radius: 99px; background: var(--bg-input); color: var(--text-muted); border: 1px solid var(--border-color); }
 .rev-footer { margin-top: 0.75rem; }
 .status-chip { font-size: 0.7rem; font-weight: 600; padding: 0.25rem 0.6rem; border-radius: 99px; }
-.libre-chip { background: rgba(34,197,94,0.12); color: #15803d; }
-.lleno-chip { background: rgba(248,113,113,0.12); color: #dc2626; }
-.asignado-chip { background: rgba(59,130,246,0.12); color: #1d4ed8; }
-[data-theme="dark"] .libre-chip { color: #4ade80; }
-[data-theme="dark"] .lleno-chip { color: #f87171; }
-[data-theme="dark"] .asignado-chip { color: #60a5fa; }
+.libre-chip { background: var(--success-faint); color: var(--success); }
+.lleno-chip { background: var(--error-faint); color: var(--error); }
+.asignado-chip { background: var(--primary-faint); color: var(--primary); }
+
 
 /* ── Solicitudes ── */
 .solicitudes-grid {
@@ -1177,10 +1211,10 @@ onMounted(async () => {
   border: 1px solid transparent;
 }
 .btn-action svg { width: 16px; height: 16px; }
-.btn-action.approve { background: rgba(34,197,94,0.1); color: #15803d; border-color: rgba(34,197,94,0.2); }
-.btn-action.approve:hover { background: rgba(34,197,94,0.2); }
-.btn-action.reject { background: rgba(239,68,68,0.1); color: #dc2626; border-color: rgba(239,68,68,0.2); }
-.btn-action.reject:hover { background: rgba(239,68,68,0.2); }
+.btn-action.approve { background: var(--success-faint); color: var(--success); border-color: var(--success-faint); }
+.btn-action.approve:hover { background: var(--success-faint); opacity: 0.8; }
+.btn-action.reject { background: var(--error-faint); color: var(--error); border-color: var(--error-faint); }
+.btn-action.reject:hover { background: var(--error-faint); opacity: 0.8; }
 
 .sol-resolved {
   padding: 0.75rem;
@@ -1191,8 +1225,8 @@ onMounted(async () => {
 .resolved-label { display: block; font-weight: 700; margin-bottom: 0.4rem; color: var(--text-muted); }
 .sol-feedback { color: var(--text-normal); font-style: italic; }
 
-.sol-card.aprobado { border-left: 4px solid #10b981; }
-.sol-card.rechazado { border-left: 4px solid #ef4444; }
+.sol-card.aprobado { border-left: 4px solid var(--success); }
+.sol-card.rechazado { border-left: 4px solid var(--error); }
 
 /* ── Revisores asignados chips ── */
 .asignados-section { margin-bottom: 1.5rem; }
@@ -1204,10 +1238,8 @@ onMounted(async () => {
 
 /* ── Toast/mensaje ── */
 .mensaje-toast { font-size: 0.8rem; font-weight: 500; padding: 0.6rem 1rem; border-radius: 6px; }
-.mensaje-toast.success { background: rgba(34,197,94,0.12); color: #15803d; border: 1px solid rgba(34,197,94,0.3); }
-.mensaje-toast.error { background: rgba(248,113,113,0.12); color: #dc2626; border: 1px solid rgba(248,113,113,0.3); }
-[data-theme="dark"] .mensaje-toast.success { color: #4ade80; }
-[data-theme="dark"] .mensaje-toast.error { color: #f87171; }
+.mensaje-toast.success { background: var(--success-faint); color: var(--success); border: 1px solid var(--success-faint); }
+.mensaje-toast.error { background: var(--error-faint); color: var(--error); border: 1px solid var(--error-faint); }
 
 /* ── Modal ── */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 1rem; }

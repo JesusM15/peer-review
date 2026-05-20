@@ -6,10 +6,12 @@ import { Congreso } from './entities/congreso.entity';
 import { Tag } from './entities/tag.entity';
 import { UsuarioCongresoRol } from './entities/usuario-congreso-rol.entity';
 import { EditorTag } from './entities/editor-tag.entity';
+import { RevisorTag } from './entities/revisor-tag.entity';
+import { CongresoTag } from './entities/congreso-tag.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Congreso, Tag, UsuarioCongresoRol, EditorTag]),
+    TypeOrmModule.forFeature([Congreso, Tag, UsuarioCongresoRol, EditorTag, RevisorTag, CongresoTag]),
   ],
   controllers: [CongresosController],
   providers: [CongresosService],

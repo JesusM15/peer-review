@@ -22,6 +22,9 @@ export class Congreso {
   @OneToMany(() => Tag, (tag) => tag.congreso)
   tags: Tag[];
 
+  @OneToMany('CongresoTag', 'congreso')
+  congresoTags: any[];
+
   @OneToMany(() => UsuarioCongresoRol, (membresia) => membresia.congreso)
   membresias: UsuarioCongresoRol[];
 }
