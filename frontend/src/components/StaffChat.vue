@@ -146,15 +146,15 @@ export default defineComponent({
 .msg-meta { display:flex; gap:8px; align-items:center; font-size:0.78rem; color:var(--text-faint); }
 .msg-time { font-size:0.72rem; color:var(--text-faint); }
 .msg-bubble { margin-top:6px; padding:10px 12px; border-radius:10px; background:var(--bg-input); color:var(--text-normal); border:1px solid var(--border-color); word-break:break-word }
-.message-row.mine .msg-bubble { background:#000000; color:#ffffff; border-color:transparent }
+.message-row.mine .msg-bubble { background:var(--btn-primary-bg); color:var(--btn-primary-text); border-color:transparent }
 
 .typing { padding:8px 14px; border-top:1px dashed var(--border-color); background:transparent }
 .typing-indicator { color:var(--text-faint); font-size:0.85rem }
 
 .composer { display:flex; gap:8px; padding:12px 14px; border-top:1px solid var(--border-color); align-items:center }
-.composer .form-input { flex:1; background:var(--bg-input); border:1px solid var(--border-color); padding:10px; border-radius:8px; color:#ffffff }
+.composer .form-input { flex:1; background:var(--bg-input); border:1px solid var(--border-color); padding:10px; border-radius:8px; color:var(--text-normal) }
 .composer .btn-primary { white-space:nowrap }
-.composer .btn-send { background: #ffffff; color: var(--text-strong); border: 1px solid var(--border-color); padding:8px 12px; border-radius:8px }
+.composer .btn-send { background: var(--btn-primary-bg); color: var(--btn-primary-text); border: 1px solid var(--border-color); padding:8px 12px; border-radius:8px }
 .composer .btn-send:disabled { opacity:0.5; cursor:not-allowed }
 .sentinel { height:1px }
 </style>
