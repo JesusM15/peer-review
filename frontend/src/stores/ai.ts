@@ -168,6 +168,31 @@ export const useAIStore = defineStore('ai', () => {
     }
   };
 
+  const suggestReviewers = async (articuloId: string) => {
+    loading.value = true;
+    try {
+      const response = await fetch(
+        `${API_URL}/ai/suggest-reviewers/${articuloId}`,
+        {
+          method: 'POST',
+          headers: authHeaders(),
+        },
+      );
+      if (response.ok) {
+        return await response.json();
+      }
+      const err = await response.json().catch(() => ({}));
+      throw new Error(
+        err.message || `Error al sugerir revisores (${response.status})`,
+      );
+    } catch (error) {
+      console.error('Error suggesting reviewers:', error);
+      throw error;
+    } finally {
+      loading.value = false;
+    }
+  };
+
   return {
     config,
     loading,
@@ -177,5 +202,6 @@ export const useAIStore = defineStore('ai', () => {
     checkPlagiarismSimilarity,
     ethicsReport,
     fullAnalysis,
+    suggestReviewers,
   };
 });

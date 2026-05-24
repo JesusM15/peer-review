@@ -22,6 +22,7 @@ import { EditorTag } from '../congresos/entities/editor-tag.entity';
 import { RevisorTag } from '../congresos/entities/revisor-tag.entity';
 import { Congreso } from '../congresos/entities/congreso.entity';
 import { UsuarioCongresoRol } from '../congresos/entities/usuario-congreso-rol.entity';
+import { NotificacionesService } from '../notificaciones/notificaciones.service';
 
 @Injectable()
 export class AsignacionesService {
@@ -46,6 +47,7 @@ export class AsignacionesService {
     private readonly ucrRepository: Repository<UsuarioCongresoRol>,
     @InjectModel(Revision.name)
     private readonly revisionModel: Model<RevisionDocument>,
+    private readonly notificacionesService: NotificacionesService,
   ) {}
 
   async findAll(includeRelations: boolean = false) {
@@ -314,8 +316,18 @@ export class AsignacionesService {
 
     // Cambiar estado del artículo a EN_REVISION si estaba en BORRADOR
     if (articulo.estado === EstadoArticulo.BORRADOR) {
+      const estadoAnterior = articulo.estado;
       articulo.estado = EstadoArticulo.EN_REVISION;
       await this.articuloRepository.save(articulo);
+      await this.notificacionesService.notificarCambioEstadoArticulo(
+        {
+          id: articulo.id,
+          titulo: articulo.titulo,
+          autor_id: articulo.autor_id,
+        },
+        estadoAnterior,
+        articulo.estado,
+      );
     }
 
     return this.asignacionRepository.save(nuevaAsignacion);
@@ -364,7 +376,7 @@ export class AsignacionesService {
       where: { id: articulo_id },
     });
     if (articulo) {
-      // Mapear decisión a estado
+      const estadoAnterior = articulo.estado;
       if (decision === 'aceptado') {
         articulo.estado = EstadoArticulo.ACEPTADO;
       } else if (decision === 'revision') {
@@ -373,6 +385,17 @@ export class AsignacionesService {
         articulo.estado = EstadoArticulo.RECHAZADO;
       }
       await this.articuloRepository.save(articulo);
+      if (estadoAnterior !== articulo.estado) {
+        await this.notificacionesService.notificarCambioEstadoArticulo(
+          {
+            id: articulo.id,
+            titulo: articulo.titulo,
+            autor_id: articulo.autor_id,
+          },
+          estadoAnterior,
+          articulo.estado,
+        );
+      }
     }
 
     // 3. Ya NO eliminamos la asignación para que el revisor pueda ver su historial y las estadísticas en el dashboard

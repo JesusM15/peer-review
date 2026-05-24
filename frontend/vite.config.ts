@@ -20,6 +20,7 @@ export default defineConfig({
         type: 'module',
       },
       workbox: {
+        importScripts: ['push-handler.js'],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
         runtimeCaching: [
           {

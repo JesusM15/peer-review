@@ -18,6 +18,7 @@ import {
   RevisionDocument,
 } from '../asignaciones/schemas/revision.schema';
 import { v4 as uuidv4 } from 'uuid';
+import { NotificacionesService } from '../notificaciones/notificaciones.service';
 
 @Injectable()
 export class ArticulosService {
@@ -30,6 +31,7 @@ export class ArticulosService {
     private readonly articuloDetalleModel: Model<ArticuloDetalleDocument>,
     @InjectModel(Revision.name)
     private readonly revisionModel: Model<RevisionDocument>,
+    private readonly notificacionesService: NotificacionesService,
   ) {}
 
   async create(data: {
@@ -235,6 +237,7 @@ export class ArticulosService {
     }
 
     const { titulo, estado, pdf_url, keywords } = updateData;
+    const estadoAnterior = articulo.estado;
     let hasMariaUpdate = false;
 
     if (titulo !== undefined) {
@@ -249,6 +252,18 @@ export class ArticulosService {
 
     if (hasMariaUpdate) {
       await this.articuloRepository.save(articulo);
+    }
+
+    if (estado !== undefined && estadoAnterior !== estado) {
+      await this.notificacionesService.notificarCambioEstadoArticulo(
+        {
+          id: articulo.id,
+          titulo: articulo.titulo,
+          autor_id: articulo.autor_id,
+        },
+        estadoAnterior,
+        estado,
+      );
     }
 
     let hasMongoUpdate = false;

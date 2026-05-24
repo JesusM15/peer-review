@@ -15,9 +15,11 @@ import { UsuarioCongresoRol } from '../congresos/entities/usuario-congreso-rol.e
 import { AsignacionesController } from './asignaciones.controller';
 import { RevisionesController } from './revisiones.controller';
 import { AsignacionesService } from './asignaciones.service';
+import { NotificacionesModule } from '../notificaciones/notificaciones.module';
 
 @Module({
   imports: [
+    NotificacionesModule,
     TypeOrmModule.forFeature([Asignacion, User, Perfil, Articulo, ArticuloTag, Tag, EditorTag, RevisorTag, Congreso, UsuarioCongresoRol]),
     MongooseModule.forFeature([{ name: Revision.name, schema: RevisionSchema }]),
   ],

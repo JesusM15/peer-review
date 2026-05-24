@@ -4,11 +4,14 @@
     <!-- ── Sidebar ── -->
     <aside class="sidebar">
       <div class="sidebar-header">
-        <div class="brand">
-          <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <span class="brand-name">Peer Review System</span>
+        <div class="brand-row">
+          <div class="brand">
+            <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="brand-name">Peer Review System</span>
+          </div>
+          <NotificationBell />
         </div>
         <div v-if="congressStore.currentCongressId" class="congress-context">
           <span class="congress-name-text">{{ currentCongressName }}</span>
@@ -322,7 +325,56 @@
 
           <!-- Lista de revisores disponibles -->
           <div v-if="articuloSeleccionadoId" class="revisores-disponibles">
-            <h3 class="sub-title">Lista de revisores disponibles</h3>
+            <div class="sub-title-row">
+              <h3 class="sub-title">Lista de revisores disponibles</h3>
+              <button 
+                class="btn-ai-suggest" 
+                @click="obtenerSugerenciasIA"
+                :disabled="cargandoSugerenciasIA"
+              >
+                <svg v-if="!cargandoSugerenciasIA" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <svg v-else class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                {{ cargandoSugerenciasIA ? 'Analizando...' : 'Sugerir con IA' }}
+              </button>
+            </div>
+            
+            <!-- Sugerencias de IA -->
+            <div v-if="mostrandoSugerenciasIA && sugerenciasIA.length > 0" class="ai-suggestions-section">
+              <div class="ai-suggestions-header">
+                <span class="ai-badge">🤖 Sugerencias de IA</span>
+                <button class="btn-close-ai" @click="ocultarSugerenciasIA">×</button>
+              </div>
+              <div class="ai-suggestions-grid">
+                <div
+                  v-for="sugerencia in sugerenciasIA"
+                  :key="sugerencia.reviewer_id"
+                  class="ai-suggestion-card"
+                  :class="{ 'suggestion-asignado': estaAsignado(sugerencia.reviewer_id) }"
+                  @click="abrirModalRevisor(revisores.find(r => r.id === sugerencia.reviewer_id))"
+                >
+                  <div class="ai-suggestion-score">
+                    <span class="score-value">{{ sugerencia.match_score }}%</span>
+                    <span class="score-label">Coincidencia</span>
+                  </div>
+                  <div class="ai-suggestion-content">
+                    <span class="suggestion-name">{{ sugerencia.nombre }}</span>
+                    <span class="suggestion-email">{{ sugerencia.email }}</span>
+                    <div class="suggestion-tags">
+                      <span v-for="esp in sugerencia.especialidades.slice(0,3)" :key="esp" class="tag">{{ esp }}</span>
+                    </div>
+                    <p class="suggestion-reason">{{ sugerencia.match_reason }}</p>
+                  </div>
+                  <div class="ai-suggestion-footer">
+                    <span class="suggestion-load">{{ sugerencia.articulos_asignados }}/3 asignados</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
             <div v-if="cargandoRevisores" class="loading-state">
               <div class="spinner"></div><span>Cargando revisores...</span>
             </div>
@@ -698,9 +750,11 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useTheme } from '../composables/useTheme'
 import { useAuthStore } from '../stores/auth'
 import { useCongressStore } from '../stores/congress'
+import { useAIStore } from '../stores/ai'
 import CustomSelect from '../components/CustomSelect.vue'
 import CongressSelector from '../components/CongressSelector.vue'
 import StaffChat from '../components/StaffChat.vue'
+import NotificationBell from '../components/NotificationBell.vue'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 
@@ -708,6 +762,7 @@ const router = useRouter()
 const { isDark, toggleTheme } = useTheme()
 const authStore = useAuthStore()
 const congressStore = useCongressStore()
+const aiStore = useAIStore()
 
 const authHeaders = (extra: Record<string, string> = {}) => {
   const headers: Record<string, string> = {}
@@ -747,6 +802,11 @@ const modalRevisor = ref<any>(null)
 const asignando = ref(false)
 const mensajeAsignacion = ref<{ texto: string; tipo: string } | null>(null)
 const mensajeModal = ref<{ texto: string; tipo: string } | null>(null)
+
+// ── Sugerencias de IA ───────────────────────────────────
+const sugerenciasIA = ref<any[]>([])
+const cargandoSugerenciasIA = ref(false)
+const mostrandoSugerenciasIA = ref(false)
 
 
 // ── Solicitudes de Rol ────────────────────────────────
@@ -865,6 +925,29 @@ async function cargarAsignacionesDeArticulo(articuloId: string) {
   } catch (e) {
     revisoresDelArticulo.value = []
   }
+}
+
+// ── Sugerencias de IA ───────────────────────────────────
+async function obtenerSugerenciasIA() {
+  if (!articuloSeleccionadoId.value) return
+  
+  cargandoSugerenciasIA.value = true
+  mostrandoSugerenciasIA.value = false
+  try {
+    const suggestions = await aiStore.suggestReviewers(articuloSeleccionadoId.value)
+    sugerenciasIA.value = suggestions
+    mostrandoSugerenciasIA.value = true
+  } catch (error) {
+    console.error('Error obteniendo sugerencias de IA:', error)
+    alert('Error al obtener sugerencias de IA. Por favor, intenta de nuevo.')
+  } finally {
+    cargandoSugerenciasIA.value = false
+  }
+}
+
+function ocultarSugerenciasIA() {
+  mostrandoSugerenciasIA.value = false
+  sugerenciasIA.value = []
 }
 
 // ── Navegación ────────────────────────────────────────
@@ -1120,6 +1203,13 @@ watch(vistaActiva, (newVal) => {
 
 /* ── Sidebar ── */
 .sidebar { width: 220px; min-width: 220px; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; background: var(--bg-sidebar); position: sticky; top: 0; height: 100vh; }
+.brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
 .sidebar-header {
   padding: 1.5rem;
   border-bottom: 1px solid #eaeaea;
@@ -1466,6 +1556,40 @@ watch(vistaActiva, (newVal) => {
   .revisores-grid { grid-template-columns: 1fr; }
   .ct-input-row { flex-direction: column; }
 }
+
+/* ── AI Suggestions ─────────────────────────────────────── */
+.sub-title-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.btn-ai-suggest { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; border: none; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.btn-ai-suggest:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(99,102,241,0.3); }
+.btn-ai-suggest:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-ai-suggest svg { width: 16px; height: 16px; }
+.btn-ai-suggest .spin { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.ai-suggestions-section { margin-bottom: 1.5rem; }
+.ai-suggestions-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.ai-badge { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.8rem; background: linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(139,92,246,0.1) 100%); color: #6366f1; border: 1px solid rgba(99,102,241,0.2); border-radius: 8px; font-size: 0.8rem; font-weight: 600; }
+.btn-close-ai { background: none; border: none; color: var(--text-faint); cursor: pointer; font-size: 1.5rem; line-height: 1; padding: 0; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 6px; transition: all 0.2s; }
+.btn-close-ai:hover { background: var(--bg-input); color: var(--text-strong); }
+
+.ai-suggestions-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+.ai-suggestion-card { background: linear-gradient(135deg, rgba(99,102,241,0.03) 0%, rgba(139,92,246,0.02) 100%); border: 1px solid rgba(99,102,241,0.15); border-radius: 12px; padding: 1rem; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
+.ai-suggestion-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(99,102,241,0.15); border-color: rgba(99,102,241,0.3); }
+.ai-suggestion-card.suggestion-asignado { opacity: 0.6; cursor: not-allowed; }
+
+.ai-suggestion-score { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 56px; height: 56px; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-radius: 10px; margin-bottom: 0.75rem; }
+.ai-suggestion-score .score-value { font-size: 1.1rem; font-weight: 700; color: white; line-height: 1; }
+.ai-suggestion-score .score-label { font-size: 0.65rem; color: rgba(255,255,255,0.8); font-weight: 500; }
+
+.ai-suggestion-content { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.75rem; }
+.ai-suggestion-content .suggestion-name { font-size: 0.9rem; font-weight: 600; color: var(--text-strong); }
+.ai-suggestion-content .suggestion-email { font-size: 0.75rem; color: var(--text-muted); }
+.ai-suggestion-content .suggestion-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.ai-suggestion-content .suggestion-tags .tag { font-size: 0.7rem; color: var(--text-muted); background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 999px; padding: 0.15rem 0.5rem; }
+.ai-suggestion-content .suggestion-reason { font-size: 0.75rem; color: var(--text-normal); line-height: 1.4; margin: 0; }
+
+.ai-suggestion-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 0.5rem; border-top: 1px solid rgba(99,102,241,0.1); }
+.ai-suggestion-footer .suggestion-load { font-size: 0.72rem; color: var(--text-muted); font-weight: 500; }
 
 /* ── Congress Tags Panel ──────────────────────────────── */
 .ct-create-card {

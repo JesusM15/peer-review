@@ -38,6 +38,12 @@
           Solicitudes de Congreso
           <span v-if="solicitudesPendientesCount > 0" class="nav-badge">{{ solicitudesPendientesCount }}</span>
         </button>
+        <button class="nav-item" :class="{ active: currentView === 'ai-settings' }" id="nav-admin-ai" @click="currentView = 'ai-settings'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Configuración IA
+        </button>
         <button class="nav-item" id="nav-admin-tags" @click="router.push('/perfil').then(() => { setTimeout(() => { const el = document.getElementById('congress-tags'); if(el) el.scrollIntoView({ behavior: 'smooth' }); }, 300); })">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" stroke-linecap="round" stroke-linejoin="round"/>
@@ -108,35 +114,7 @@
             <p class="page-sub">Resumen del sistema</p>
           </div>
           <div class="topbar-actions">
-            <div class="notif-wrapper">
-              <button class="notif-btn" @click="toggleNotifPanel" title="Notificaciones">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                  <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span v-if="notificacionesNoLeidas > 0" class="notif-dot">{{ notificacionesNoLeidas }}</span>
-              </button>
-              <div v-if="showNotifPanel" class="notif-panel" @click.stop>
-                <div class="notif-panel-header">
-                  <span>Notificaciones</span>
-                  <button v-if="notificacionesNoLeidas > 0" class="notif-mark-all" @click="marcarTodasLeidas">Marcar todas como leídas</button>
-                </div>
-                <div v-if="notificacionesLoading" class="notif-empty">Cargando...</div>
-                <div v-else-if="notificaciones.length === 0" class="notif-empty">Sin notificaciones</div>
-                <ul v-else class="notif-list">
-                  <li
-                    v-for="notif in notificaciones"
-                    :key="notif.id"
-                    class="notif-item"
-                    :class="{ 'unread': !notif.leida }"
-                    @click="abrirNotificacion(notif)"
-                  >
-                    <div class="notif-item-title">{{ notif.titulo }}</div>
-                    <div class="notif-item-msg">{{ notif.mensaje }}</div>
-                    <div class="notif-item-date">{{ formatDateNotif(notif.fecha_creacion) }}</div>
-                  </li>
-                </ul>
-              </div>
-            </div>
+            <NotificationBell :on-navigate="abrirNotificacionAdmin" />
           </div>
         </header>
         
@@ -663,6 +641,8 @@ import { useAIStore } from '../stores/ai';
 import { useTheme } from '../composables/useTheme';
 import { Pie, Bar } from 'vue-chartjs';
 import { Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend, Title } from 'chart.js';
+import NotificationBell from '../components/NotificationBell.vue';
+import type { Notificacion } from '../composables/useNotifications';
 
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend, Title);
 
@@ -1074,6 +1054,69 @@ const logout = () => {
   router.push('/login');
 };
 
+const goToArticles = () => {
+  currentView.value = 'articles';
+  loadArticles();
+};
+
+const loadArticles = async () => {
+  loadingArticles.value = true;
+  try {
+    const response = await fetch(`${API_URL}/articulos`, {
+      headers: authHeaders()
+    });
+    if (response.ok) {
+      articles.value = await response.json();
+    }
+  } catch (error) {
+    console.error('Error cargando artículos:', error);
+  } finally {
+    loadingArticles.value = false;
+  }
+};
+
+const openAIAnalysis = (article: any) => {
+  currentAnalysisArticle.value = article;
+  showAIModal.value = true;
+  aiAnalysisResult.value = null;
+};
+
+const closeAIModal = () => {
+  showAIModal.value = false;
+  currentAnalysisArticle.value = null;
+  aiAnalysisResult.value = null;
+};
+
+const saveAIConfig = async () => {
+  const success = await aiStore.updateConfig(aiForm.value);
+  if (success) {
+    alert('Configuración de IA guardada exitosamente');
+  } else {
+    alert('Error al guardar la configuración de IA');
+  }
+};
+
+const runFullAnalysis = async () => {
+  if (!currentAnalysisArticle.value) return;
+  
+  aiAnalysisLoading.value = true;
+  try {
+    const result = await aiStore.fullAnalysis(currentAnalysisArticle.value.id);
+    aiAnalysisResult.value = result;
+  } catch (error) {
+    console.error('Error en análisis completo:', error);
+    alert('Error al ejecutar el análisis completo');
+  } finally {
+    aiAnalysisLoading.value = false;
+  }
+};
+
+const getPlagioClass = (score: number) => {
+  if (score >= 0.7) return 'high-risk';
+  if (score >= 0.4) return 'medium-risk';
+  return 'low-risk';
+};
+
 interface SolicitanteRef { id: string; nombre: string; email: string }
 interface SolicitudCongreso {
   id: string;
@@ -1091,26 +1134,9 @@ interface SolicitudCongreso {
   fecha_creacion: string;
   fecha_resolucion?: string;
 }
-interface Notificacion {
-  id: string;
-  user_id: string;
-  tipo: string;
-  titulo: string;
-  mensaje: string;
-  link?: string;
-  leida: boolean;
-  fecha_creacion: string;
-}
-
 const solicitudesCongreso = ref<SolicitudCongreso[]>([]);
 const cargandoSolicitudesCongreso = ref(false);
 const scFilter = ref<'pendientes' | 'todas'>('pendientes');
-const notificaciones = ref<Notificacion[]>([]);
-const notificacionesLoading = ref(false);
-const showNotifPanel = ref(false);
-const notificacionesNoLeidas = computed(() =>
-  notificaciones.value.filter((n) => !n.leida).length
-);
 const solicitudesPendientesCount = computed(() =>
   solicitudesCongreso.value.filter((s) => s.estado === 'Pendiente').length
 );
@@ -1164,79 +1190,19 @@ const resolverSolicitudCongreso = async (sol: SolicitudCongreso, estado: 'Aproba
       return;
     }
     await cargarSolicitudesCongreso();
-    await cargarNotificaciones();
   } catch (e) {
     console.error(`Error al ${label} solicitud:`, e);
     alert(`Error al ${label} la solicitud.`);
   }
 };
 
-const cargarNotificaciones = async () => {
-  notificacionesLoading.value = true;
-  try {
-    const res = await fetch(`${API_URL}/notificaciones`, { headers: authHeaders() });
-    if (res.ok) {
-      notificaciones.value = await res.json();
-    }
-  } catch (e) {
-    console.error('Error cargando notificaciones:', e);
-  } finally {
-    notificacionesLoading.value = false;
-  }
-};
-
-const toggleNotifPanel = () => {
-  showNotifPanel.value = !showNotifPanel.value;
-  if (showNotifPanel.value) {
-    cargarNotificaciones();
-  }
-};
-
-const marcarNotifLeida = async (id: string) => {
-  try {
-    const res = await fetch(`${API_URL}/notificaciones/${id}/leer`, {
-      method: 'PATCH',
-      headers: authHeaders()
-    });
-    if (res.ok) {
-      const idx = notificaciones.value.findIndex((n) => n.id === id);
-      if (idx !== -1) notificaciones.value[idx].leida = true;
-    }
-  } catch (e) {
-    console.error('Error marcando notificación:', e);
-  }
-};
-
-const marcarTodasLeidas = async () => {
-  try {
-    const res = await fetch(`${API_URL}/notificaciones/leer-todas`, {
-      method: 'PATCH',
-      headers: authHeaders()
-    });
-    if (res.ok) {
-      notificaciones.value = notificaciones.value.map((n) => ({ ...n, leida: true }));
-    }
-  } catch (e) {
-    console.error('Error marcando todas las notificaciones:', e);
-  }
-};
-
-const abrirNotificacion = (notif: Notificacion) => {
-  if (!notif.leida) {
-    marcarNotifLeida(notif.id);
-  }
-  if (notif.tipo === 'SolicitudCongresoCreada' || notif.link?.startsWith('/admin/solicitudes-congreso')) {
-    showNotifPanel.value = false;
+const abrirNotificacionAdmin = (notif: Notificacion) => {
+  if (
+    notif.tipo === 'SolicitudCongresoCreada' ||
+    notif.tipo === 'SolicitudCongresoNueva' ||
+    notif.link?.includes('solicitudes')
+  ) {
     abrirSolicitudesCongreso();
-  }
-};
-
-const formatDateNotif = (iso?: string) => {
-  if (!iso) return '';
-  try {
-    return new Date(iso).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
-  } catch {
-    return iso;
   }
 };
 
@@ -1262,7 +1228,6 @@ onMounted(async () => {
   // Sincronizar form con store
   aiForm.value = { ...aiStore.config };
   cargarSolicitudesCongreso();
-  cargarNotificaciones();
 });
 </script>
 

@@ -13,9 +13,11 @@ import {
 } from '../asignaciones/schemas/revision.schema';
 import { ArticulosService } from './articulos.service';
 import { ArticulosController } from './articulos.controller';
+import { NotificacionesModule } from '../notificaciones/notificaciones.module';
 
 @Module({
   imports: [
+    NotificacionesModule,
     TypeOrmModule.forFeature([Articulo, ArticuloTag]),
     MongooseModule.forFeature([
       { name: ArticuloDetalle.name, schema: ArticuloDetalleSchema },

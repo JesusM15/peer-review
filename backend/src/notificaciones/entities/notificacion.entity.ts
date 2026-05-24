@@ -13,6 +13,7 @@ export enum TipoNotificacion {
   SOLICITUD_CONGRESO_NUEVA = 'SolicitudCongresoNueva',
   SOLICITUD_CONGRESO_APROBADA = 'SolicitudCongresoAprobada',
   SOLICITUD_CONGRESO_RECHAZADA = 'SolicitudCongresoRechazada',
+  ARTICULO_ESTADO = 'ArticuloEstado',
   GENERAL = 'General',
 }
 

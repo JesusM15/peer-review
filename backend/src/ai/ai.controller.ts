@@ -13,6 +13,8 @@ import { LLMService } from './services/llm.service';
 import { PlagiarismService } from './services/plagiarism.service';
 import { EthicsService } from './services/ethics.service';
 import { EmbeddingService } from './services/embedding.service';
+import { ReviewerSuggestionService } from './services/reviewer-suggestion.service';
+import { ReviewerSuggestion } from './dto/reviewer-suggestion.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AIConfig } from './entities/ai-config.entity';
@@ -27,6 +29,7 @@ export class AIController {
     private readonly plagiarismService: PlagiarismService,
     private readonly ethicsService: EthicsService,
     private readonly embeddingService: EmbeddingService,
+    private readonly reviewerSuggestionService: ReviewerSuggestionService,
     private readonly articulosService: ArticulosService,
     @InjectRepository(AIConfig)
     private readonly aiConfigRepository: Repository<AIConfig>,
@@ -160,6 +163,21 @@ export class AIController {
       };
     } catch (error) {
       console.error('[AIController] Error in fullAnalysis:', error);
+      throw error;
+    }
+  }
+
+  @Post('suggest-reviewers/:articuloId')
+  async suggestReviewers(@Param('articuloId') articuloId: string) {
+    console.log('[AIController] suggestReviewers called for articuloId:', articuloId);
+    try {
+      const suggestions = await this.reviewerSuggestionService.suggestReviewers(
+        articuloId,
+      );
+      console.log('[AIController] Reviewer suggestions generated:', suggestions.length);
+      return suggestions;
+    } catch (error) {
+      console.error('[AIController] Error in suggestReviewers:', error);
       throw error;
     }
   }
