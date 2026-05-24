@@ -21,6 +21,7 @@ import { Tag } from '../congresos/entities/tag.entity';
 import { EditorTag } from '../congresos/entities/editor-tag.entity';
 import { RevisorTag } from '../congresos/entities/revisor-tag.entity';
 import { Congreso } from '../congresos/entities/congreso.entity';
+import { UsuarioCongresoRol } from '../congresos/entities/usuario-congreso-rol.entity';
 
 @Injectable()
 export class AsignacionesService {
@@ -41,6 +42,8 @@ export class AsignacionesService {
     private readonly revisorTagRepository: Repository<RevisorTag>,
     @InjectRepository(Congreso)
     private readonly congresoRepository: Repository<Congreso>,
+    @InjectRepository(UsuarioCongresoRol)
+    private readonly ucrRepository: Repository<UsuarioCongresoRol>,
     @InjectModel(Revision.name)
     private readonly revisionModel: Model<RevisionDocument>,
   ) {}
@@ -75,13 +78,22 @@ export class AsignacionesService {
       });
     } catch (error) {
       console.error('Error en findByRevisor:', error);
-      // Fallback sin relaciones anidadas si falla
       const relations = includeRelations ? ['articulo', 'revisor'] : [];
       return this.asignacionRepository.find({
         where: { revisor_id: revisorId },
         relations,
       });
     }
+  }
+
+  async findByArticulo(articuloId: string, includeRelations: boolean = false) {
+    const relations = includeRelations
+      ? ['articulo', 'revisor', 'revisor.perfil', 'articulo.autor', 'articulo.autor.perfil']
+      : [];
+    return this.asignacionRepository.find({
+      where: { articulo_id: articuloId },
+      relations,
+    });
   }
 
   async findOne(id: string, includeRelations: boolean = false) {
@@ -107,20 +119,38 @@ export class AsignacionesService {
   }
 
   /**
-   * Lista todos los revisores con cuántos artículos tienen asignados actualmente
+   * Lista revisores con cuántos artículos tienen asignados.
+   * Si se proporciona congreso_id, solo devuelve revisores de ESE congreso.
    */
-  async findRevisoresConConteo() {
-    // Nota: Ahora los revisores se definen por membresía en un congreso.
-    // Por simplicidad, aquí buscamos todos los usuarios que tienen al menos una membresía como REVISOR
-    // o que tengan el rol global de REVISOR (para compatibilidad).
+  async findRevisoresConConteo(congresoId?: string) {
+    let userIds: string[];
+
+    if (congresoId) {
+      // Paso 1: obtener IDs de usuarios con rol Revisor en este congreso
+      const membresías = await this.ucrRepository.find({
+        where: { congreso_id: congresoId, rol: Rol.REVISOR },
+      });
+      userIds = membresías.map(m => m.user_id);
+    } else {
+      // Sin congreso: buscar usuarios con rol global Revisor
+      const revisoresGlobales = await this.userRepository.find({
+        where: { rol: Rol.REVISOR },
+      });
+      userIds = revisoresGlobales.map(u => u.id);
+    }
+
+    if (userIds.length === 0) {
+      return [];
+    }
+
+    // Paso 2: cargar los usuarios con su perfil
     const revisores = await this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.perfil', 'perfil')
-      .leftJoin('user.membresias', 'membresia')
-      .where('user.rol = :rol', { rol: Rol.REVISOR })
-      .orWhere('membresia.rol = :mrol', { mrol: Rol.REVISOR })
+      .where('user.id IN (:...ids)', { ids: userIds })
       .getMany();
 
+    // Paso 3: contar asignaciones activas por revisor
     const resultados = await Promise.all(
       revisores.map(async (revisor) => {
         const asignaciones = await this.asignacionRepository.find({
@@ -128,11 +158,10 @@ export class AsignacionesService {
           relations: ['articulo'],
         });
 
-        const totalAsignados = asignaciones.filter(
-          (a) =>
-            a.articulo &&
-            a.articulo.estado !== EstadoArticulo.ACEPTADO &&
-            a.articulo.estado !== EstadoArticulo.RECHAZADO,
+        const totalAsignados = asignaciones.filter(a =>
+          a.articulo &&
+          a.articulo.estado !== EstadoArticulo.ACEPTADO &&
+          a.articulo.estado !== EstadoArticulo.RECHAZADO
         ).length;
 
         return {

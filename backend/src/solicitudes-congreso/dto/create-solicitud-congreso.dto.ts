@@ -5,6 +5,7 @@ import {
   IsDateString,
   MaxLength,
   MinLength,
+  IsArray,
 } from 'class-validator';
 
 export class CreateSolicitudCongresoDto {
@@ -31,4 +32,8 @@ export class CreateSolicitudCongresoDto {
   @IsString()
   @MaxLength(2000)
   motivo?: string;
+
+  @IsOptional()
+  @IsArray()
+  tags?: string[];
 }

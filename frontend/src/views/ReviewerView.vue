@@ -40,6 +40,18 @@
           </svg>
           Postularse
         </button>
+        <button class="nav-item" id="nav-tags-revisor" @click="router.push('/perfil').then(() => { setTimeout(() => { const el = document.getElementById('congress-tags'); if(el) el.scrollIntoView({ behavior: 'smooth' }); }, 300); })">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Tags del Congreso
+        </button>
+        <button class="nav-item" id="nav-perfil-revisor" @click="router.push('/perfil')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Perfil
+        </button>
         <button class="nav-item" :class="{ active: vistaActiva === 'staffchat' }" id="nav-staffchat-revisor" @click="vistaActiva = 'staffchat'">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke-linecap="round" stroke-linejoin="round"/>
@@ -294,6 +306,15 @@
                   </div>
                 </div>
               </div>
+              <div class="form-group" v-if="availableTags.length">
+                <label>Etiquetas del artículo</label>
+                <div class="tag-options">
+                  <label v-for="tag in availableTags" :key="tag.id" class="tag-option">
+                    <input type="checkbox" :value="tag.id" v-model="selectedArticleTagIds" />
+                    <span>{{ tag.nombre }}</span>
+                  </label>
+                </div>
+              </div>
               <div class="form-actions">
                 <button type="button" class="btn-ghost" id="btn-cancelar-revisor" @click="cancelarFormulario">Cancelar</button>
                 <button type="submit" class="btn-primary" id="btn-submit-articulo-revisor" :disabled="isLoading">
@@ -366,6 +387,8 @@ const tituloArticulo = ref<string>('')
 const archivoPdf = ref<File | null>(null)
 const isLoading = ref<boolean>(false)
 const isOffline = ref(false)
+const availableTags = ref<{ id: string; nombre: string }[]>([])
+const selectedArticleTagIds = ref<string[]>([])
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 
@@ -410,7 +433,20 @@ onMounted(() => {
   isOffline.value = !offlineStorage.isOnline()
   window.addEventListener('online', () => isOffline.value = false)
   window.addEventListener('offline', () => isOffline.value = true)
+  cargarTagsCongreso()
 })
+
+const cargarTagsCongreso = async () => {
+  if (!congressStore.currentCongressId) return
+  try {
+    const response = await fetch(`${API_BASE_URL}/congresos/${congressStore.currentCongressId}`)
+    if (!response.ok) return
+    const data = await response.json()
+    availableTags.value = data.tags || []
+  } catch (error) {
+    console.error('Error al cargar tags del congreso:', error)
+  }
+}
 
 const cargarAsignaciones = async () => {
   if (!currentUser.value?.id) return
@@ -639,6 +675,13 @@ const submitArticulo = async () => {
     })
     if (!response.ok) throw new Error(`Error HTTP: ${response.status}`)
     const result = await response.json()
+    await Promise.all(selectedArticleTagIds.value.map((tagId) =>
+      fetch(`${API_BASE_URL}/articulos/${articuloId}/tags`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tagId })
+      }).catch((error) => console.error('Error asignando tag al artículo:', error))
+    ))
     console.log('Artículo registrado:', result)
     showToast(`Artículo "${tituloArticulo.value}" registrado con éxito (ID: ${articuloId})`, 'success')
     cancelarFormulario()
@@ -671,7 +714,7 @@ const formatFileSize = (bytes: number): string => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
-const cancelarFormulario = () => { tituloArticulo.value = ''; archivoPdf.value = null }
+const cancelarFormulario = () => { tituloArticulo.value = ''; archivoPdf.value = null; selectedArticleTagIds.value = [] }
 const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString()
 </script>
 
@@ -690,14 +733,14 @@ const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString()
 .congress-name-text {
   font-size: 0.7rem;
   font-weight: 600;
-  color: #10b981;
+  color: var(--success);
   letter-spacing: 0.02em;
   opacity: 0.9;
 }
 
 .dark .congress-name-text {
-  color: #34d399;
-  text-shadow: 0 0 8px rgba(52, 211, 153, 0.3);
+  color: var(--success);
+  text-shadow: 0 0 8px var(--success-faint);
 }
 .brand { display: flex; align-items: center; gap: 0.45rem; }
 .brand-icon { width: 16px; height: 16px; color: var(--text-strong); }
@@ -728,6 +771,9 @@ const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString()
 .menu-item.text-danger { color: var(--stat-rechazado); }
 .menu-item.text-danger svg { color: var(--stat-rechazado); }
 .menu-item.text-danger:hover { background: rgba(248, 113, 113, 0.1); }
+.tag-options { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.55rem; }
+.tag-option { display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer; }
+.tag-option span { font-size: 0.72rem; color: var(--text-muted); background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 999px; padding: 0.2rem 0.5rem; }
 
 .main { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
 .topbar { display: flex; align-items: flex-start; justify-content: space-between; padding: 2rem 2.5rem 1.5rem; border-bottom: 1px solid var(--border-color); }
@@ -836,24 +882,24 @@ const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString()
 }
 
 .assignment-status.borrador {
-  background: rgba(229, 162, 76, 0.1);
-  color: var(--stat-revision);
+  background: var(--warning-faint);
+  color: var(--warning);
 }
 
 .assignment-status.en-revisión,
 .assignment-status.en-revision {
-  background: rgba(96, 165, 250, 0.1);
-  color: var(--stat-progreso);
+  background: var(--primary-faint);
+  color: var(--primary);
 }
 
 .assignment-status.aceptado {
-  background: rgba(74, 222, 128, 0.1);
-  color: var(--stat-aceptado);
+  background: var(--success-faint);
+  color: var(--success);
 }
 
 .assignment-status.rechazado {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--stat-rechazado);
+  background: var(--error-faint);
+  color: var(--error);
 }
 
 .assignment-info {
@@ -935,8 +981,8 @@ const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString()
   gap: 0.4rem;
   font-size: 0.7rem;
   font-weight: 500;
-  color: var(--stat-aceptado);
-  background: rgba(74, 222, 128, 0.1);
+  color: var(--success);
+  background: var(--success-faint);
   padding: 0.4rem 0.75rem;
   border-radius: 6px;
 }
@@ -952,8 +998,8 @@ const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString()
   gap: 0.3rem;
   font-size: 0.65rem;
   font-weight: 600;
-  color: var(--stat-aceptado);
-  background: rgba(74, 222, 128, 0.1);
+  color: var(--success);
+  background: var(--success-faint);
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
 }
@@ -981,15 +1027,15 @@ const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString()
 }
 
 .connection-status.online {
-  background: rgba(74, 222, 128, 0.1);
-  color: #4ade80;
-  border: 1px solid rgba(74, 222, 128, 0.2);
+  background: var(--success-faint);
+  color: var(--success);
+  border: 1px solid var(--success-faint);
 }
 
 .connection-status.offline {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: var(--error-faint);
+  color: var(--error);
+  border: 1px solid var(--error-faint);
 }
 
 @media (max-width: 768px) {

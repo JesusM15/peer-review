@@ -38,12 +38,17 @@
           Solicitudes de Congreso
           <span v-if="solicitudesPendientesCount > 0" class="nav-badge">{{ solicitudesPendientesCount }}</span>
         </button>
-        <button class="nav-item" :class="{ active: currentView === 'ai-settings' }" id="nav-admin-ai" @click="currentView = 'ai-settings'">
+        <button class="nav-item" id="nav-admin-tags" @click="router.push('/perfil').then(() => { setTimeout(() => { const el = document.getElementById('congress-tags'); if(el) el.scrollIntoView({ behavior: 'smooth' }); }, 300); })">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M12 2a10 10 0 100 20 10 10 0 000-20zM12 6a6 6 0 110 12 6 6 0 010-12z" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12 8v4l3 3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          Configuración IA
+          Tags del Congreso
+        </button>
+        <button class="nav-item" id="nav-perfil-admin" @click="router.push('/perfil')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Perfil
         </button>
       </nav>
 
@@ -378,6 +383,9 @@
                 <span v-if="sol.fecha_fin_propuesta"><strong>Fin:</strong> {{ formatDateOnly(sol.fecha_fin_propuesta) }}</span>
               </div>
               <p v-if="sol.motivo" class="sc-motivo"><strong>Motivo:</strong> {{ sol.motivo }}</p>
+              <div v-if="sol.tags?.length" class="article-tags">
+                <span v-for="tag in sol.tags" :key="tag" class="tag">{{ tag }}</span>
+              </div>
               <p v-if="sol.respuesta_admin" class="sc-resp"><strong>Tu respuesta:</strong> {{ sol.respuesta_admin }}</p>
               <div class="sc-meta">Enviada: {{ formatDateNotif(sol.fecha_creacion) }}</div>
             </div>
@@ -551,6 +559,17 @@
               <option value="Admin">Admin</option>
             </select>
           </div>
+
+          <div class="form-group">
+            <label>Especialidades / Tags
+              <span style="font-weight:400; color: var(--text-faint); font-size: 0.78rem;">(separadas por coma)</span>
+            </label>
+            <input
+              v-model="userForm.especialidades"
+              type="text"
+              placeholder="Ej: Machine Learning, Redes, Cloud"
+            />
+          </div>
           
           <div class="form-group" v-if="!showEditModal">
             <label>Contraseña</label>
@@ -693,7 +712,8 @@ const userForm = ref({
   nombre: '',
   email: '',
   rol: 'Autor',
-  password: ''
+  password: '',
+  especialidades: '' // comma-separated tags
 });
 
 const loadUsers = async () => {
@@ -942,114 +962,80 @@ const barChartOptions = {
 
 const submitUser = async () => {
   try {
-    const url = showEditModal.value 
+    const url = showEditModal.value
       ? `${API_URL}/users/${userForm.value.id}`
       : `${API_URL}/users`;
-    
+
     const method = showEditModal.value ? 'PATCH' : 'POST';
-    
-    const payload = { ...userForm.value };
+
+    const { especialidades, ...basePayload } = userForm.value;
+    const payload: Record<string, any> = { ...basePayload };
     if (showEditModal.value && !payload.password) {
       delete payload.password;
     }
 
+    const authHeaders = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${authStore.token}`
+    };
+
     const response = await fetch(url, {
       method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authStore.token}`
-      },
+      headers: authHeaders,
       body: JSON.stringify(payload)
     });
-    
-    if (response.ok) {
-      closeModal();
-      loadUsers();
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      console.error('Error guardando usuario:', err);
+      return;
     }
+
+    // Also update the profile (nombre + especialidades) for this user
+    // We do this via the admin-privileged PATCH /users/:id but we also
+    // update the perfil by calling /users/:id with nombre so both stay in sync.
+    // Additionally store the tags in the perfil via a direct perfil update.
+    const perfilPayload: Record<string, any> = {
+      nombre: userForm.value.nombre,
+    };
+    if (especialidades !== undefined) {
+      perfilPayload.especialidades = especialidades
+        .split(',')
+        .map((t: string) => t.trim())
+        .filter(Boolean);
+    }
+
+    // Call update-perfil endpoint if editing
+    if (showEditModal.value && userForm.value.id) {
+      await fetch(`${API_URL}/users/${userForm.value.id}/perfil`, {
+        method: 'PATCH',
+        headers: authHeaders,
+        body: JSON.stringify(perfilPayload)
+      }).catch(() => {}); // best-effort – may not exist yet
+    }
+
+    closeModal();
+    loadUsers();
   } catch (error) {
     console.error('Error guardando usuario:', error);
   }
 };
 
-const saveAIConfig = async () => {
-  console.log('[AdminView] Saving AI config with form:', aiForm.value);
-  const success = await aiStore.updateConfig(aiForm.value);
-  if (success) {
-    alert('Configuración de IA guardada con éxito');
-  } else {
-    alert('Error al guardar la configuración. Revisa la consola del navegador para más detalles.');
-  }
-};
-
-const getPlagioClass = (score: number) => {
-  if (score < 15) return 'plagio-low';
-  if (score < 40) return 'plagio-mid';
-  return 'plagio-high';
-};
-
-const checkPlagiarism = async (id: string) => {
-  try {
-    const report = await aiStore.checkPlagiarism(id);
-    alert(`Análisis completado: ${report.score}% de similitud detectada.`);
-    loadArticles();
-  } catch (error) {
-    alert('Error al realizar el análisis');
-  }
-};
-
-const loadArticles = async () => {
-  loadingArticles.value = true;
-  try {
-    const response = await fetch(`${API_URL}/articulos?include_relations=true`, {
-      headers: { 'Authorization': `Bearer ${authStore.token}` },
-    });
-    if (response.ok) {
-      articles.value = await response.json();
-    }
-  } catch (e) {
-    console.error('Error cargando artículos:', e);
-  } finally {
-    loadingArticles.value = false;
-  }
-};
-
-const goToArticles = () => {
-  currentView.value = 'articles';
-  if (!articles.value.length) loadArticles();
-};
-
-const openAIAnalysis = (article: any) => {
-  currentAnalysisArticle.value = article;
-  aiAnalysisResult.value = null;
-  aiAnalysisLoading.value = false;
-  showAIModal.value = true;
-};
-
-const closeAIModal = () => {
-  showAIModal.value = false;
-  currentAnalysisArticle.value = null;
-  aiAnalysisResult.value = null;
-  aiAnalysisLoading.value = false;
-};
-
-const runFullAnalysis = async () => {
-  if (!currentAnalysisArticle.value) return;
-  aiAnalysisLoading.value = true;
-  try {
-    aiAnalysisResult.value = await aiStore.fullAnalysis(
-      currentAnalysisArticle.value.id,
-      { topK: 5, threshold: 0.7 },
-    );
-  } catch (e: any) {
-    alert('Error al ejecutar el análisis: ' + (e?.message || e));
-  } finally {
-    aiAnalysisLoading.value = false;
-  }
-};
-
-const editUser = (user: any) => {
-  userForm.value = { ...user, password: '' };
+const editUser = async (user: any) => {
+  userForm.value = { ...user, password: '', especialidades: '' };
   showEditModal.value = true;
+  // Load the perfil to populate especialidades
+  try {
+    const res = await fetch(`${API_URL}/users/${user.id}?include_relations=true`, {
+      headers: { 'Authorization': `Bearer ${authStore.token}` }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.perfil?.especialidades?.length) {
+        userForm.value.especialidades = data.perfil.especialidades.join(', ');
+      }
+    }
+  } catch {}
 };
 
 const deleteUser = async (id: string) => {
@@ -1075,7 +1061,7 @@ const deleteUser = async (id: string) => {
 const closeModal = () => {
   showCreateModal.value = false;
   showEditModal.value = false;
-  userForm.value = { id: '', nombre: '', email: '', rol: 'Autor', password: '' };
+  userForm.value = { id: '', nombre: '', email: '', rol: 'Autor', password: '', especialidades: '' };
 };
 
 const changeCongress = () => {
@@ -1098,6 +1084,7 @@ interface SolicitudCongreso {
   fecha_inicio_propuesta?: string;
   fecha_fin_propuesta?: string;
   motivo?: string;
+  tags?: string[];
   estado: 'Pendiente' | 'Aprobado' | 'Rechazado';
   respuesta_admin?: string;
   congreso_creado_id?: string;
@@ -1318,6 +1305,8 @@ onMounted(async () => {
   .menu-item.text-danger { color: var(--stat-rechazado); }
   .menu-item.text-danger svg { color: var(--stat-rechazado); }
   .menu-item.text-danger:hover { background: rgba(248, 113, 113, 0.1); }
+  .article-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.55rem; }
+  .tag { font-size: 0.72rem; color: var(--text-muted); background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 999px; padding: 0.2rem 0.5rem; }
 
   /* ─── MAIN ────────────────────────────────────────── */
   .main { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 1.5rem; }
@@ -1670,7 +1659,7 @@ onMounted(async () => {
   /* ─── NAV BADGE ─── */
   .nav-badge {
     margin-left: auto;
-    background: #0070f3;
+    background: var(--primary);
     color: #fff;
     font-size: 0.65rem;
     font-weight: 700;
@@ -1729,7 +1718,7 @@ onMounted(async () => {
     position: absolute;
     top: -4px;
     right: -4px;
-    background: #0070f3;
+    background: var(--primary);
     color: #fff;
     font-size: 0.6rem;
     font-weight: 700;
@@ -1769,7 +1758,7 @@ onMounted(async () => {
   .notif-mark-all {
     background: transparent;
     border: none;
-    color: #0070f3;
+    color: var(--primary);
     font-size: 0.72rem;
     cursor: pointer;
     padding: 0;
@@ -1792,7 +1781,7 @@ onMounted(async () => {
   }
   .notif-item:last-child { border-bottom: none; }
   .notif-item:hover { background: var(--bg-card-hover); }
-  .notif-item.unread { background: rgba(0, 112, 243, 0.06); }
+  .notif-item.unread { background: var(--primary-faint); }
   .notif-item-title { font-weight: 600; font-size: 0.82rem; color: var(--text-strong); margin-bottom: 0.2rem; }
   .notif-item-msg { font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; }
   .notif-item-date { font-size: 0.68rem; color: var(--text-faint); margin-top: 0.35rem; }
@@ -1831,7 +1820,7 @@ onMounted(async () => {
     height: 18px;
     padding: 0 5px;
     border-radius: 9px;
-    background: #0070f3;
+    background: var(--primary);
     color: #fff;
     font-size: 0.65rem;
     font-weight: 700;
@@ -1882,9 +1871,9 @@ onMounted(async () => {
     text-transform: uppercase;
     letter-spacing: 0.03em;
   }
-  .sc-badge.pendiente { background: rgba(0, 112, 243, 0.12); color: #0070f3; }
-  .sc-badge.aprobado { background: rgba(16, 145, 76, 0.12); color: #10914c; }
-  .sc-badge.rechazado { background: rgba(220, 38, 38, 0.12); color: #dc2626; }
+  .sc-badge.pendiente { background: var(--primary-faint); color: var(--primary); }
+  .sc-badge.aprobado { background: var(--success-faint); color: var(--success); }
+  .sc-badge.rechazado { background: var(--error-faint); color: var(--error); }
 
   .sc-card-body {
     padding: 0.75rem 1rem;
@@ -1940,124 +1929,16 @@ onMounted(async () => {
     transition: opacity 0.15s ease;
   }
   .sc-btn svg { width: 14px; height: 14px; }
-  .sc-btn.approve { background: #10914c; color: #fff; border-color: #10914c; }
-  .sc-btn.reject { background: transparent; color: #dc2626; border-color: #dc2626; }
+  .sc-btn.approve { background: var(--success); color: #fff; border-color: var(--success); }
+  .sc-btn.reject { background: transparent; color: var(--error); border-color: var(--error); }
   .sc-btn:hover { opacity: 0.85; }
 
-/* AI Config Styles */
-.ai-config-container {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  padding: 2rem;
-  max-width: 800px;
-}
-
-.ai-form .form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
-}
-
-.ai-form .full-width {
-  grid-column: span 2;
-}
-
-.ai-form label {
-  display: block;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  margin-bottom: 0.5rem;
-}
-
-.ai-form input, .ai-form select {
-  width: 100%;
-  padding: 0.75rem;
-  background: var(--bg-input);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  color: var(--text-normal);
-  font-size: 0.9rem;
-}
-
-.password-input {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.password-input button {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  padding: 0 1rem;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  cursor: pointer;
-  color: var(--text-muted);
-}
-
-.ai-actions {
-  margin-top: 2rem;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.info-card {
-  background: rgba(59, 130, 246, 0.05);
-  border: 1px solid rgba(59, 130, 246, 0.2);
-  padding: 1.5rem;
-  border-radius: 8px;
-}
-
-.info-card h4 {
-  margin-top: 0;
-  margin-bottom: 1rem;
-  color: #3b82f6;
-  font-size: 1rem;
-}
-
-.info-card ul {
-  padding-left: 1.25rem;
-  margin: 0;
-}
-
-.info-card li {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin-bottom: 0.5rem;
-}
-
-.sc-badge.aprobado {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
-}
-
-.sc-badge.rechazado {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-}
-
-.plagio-low {
-  color: #10b981;
-  font-weight: 700;
-}
-
-.plagio-mid {
-  color: #f59e0b;
-  font-weight: 700;
-}
-
-.plagio-high {
-  color: #ef4444;
-  font-weight: 700;
-}
-
-.btn-text {
-  background: none;
-  border: none;
-  color: #3b82f6;
-  text-decoration: underline;
-  cursor: pointer;
-  font-size: 0.85rem;
-}
+  /* ── Tags Management ── */
+  .tags-management { display: flex; flex-direction: column; gap: 2rem; }
+  .add-tag-box { display: flex; gap: 1rem; max-width: 500px; }
+  .tags-list-admin { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+  .tag-admin-card { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; font-weight: 500; color: var(--text-strong); }
+  .loading-state { display: flex; align-items: center; gap: 0.75rem; padding: 2rem 0; color: var(--text-muted); font-size: 0.85rem; }
+  .spinner { width: 18px; height: 18px; border: 2px solid var(--border-color); border-top-color: var(--text-strong); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 </style>

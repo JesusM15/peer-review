@@ -81,6 +81,16 @@ export class CongresosController {
     return this.congresosService.assignEditorToTag(body.userId, body.tagId, id);
   }
 
+  @Get(':id/editor/:userId/tags')
+  getEditorTags(@Param('id') id: string, @Param('userId') userId: string) {
+    return this.congresosService.getEditorTags(userId, id);
+  }
+
+  @Delete('editor-tag/:editorTagId')
+  removeEditorTag(@Param('editorTagId') editorTagId: string) {
+    return this.congresosService.removeEditorTag(editorTagId);
+  }
+
   @Post(':id/assign-revisor')
   assignRevisor(
     @Param('id') id: string,

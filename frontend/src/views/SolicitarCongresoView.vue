@@ -75,6 +75,21 @@
             ></textarea>
           </div>
 
+          <div class="form-group">
+            <label for="sc-tags">Tags del congreso *</label>
+            <input
+              id="sc-tags"
+              v-model="tagsInput"
+              type="text"
+              required
+              placeholder="IA, Software, Educación"
+              class="form-input"
+            />
+            <div v-if="parsedTags.length" class="tag-preview">
+              <span v-for="tag in parsedTags" :key="tag" class="tag">{{ tag }}</span>
+            </div>
+          </div>
+
           <div v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</div>
 
           <button type="submit" class="btn btn-primary" :disabled="enviando">
@@ -105,6 +120,9 @@
               <span class="sol-badge" :class="estadoClass(sol.estado)">{{ sol.estado }}</span>
             </div>
             <p v-if="sol.descripcion_propuesta" class="sol-desc">{{ sol.descripcion_propuesta }}</p>
+            <div v-if="sol.tags?.length" class="tag-preview">
+              <span v-for="tag in sol.tags" :key="tag" class="tag">{{ tag }}</span>
+            </div>
             <p v-if="sol.respuesta_admin" class="sol-resp">
               <strong>Respuesta del administrador:</strong> {{ sol.respuesta_admin }}
             </p>
@@ -121,6 +139,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useTheme } from '../composables/useTheme'
@@ -133,6 +152,7 @@ interface SolicitudCongreso {
   fecha_inicio_propuesta?: string
   fecha_fin_propuesta?: string
   motivo?: string
+  tags?: string[]
   estado: 'Pendiente' | 'Aprobado' | 'Rechazado'
   respuesta_admin?: string
   congreso_creado_id?: string
@@ -154,6 +174,8 @@ const form = ref({
   fecha_fin_propuesta: '',
   motivo: '',
 })
+const tagsInput = ref('')
+const parsedTags = computed(() => normalizeTags(tagsInput.value))
 
 const enviando = ref(false)
 const cargando = ref(false)
@@ -186,6 +208,10 @@ async function enviarSolicitud() {
     errorMessage.value = 'El nombre del congreso es obligatorio.'
     return
   }
+  if (parsedTags.value.length === 0) {
+    errorMessage.value = 'Agrega al menos un tag para el congreso.'
+    return
+  }
   if (form.value.fecha_inicio_propuesta && form.value.fecha_fin_propuesta) {
     if (new Date(form.value.fecha_fin_propuesta) < new Date(form.value.fecha_inicio_propuesta)) {
       errorMessage.value = 'La fecha de fin no puede ser anterior a la de inicio.'
@@ -210,11 +236,12 @@ async function enviarSolicitud() {
     if (form.value.motivo.trim()) {
       payload.motivo = form.value.motivo.trim()
     }
+    const payloadWithTags = { ...payload, tags: parsedTags.value }
 
     const res = await fetch(`${API}/solicitudes-congreso`, {
       method: 'POST',
       headers: authHeaders(),
-      body: JSON.stringify(payload),
+      body: JSON.stringify(payloadWithTags),
     })
     const data = await res.json()
     if (res.ok) {
@@ -226,6 +253,7 @@ async function enviarSolicitud() {
         fecha_fin_propuesta: '',
         motivo: '',
       }
+      tagsInput.value = ''
       await cargarMisSolicitudes()
     } else {
       errorMessage.value = data?.message || 'No se pudo enviar la solicitud.'
@@ -242,6 +270,10 @@ async function enviarSolicitud() {
 
 function estadoClass(estado: string) {
   return estado.toLowerCase()
+}
+
+function normalizeTags(value: string) {
+  return [...new Set(value.split(',').map((tag) => tag.trim()).filter(Boolean))]
 }
 
 function formatDate(date?: string) {
@@ -269,14 +301,10 @@ onMounted(cargarMisSolicitudes)
 <style scoped>
 .sc-container {
   min-height: 100vh;
-  background-color: #fff;
-  color: #000;
+  background-color: var(--bg-base);
+  color: var(--text-normal);
   font-family: 'Inter', sans-serif;
   padding: 2rem;
-}
-.sc-container.dark {
-  background-color: #000;
-  color: #fff;
 }
 
 .sc-header {
@@ -289,18 +317,17 @@ onMounted(cargarMisSolicitudes)
   margin: 0.5rem 0;
 }
 .page-sub {
-  color: #666;
+  color: var(--text-muted);
   font-size: 0.95rem;
   margin: 0;
 }
-.sc-container.dark .page-sub { color: #aaa; }
 
 .back-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   background: transparent;
-  border: 1px solid #eaeaea;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   padding: 0.45rem 0.85rem;
   color: inherit;
@@ -308,9 +335,7 @@ onMounted(cargarMisSolicitudes)
   cursor: pointer;
   transition: background 0.15s ease;
 }
-.back-btn:hover { background: rgba(0,0,0,0.04); }
-.sc-container.dark .back-btn { border-color: #333; }
-.sc-container.dark .back-btn:hover { background: rgba(255,255,255,0.05); }
+.back-btn:hover { background: var(--bg-card-hover); }
 
 .sc-main {
   max-width: 900px;
@@ -320,14 +345,10 @@ onMounted(cargarMisSolicitudes)
 }
 
 .card {
-  border: 1px solid #eaeaea;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   padding: 1.5rem;
-  background: #fff;
-}
-.sc-container.dark .card {
-  background: #0a0a0a;
-  border-color: #333;
+  background: var(--bg-card);
 }
 
 .card-title {
@@ -347,28 +368,25 @@ onMounted(cargarMisSolicitudes)
   gap: 1rem;
 }
 .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
-.form-group label { font-size: 0.85rem; font-weight: 500; color: #444; }
-.sc-container.dark .form-group label { color: #ccc; }
+.form-group label { font-size: 0.85rem; font-weight: 500; color: var(--text-normal); }
 
 .form-input {
   width: 100%;
   padding: 0.6rem 0.75rem;
-  border: 1px solid #eaeaea;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
-  background: #fff;
-  color: #000;
+  background: var(--bg-input);
+  color: var(--text-normal);
   font-size: 0.9rem;
   font-family: inherit;
   box-sizing: border-box;
 }
+.tag-preview { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
+.tag { font-size: 0.72rem; color: #555; background: #f6f6f6; border: 1px solid #e5e5e5; border-radius: 999px; padding: 0.2rem 0.5rem; }
+.sc-container.dark .tag { color: #ddd; background: #151515; border-color: #333; }
 .form-input:focus {
   outline: none;
-  border-color: #0070f3;
-}
-.sc-container.dark .form-input {
-  background: #111;
-  color: #fff;
-  border-color: #333;
+  border-color: var(--border-focus);
 }
 .textarea { resize: vertical; min-height: 80px; }
 
@@ -386,12 +404,8 @@ onMounted(cargarMisSolicitudes)
   transition: opacity 0.15s ease;
 }
 .btn-primary {
-  background: #000;
-  color: #fff;
-}
-.sc-container.dark .btn-primary {
-  background: #fff;
-  color: #000;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
 }
 .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
 
@@ -401,12 +415,9 @@ onMounted(cargarMisSolicitudes)
   font-size: 0.85rem;
 }
 .alert-error {
-  background: rgba(239, 68, 68, 0.08);
-  color: #b91c1c;
-  border: 1px solid rgba(239, 68, 68, 0.25);
-}
-.sc-container.dark .alert-error {
-  color: #fca5a5;
+  background: var(--error-faint);
+  color: var(--error);
+  border: 1px solid var(--error-faint);
 }
 
 .empty-state {
@@ -424,14 +435,10 @@ onMounted(cargarMisSolicitudes)
   gap: 0.75rem;
 }
 .sol-item {
-  border: 1px solid #eaeaea;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   padding: 1rem;
-  background: #fafafa;
-}
-.sc-container.dark .sol-item {
-  background: #111;
-  border-color: #333;
+  background: var(--bg-card);
 }
 .sol-row {
   display: flex;
@@ -446,17 +453,16 @@ onMounted(cargarMisSolicitudes)
 }
 .sol-desc {
   font-size: 0.85rem;
-  color: #555;
+  color: var(--text-muted);
   margin: 0.5rem 0 0 0;
   line-height: 1.4;
 }
-.sc-container.dark .sol-desc { color: #bbb; }
 .sol-resp {
   font-size: 0.85rem;
   margin: 0.5rem 0 0 0;
   padding: 0.5rem 0.7rem;
-  border-left: 2px solid #0070f3;
-  background: rgba(0,112,243,0.06);
+  border-left: 2px solid var(--primary);
+  background: var(--primary-faint);
 }
 .sol-meta {
   font-size: 0.75rem;
@@ -472,9 +478,9 @@ onMounted(cargarMisSolicitudes)
   border-radius: 4px;
   letter-spacing: 0.04em;
 }
-.sol-badge.pendiente { background: rgba(59,130,246,0.12); color: #2563eb; }
-.sol-badge.aprobado { background: rgba(16,185,129,0.12); color: #059669; }
-.sol-badge.rechazado { background: rgba(239,68,68,0.12); color: #dc2626; }
+.sol-badge.pendiente { background: var(--primary-faint); color: var(--primary); }
+.sol-badge.aprobado { background: var(--success-faint); color: var(--success); }
+.sol-badge.rechazado { background: var(--error-faint); color: var(--error); }
 
 @media (max-width: 720px) {
   .form-row { grid-template-columns: 1fr; }

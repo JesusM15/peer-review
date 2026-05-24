@@ -6,7 +6,7 @@ export class Perfil {
   @PrimaryColumn('uuid')
   id: string;
 
-  @OneToOne(() => User)
+  @OneToOne(() => User, (user) => user.perfil)
   @JoinColumn({ name: 'id' })
   user: User;
 

@@ -164,9 +164,9 @@ h1 {
 }
 
 .error-message {
-  background: rgba(255, 50, 50, 0.1);
-  border: 1px solid rgba(255, 50, 50, 0.3);
-  color: #ff6666;
+  background: var(--error-faint);
+  border: 1px solid var(--error-faint);
+  color: var(--error);
   padding: 0.75rem;
   border-radius: 8px;
   font-size: 0.85rem;

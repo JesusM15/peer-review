@@ -40,6 +40,18 @@
           </svg>
           Postularse
         </button>
+        <button class="nav-item" id="nav-tags-autor" @click="router.push('/perfil').then(() => { setTimeout(() => { const el = document.getElementById('congress-tags'); if(el) el.scrollIntoView({ behavior: 'smooth' }); }, 300); })">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Tags del Congreso
+        </button>
+        <button class="nav-item" id="nav-perfil-autor" @click="router.push('/perfil')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Perfil
+        </button>
       </nav>
 
       <div class="sidebar-footer relative-footer">
@@ -164,6 +176,9 @@
                   <span class="estado-badge" :class="articulo.estado.toLowerCase().replace(' ', '-')">{{ articulo.estado }}</span>
                   <span class="fecha-creacion">{{ formatDate(articulo.createdAt) }}</span>
                 </div>
+                <div v-if="articleTagNames(articulo).length" class="article-tags">
+                  <span v-for="tag in articleTagNames(articulo)" :key="tag" class="tag">{{ tag }}</span>
+                </div>
               </div>
               <div class="articulo-actions">
                 <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -211,6 +226,9 @@
                 <div class="articulo-meta">
                   <span class="estado-badge borrador">{{ articulo.estado }}</span>
                   <span class="fecha-creacion">{{ formatDate(articulo.createdAt) }}</span>
+                </div>
+                <div v-if="articleTagNames(articulo).length" class="article-tags">
+                  <span v-for="tag in articleTagNames(articulo)" :key="tag" class="tag">{{ tag }}</span>
                 </div>
               </div>
               <div class="articulo-actions">
@@ -261,8 +279,11 @@
           </div>
           <div class="revision-panel">
             <div class="panel-placeholder">
-              <h3>Formulario de revisión</h3>
-              <p>Esta sección estará disponible en futuras versiones para agregar formularios de revisión.</p>
+              <h3>Tags del artículo</h3>
+              <div v-if="articuloActual && articleTagNames(articuloActual).length" class="article-tags center">
+                <span v-for="tag in articleTagNames(articuloActual)" :key="tag" class="tag">{{ tag }}</span>
+              </div>
+              <p v-else>Este artículo no tiene tags asignados.</p>
             </div>
           </div>
         </div>
@@ -304,6 +325,16 @@
                 </div>
               </div>
 
+              <div class="form-group" v-if="availableTags.length">
+                <label>Etiquetas del artículo</label>
+                <div class="tag-options">
+                  <label v-for="tag in availableTags" :key="tag.id" class="tag-option">
+                    <input type="checkbox" :value="tag.id" v-model="selectedArticleTagIds" />
+                    <span>{{ tag.nombre }}</span>
+                  </label>
+                </div>
+              </div>
+
               <div class="form-actions">
                 <button type="button" class="btn-ghost" id="btn-cancelar-form" @click="cancelarFormulario">Cancelar</button>
                 <button type="submit" class="btn-primary" id="btn-submit-articulo" :disabled="isLoading">
@@ -338,6 +369,13 @@ const { showToast } = useToast()
 const authStore = useAuthStore()
 const congressStore = useCongressStore()
 
+// Helper para headers con JWT
+const authHeaders = (extra: Record<string, string> = {}): Record<string, string> => {
+  const headers: Record<string, string> = { ...extra }
+  if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`
+  return headers
+}
+
 const showUserMenu = ref(false)
 
 const vistaActiva = ref<string>('overview')
@@ -353,6 +391,7 @@ interface Articulo {
   autor_id: string
   pdf_url: string
   keywords: string[]
+  tags?: { id: string; tag?: { id: string; nombre: string } }[]
   createdAt?: string
   updatedAt?: string
 }
@@ -393,6 +432,7 @@ onMounted(async () => {
   }
   
   // Cargar artículos del usuario
+  await cargarTagsCongreso()
   await cargarArticulos()
 })
 
@@ -423,29 +463,45 @@ const mostrarFormulario = ref<boolean>(true)
 const tituloArticulo = ref<string>('')
 const archivoPdf = ref<File | null>(null)
 const isLoading = ref<boolean>(false)
+const availableTags = ref<{ id: string; nombre: string }[]>([])
+const selectedArticleTagIds = ref<string[]>([])
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+
+const cargarTagsCongreso = async () => {
+  if (!congressStore.currentCongressId) return
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/congresos/${congressStore.currentCongressId}`,
+      { headers: authHeaders() },
+    )
+    if (!response.ok) return
+    const data = await response.json()
+    availableTags.value = data.tags || []
+  } catch (error) {
+    console.error('Error al cargar tags del congreso:', error)
+  }
+}
+
+const articleTagNames = (articulo: Articulo) =>
+  (articulo.tags || []).map((item) => item.tag?.nombre).filter(Boolean) as string[]
 
 // ─── Funciones para manejo de artículos ─────────────────────────────────────
 const cargarArticulos = async () => {
   if (!currentUser.value?.id) return
-  
   try {
     loadingArticulos.value = true
-    const response = await fetch(`${API_BASE_URL}/articulos?autor_id=${currentUser.value.id}&include_relations=true`)
-    
+    const response = await fetch(
+      `${API_BASE_URL}/articulos?autor_id=${currentUser.value.id}&include_relations=true`,
+      { headers: authHeaders() },
+    )
     if (!response.ok) throw new Error(`Error HTTP: ${response.status}`)
-    
     const data = await response.json()
-    
-    // Construir URLs completas para los PDFs
     const baseUrl = API_BASE_URL.replace('/api', '')
     articulos.value = data.map((articulo: any) => ({
       ...articulo,
       pdf_url: articulo.pdf_url ? `${baseUrl}${articulo.pdf_url}` : ''
     }))
-    
-    console.log('Artículos cargados:', articulos.value)
   } catch (error) {
     console.error('Error al cargar artículos:', error)
     articulos.value = []
@@ -458,21 +514,15 @@ const verArticulo = async (articuloId: string) => {
   try {
     loadingPdf.value = true
     vistaActiva.value = 'articulo'
-    
-    const response = await fetch(`${API_BASE_URL}/articulos/${articuloId}?include_relations=true`)
-    
+    const response = await fetch(
+      `${API_BASE_URL}/articulos/${articuloId}?include_relations=true`,
+      { headers: authHeaders() },
+    )
     if (!response.ok) throw new Error(`Error HTTP: ${response.status}`)
-    
     const data = await response.json()
-    
-    // Construir URL completa para el PDF
     const baseUrl = API_BASE_URL.replace('/api', '')
-    if (data.pdf_url) {
-      data.pdf_url = `${baseUrl}${data.pdf_url}`
-    }
-    
+    if (data.pdf_url) data.pdf_url = `${baseUrl}${data.pdf_url}`
     articuloActual.value = data
-    console.log('Artículo cargado:', data)
   } catch (error) {
     console.error('Error al cargar artículo:', error)
     showToast('Error al cargar el artículo', 'error')
@@ -504,36 +554,46 @@ const submitArticulo = async () => {
     isLoading.value = true
     const articuloId = generateUUID()
     const autorIdFinal = currentUser.value?.id || generateUUID()
-    
-    // Usar FormData para subir archivo
+
     const formData = new FormData()
     formData.append('id', articuloId)
     formData.append('titulo', tituloArticulo.value)
     formData.append('autor_id', autorIdFinal)
     formData.append('keywords', JSON.stringify([]))
-    
     if (congressStore.currentCongressId) {
       formData.append('congreso_id', congressStore.currentCongressId)
     }
-    
     if (archivoPdf.value) {
       formData.append('pdf', archivoPdf.value)
     }
-    
-    console.log('Enviando artículo con PDF:', articuloId, archivoPdf.value?.name)
+
+    // FormData: NO poner Content-Type (el browser lo pone con el boundary)
     const response = await fetch(`${API_BASE_URL}/articulos`, {
       method: 'POST',
-      body: formData // No Content-Type header needed for FormData
+      headers: authHeaders(), // solo Authorization, sin Content-Type
+      body: formData,
     })
-    
-    if (!response.ok) throw new Error(`Error HTTP: ${response.status}`)
-    const result = await response.json()
-    console.log('Artículo registrado:', result)
+
+    if (!response.ok) {
+      const errBody = await response.json().catch(() => ({}))
+      throw new Error(errBody.message || `Error HTTP: ${response.status}`)
+    }
+
+    // Asignar tags al artículo recien creado
+    await Promise.all(
+      selectedArticleTagIds.value.map((tagId) =>
+        fetch(`${API_BASE_URL}/articulos/${articuloId}/tags`, {
+          method: 'POST',
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ tagId }),
+        }).catch((error) => console.error('Error asignando tag al artículo:', error))
+      )
+    )
+
     showToast(`Artículo "${tituloArticulo.value}" registrado con éxito`, 'success')
     tituloArticulo.value = ''
     archivoPdf.value = null
-    
-    // Recargar artículos y volver a borradores
+    selectedArticleTagIds.value = []
     await cargarArticulos()
     vistaActiva.value = 'borradores'
   } catch (error) {
@@ -571,6 +631,7 @@ const formatFileSize = (bytes: number): string => {
 const cancelarFormulario = () => {
   tituloArticulo.value = ''
   archivoPdf.value = null
+  selectedArticleTagIds.value = []
 }
 </script>
 
@@ -592,14 +653,14 @@ const cancelarFormulario = () => {
 .congress-name-text {
   font-size: 0.7rem;
   font-weight: 600;
-  color: #10b981;
+  color: var(--success);
   letter-spacing: 0.02em;
   opacity: 0.9;
 }
 
 .dark .congress-name-text {
-  color: #34d399;
-  text-shadow: 0 0 8px rgba(52, 211, 153, 0.3);
+  color: var(--success);
+  text-shadow: 0 0 8px var(--success-faint);
 }
 .brand { display: flex; align-items: center; gap: 0.45rem; }
 .brand-icon { width: 16px; height: 16px; color: var(--text-strong); }
@@ -697,10 +758,15 @@ const cancelarFormulario = () => {
 .articulo-meta { display: flex; align-items: center; gap: 0.75rem; }
 .estado-badge { font-size: 0.7rem; font-weight: 500; padding: 0.25rem 0.5rem; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
 .estado-badge.borrador { background: var(--bg-input); color: var(--text-muted); }
-.estado-badge.en-revision { background: rgba(229, 162, 76, 0.15); color: var(--stat-revision); }
-.estado-badge.aceptado { background: rgba(74, 222, 128, 0.15); color: var(--stat-aceptado); }
-.estado-badge.rechazado { background: rgba(248, 113, 113, 0.15); color: var(--stat-rechazado); }
+.estado-badge.en-revision { background: var(--warning-faint); color: var(--warning); }
+.estado-badge.aceptado { background: var(--success-faint); color: var(--success); }
+.estado-badge.rechazado { background: var(--error-faint); color: var(--error); }
 .fecha-creacion { font-size: 0.75rem; color: var(--text-muted); }
+.article-tags, .tag-options { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.55rem; }
+.article-tags.center { justify-content: center; }
+.tag, .tag-option span { font-size: 0.72rem; color: var(--text-muted); background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 999px; padding: 0.2rem 0.5rem; }
+.tag-option { display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer; }
+.tag-option input { accent-color: var(--border-focus); }
 .articulo-actions { display: flex; align-items: center; }
 .arrow-icon { width: 16px; height: 16px; color: var(--text-faint); transition: color 0.15s; }
 .articulo-item:hover .arrow-icon { color: var(--text-muted); }
@@ -714,7 +780,7 @@ const cancelarFormulario = () => {
 .panel-placeholder p { font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; }
 
 .pdf-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-.pdf-frame { flex: 1; width: 100%; height: 100%; border: none; background: #fff; }
+.pdf-frame { flex: 1; width: 100%; height: 100%; border: none; background: var(--bg-card); }
 
 /* ─── BACK BUTTON ───────────────────────────────────── */
 .btn-back { display: flex; align-items: center; gap: 0.5rem; background: transparent; color: var(--text-faint); font-size: 0.8rem; font-weight: 500; padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); cursor: pointer; transition: all 0.15s; }

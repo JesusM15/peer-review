@@ -20,12 +20,25 @@ async function migrate() {
 
     const queryRunner = AppDataSource.createQueryRunner();
 
-    console.log('Agregando columna tags a solicitudes_congreso...');
-    await queryRunner.query(`
-      ALTER TABLE solicitudes_congreso
-      ADD COLUMN IF NOT EXISTS tags TEXT NULL;
+    console.log('Verificando columna tags en solicitudes_congreso...');
+    const columns = await queryRunner.query(`
+      SELECT COLUMN_NAME
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'solicitudes_congreso'
+        AND COLUMN_NAME = 'tags';
     `);
-    console.log('Columna tags agregada.');
+
+    if (columns.length === 0) {
+      console.log('Agregando columna tags a solicitudes_congreso...');
+      await queryRunner.query(`
+        ALTER TABLE solicitudes_congreso
+        ADD COLUMN tags TEXT NULL AFTER motivo;
+      `);
+      console.log('Columna tags agregada.');
+    } else {
+      console.log('La columna tags ya existe.');
+    }
 
     await AppDataSource.destroy();
     console.log('Migración finalizada.');

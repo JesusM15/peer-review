@@ -1,7 +1,6 @@
 import { DataSource } from 'typeorm';
 import * as dotenv from 'dotenv';
 import { join } from 'path';
-import { v4 as uuidv4 } from 'uuid';
 
 dotenv.config({ path: join(__dirname, '../../.env') });
 
@@ -13,6 +12,9 @@ const AppDataSource = new DataSource({
   synchronize: false,
   logging: true,
 });
+// @ts-ignore - Archivo de migración no utilizado actualmente
+// import { AppDataSource } from '../data-source';
+// import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Migration: Add Staff Management System with Tags

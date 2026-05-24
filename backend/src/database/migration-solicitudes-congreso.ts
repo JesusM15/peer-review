@@ -30,6 +30,7 @@ async function migrate() {
         fecha_inicio_propuesta DATE NULL,
         fecha_fin_propuesta DATE NULL,
         motivo TEXT NULL,
+        tags TEXT NULL,
         estado VARCHAR(50) NOT NULL DEFAULT 'Pendiente',
         respuesta_admin TEXT NULL,
         congreso_creado_id VARCHAR(36) NULL,

@@ -37,11 +37,8 @@ export class User {
   @Column({ type: 'varchar', length: 50, default: Rol.AUTOR })
   rol: Rol;
 
-  @OneToOne(() => Perfil, (perfil) => perfil.user)
-  perfil?: Perfil;
-
-  @OneToMany(() => UsuarioCongresoRol, (membresia) => membresia.user)
-  membresias?: UsuarioCongresoRol[];
+  @OneToOne(() => Perfil, (perfil) => perfil.user, { nullable: true, cascade: true })
+  perfil: Perfil;
 
   @BeforeInsert()
   @BeforeUpdate()

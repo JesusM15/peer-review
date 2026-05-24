@@ -1,20 +1,11 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Patch,
-  Delete,
-  Param,
-  Query,
-  Body,
-  UseGuards,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Query, Body, UseGuards, Request } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Rol } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdatePerfilDto } from './dto/update-perfil.dto';
+import type { AuthRequest } from '../auth/types/auth-request.type';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard)
@@ -42,6 +33,16 @@ export class UsersController {
     return result;
   }
 
+  @Get('me')
+  findMe(@Request() req: AuthRequest) {
+    return this.usersService.findMe(req.user.id);
+  }
+
+  @Patch('me')
+  updateMe(@Request() req: AuthRequest, @Body() body: UpdatePerfilDto) {
+    return this.usersService.updateMe(req.user.id, body);
+  }
+
   @Get(':id')
   findOne(
     @Param('id') id: string,
@@ -60,6 +61,11 @@ export class UsersController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(id, updateUserDto);
+  }
+
+  @Patch(':id/perfil')
+  updateUserPerfil(@Param('id') id: string, @Body() body: UpdatePerfilDto) {
+    return this.usersService.updateMe(id, body);
   }
 
   @Delete(':id')
