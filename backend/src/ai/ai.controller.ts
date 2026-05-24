@@ -51,14 +51,24 @@ export class AIController {
 
   @Patch('config')
   async updateConfig(@Body() updateData: Partial<AIConfig>) {
-    let config = await this.aiConfigRepository.findOne({
-      where: { isActive: true },
-    });
-    if (!config) {
-      config = this.aiConfigRepository.create({ isActive: true });
+    console.log('[AIController] updateConfig called with:', updateData);
+    try {
+      let config = await this.aiConfigRepository.findOne({
+        where: { isActive: true },
+      });
+      console.log('[AIController] Existing config:', config);
+      if (!config) {
+        config = this.aiConfigRepository.create({ isActive: true });
+        console.log('[AIController] Created new config');
+      }
+      Object.assign(config, updateData);
+      const result = await this.aiConfigRepository.save(config);
+      console.log('[AIController] Config saved successfully:', result);
+      return result;
+    } catch (error) {
+      console.error('[AIController] Error saving config:', error);
+      throw error;
     }
-    Object.assign(config, updateData);
-    return this.aiConfigRepository.save(config);
   }
 
   @Post('check-plagiarism/:articuloId')
@@ -115,33 +125,43 @@ export class AIController {
     @Param('articuloId') articuloId: string,
     @Body() body: { topK?: number; threshold?: number } = {},
   ) {
-    const pdfPath = await this.resolvePdfPath(articuloId);
-    const text = await this.plagiarismService.extractPdfText(pdfPath);
+    console.log('[AIController] fullAnalysis called for articuloId:', articuloId);
+    try {
+      const pdfPath = await this.resolvePdfPath(articuloId);
+      console.log('[AIController] PDF path resolved:', pdfPath);
+      const text = await this.plagiarismService.extractPdfText(pdfPath);
+      console.log('[AIController] Text extracted, length:', text.length);
 
-    const [plagiarism, ethics, similarity] = await Promise.all([
-      this.plagiarismService.analyzeText(text),
-      this.ethicsService.analyzeText(text),
-      this.plagiarismService.analyzeSimilarity(articuloId, text, {
-        topK: body.topK,
-        threshold: body.threshold,
-      }),
-    ]);
+      const [plagiarism, ethics, similarity] = await Promise.all([
+        this.plagiarismService.analyzeText(text),
+        this.ethicsService.analyzeText(text),
+        this.plagiarismService.analyzeSimilarity(articuloId, text, {
+          topK: body.topK,
+          threshold: body.threshold,
+        }),
+      ]);
 
-    await this.articulosService.update(articuloId, {
-      plagiarism_report: plagiarism,
-      ethics_report: ethics,
-      embeddings: similarity.embedding,
-    });
+      console.log('[AIController] Analysis completed');
 
-    return {
-      plagiarism_report: plagiarism,
-      ethics_report: ethics,
-      similarity: {
-        query_articulo_id: similarity.query_articulo_id,
-        threshold: similarity.threshold,
-        hits: similarity.hits,
-      },
-    };
+      await this.articulosService.update(articuloId, {
+        plagiarism_report: plagiarism,
+        ethics_report: ethics,
+        embeddings: similarity.embedding,
+      });
+
+      return {
+        plagiarism_report: plagiarism,
+        ethics_report: ethics,
+        similarity: {
+          query_articulo_id: similarity.query_articulo_id,
+          threshold: similarity.threshold,
+          hits: similarity.hits,
+        },
+      };
+    } catch (error) {
+      console.error('[AIController] Error in fullAnalysis:', error);
+      throw error;
+    }
   }
 
   private async resolvePdfPath(articuloId: string): Promise<string> {

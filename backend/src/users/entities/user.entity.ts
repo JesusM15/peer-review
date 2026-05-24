@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { Perfil } from './perfil.entity';
+import { UsuarioCongresoRol } from '../../congresos/entities/usuario-congreso-rol.entity';
 
 export enum Rol {
   AUTOR = 'Autor',
@@ -38,6 +39,9 @@ export class User {
 
   @OneToOne(() => Perfil, (perfil) => perfil.user)
   perfil?: Perfil;
+
+  @OneToMany(() => UsuarioCongresoRol, (membresia) => membresia.user)
+  membresias?: UsuarioCongresoRol[];
 
   @BeforeInsert()
   @BeforeUpdate()

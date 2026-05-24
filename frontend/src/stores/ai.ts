@@ -18,10 +18,16 @@ export const useAIStore = defineStore('ai', () => {
 
   const loading = ref(false);
 
-  const authHeaders = (extra: Record<string, string> = {}) => ({
-    Authorization: `Bearer ${authStore.token}`,
-    ...extra,
-  });
+  const authHeaders = (extra: Record<string, string> = {}) => {
+    const headers = {
+      Authorization: `Bearer ${authStore.token}`,
+      ...extra,
+    };
+    console.log('[AI Store] Auth headers:', headers);
+    console.log('[AI Store] Token exists:', !!authStore.token);
+    console.log('[AI Store] Token value:', authStore.token ? authStore.token.substring(0, 20) + '...' : 'null');
+    return headers;
+  };
 
   const fetchConfig = async () => {
     loading.value = true;
@@ -42,18 +48,24 @@ export const useAIStore = defineStore('ai', () => {
   const updateConfig = async (newConfig: any) => {
     loading.value = true;
     try {
+      console.log('[AI Store] Updating config with:', newConfig);
+      console.log('[AI Store] API URL:', API_URL);
       const response = await fetch(`${API_URL}/ai/config`, {
         method: 'PATCH',
         headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(newConfig),
       });
+      console.log('[AI Store] Response status:', response.status);
       if (response.ok) {
         config.value = await response.json();
+        console.log('[AI Store] Config updated successfully');
         return true;
       }
+      const errorText = await response.text();
+      console.error('[AI Store] Response not ok:', response.status, errorText);
       return false;
     } catch (error) {
-      console.error('Error updating AI config:', error);
+      console.error('[AI Store] Error updating AI config:', error);
       return false;
     } finally {
       loading.value = false;

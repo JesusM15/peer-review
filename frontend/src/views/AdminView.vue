@@ -972,11 +972,12 @@ const submitUser = async () => {
 };
 
 const saveAIConfig = async () => {
+  console.log('[AdminView] Saving AI config with form:', aiForm.value);
   const success = await aiStore.updateConfig(aiForm.value);
   if (success) {
     alert('Configuración de IA guardada con éxito');
   } else {
-    alert('Error al guardar la configuración');
+    alert('Error al guardar la configuración. Revisa la consola del navegador para más detalles.');
   }
 };
 
